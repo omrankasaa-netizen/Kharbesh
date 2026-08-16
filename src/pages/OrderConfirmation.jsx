@@ -1,0 +1,65 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router';
+import { useI18n } from '@/lib/i18n';
+import { base44 } from '@/api/khClient';
+import { Scribble } from '@/components/Brand';
+
+export default function OrderConfirmation() {
+  const { id } = useParams();
+  const { t } = useI18n();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const o = await base44.entities.Order.get(id);
+        setOrder(o);
+      } catch { setOrder(null); }
+      finally { setLoading(false); }
+    })();
+  }, [id]);
+
+  if (loading) return <div className="max-w-[800px] mx-auto px-6 py-20 text-muted-foreground">{t.common.loading}</div>;
+  if (!order) return <div className="max-w-[800px] mx-auto px-6 py-20"><p>Order not found.</p><Link to="/shop" className="kh-btn-text mt-4">{t.nav.shop}</Link></div>;
+
+  return (
+    <div className="max-w-[800px] mx-auto px-4 sm:px-6 py-16">
+      <div className="text-center">
+        <span className="kh-eyebrow">{t.confirm.title}</span>
+        <h1 className="mt-3 font-heading text-5xl sm:text-7xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.confirm.title}</h1>
+        <Scribble className="mx-auto mt-6" width={120} />
+      </div>
+      <div className="mt-10 bg-card border border-border rounded-md p-6">
+        <p className="text-sm text-muted-foreground">{t.confirm.sub} <span className="text-foreground font-medium">{order.email}</span>.</p>
+        <div className="mt-4 flex justify-between items-center py-3 border-t border-border">
+          <span className="kh-eyebrow">{t.confirm.number}</span>
+          <span className="font-heading text-lg" style={{ fontFamily: 'var(--brand-font-heading)' }}>{order.order_number}</span>
+        </div>
+        <div className="divide-y divide-border">
+          {(order.items || []).map((it, idx) => (
+            <div key={idx} className="py-3 flex justify-between text-sm">
+              <span>{it.productName} · {it.color} · {it.size} · ×{it.quantity}</span>
+              <span>${it.lineTotal}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-between py-3 border-t border-border font-heading text-lg" style={{ fontFamily: 'var(--brand-font-heading)' }}>
+          <span>{t.cart.total}</span><span>${order.total}</span>
+        </div>
+      </div>
+      <div className="mt-10">
+        <h2 className="font-heading text-2xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.confirm.whatNext}</h2>
+        <ol className="space-y-3">
+          {[t.confirm.step1, t.confirm.step2, t.confirm.step3].map((s, i) => (
+            <li key={i} className="flex gap-3"><span className="font-heading text-accent-foreground bg-accent w-7 h-7 inline-flex items-center justify-center rounded-full shrink-0" style={{ fontFamily: 'var(--brand-font-heading)' }}>{i + 1}</span><span className="pt-1">{s}</span></li>
+          ))}
+        </ol>
+      </div>
+      <div className="mt-10 flex flex-wrap gap-3">
+        <Link to="/track" className="kh-btn-scribble">{t.confirm.track}</Link>
+        <Link to="/shop" className="kh-btn-outline">{t.confirm.continue}</Link>
+      </div>
+    </div>
+  );
+}
