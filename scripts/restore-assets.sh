@@ -22,7 +22,7 @@ if [ -d assets-base64 ]; then
 fi
 
 if [ -f scripts/asset-urls.txt ]; then
-  while IFS='	' read -r rel url; do
+  while IFS="$(printf '\t')" read -r rel url; do
     case "$rel" in ''|\#*) continue ;; esac
     target="public/$rel"
     if [ ! -s "$target" ]; then
