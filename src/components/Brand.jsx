@@ -1,21 +1,28 @@
 import React from 'react';
-import { BRAND_ASSETS } from '@/lib/brandAssets';
+import { BRAND_ASSETS, INK_FILTER } from '@/lib/brandAssets';
 
 export const BrandLogo = ({ className = '', showLatin = true, tone = 'ink' }) => (
   <img
     src={BRAND_ASSETS.horizontalWhite}
     alt="Kharbesh"
     className={className}
-    style={{ height: 30, width: 'auto', mixBlendMode: 'screen', display: 'block' }}
+    style={{ height: 30, width: 'auto', display: 'block', filter: tone === 'ink' ? INK_FILTER : undefined }}
   />
 );
 
 export const Scribble = ({ className = '', width = 120, tone = 'accent' }) => (
   <span
-    className={`kh-scribble-line ${className}`}
-    style={{ width, display: 'inline-block', background: tone === 'brick' ? 'var(--brand-brick)' : undefined }}
+    className={`kh-zig ${className}`}
+    style={{ width, display: 'inline-block', height: 10, paddingBottom: 0, backgroundSize: '100% 100%' }}
     aria-hidden="true"
   />
+);
+
+/* Three imperfect dots — the brand signature */
+export const DotsMark = ({ className = '', lime = false }) => (
+  <span className={`kh-dots ${lime ? 'kh-dots-lime' : ''} ${className}`} aria-hidden="true">
+    <i /><i /><i />
+  </span>
 );
 
 export const IconShop = ({ size = 24 }) => (

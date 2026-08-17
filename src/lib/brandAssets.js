@@ -8,3 +8,6 @@ export const BRAND_ASSETS = {
   iconColor: '/assets/brand/kharbesh-icon-color.png',
   iconWhiteLime: '/assets/brand/kharbesh-icon-white-lime.png',
 };
+
+/* Renders any white lockup as solid ink on light backgrounds. */
+export const INK_FILTER = 'brightness(0)';
