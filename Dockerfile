@@ -9,6 +9,12 @@ COPY . .
 # Binary assets (fonts, brand PNGs) are restored at build time from
 # scripts/asset-urls.txt (see scripts/restore-assets.sh).
 RUN sh scripts/restore-assets.sh
+# Vite bakes VITE_* vars into the frontend bundle at build time, so they must
+# be passed as Docker build args (Railway: set them as service variables).
+ARG VITE_KIMI_AUTH_URL
+ARG VITE_APP_ID
+ENV VITE_KIMI_AUTH_URL=$VITE_KIMI_AUTH_URL
+ENV VITE_APP_ID=$VITE_APP_ID
 RUN npm run build
 
 FROM node:22-slim AS runtime
