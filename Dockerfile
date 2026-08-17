@@ -1,4 +1,6 @@
 FROM node:22-slim AS build
+# curl is needed by scripts/restore-assets.sh and is not in the slim image
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 # NOTE: package-lock.json is intentionally not committed yet (regenerate with
 # `npm install` and commit it when a binary-capable git push is available),
