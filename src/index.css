@@ -797,27 +797,74 @@
   color: var(--brand-on-primary);
   max-width: 24ch;
 }
+
+/* Marker highlight — one confident swipe of acid lime behind the word */
 .kh-hero-accent {
+  position: relative;
   display: inline-block;
-  color: var(--brand-accent);
-  text-decoration: underline;
-  text-decoration-style: wavy;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 9px;
+  z-index: 0;
+  color: var(--brand-primary);
+  padding: 0 .14em;
+  white-space: nowrap;
+}
+.kh-hero-accent::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: -0.04em;
+  right: -0.04em;
+  top: 0.14em;
+  bottom: 0.04em;
+  background: var(--brand-accent);
+  transform: rotate(-1.1deg) skewX(-6deg);
+  border-radius: 3px 9px 4px 10px / 7px 4px 9px 5px;
 }
 
-/* Hand-drawn buttons — premium base shape, subtly uneven corners, faint tilt */
-.kh-btn-blob {
-  border-radius: 16px 22px 14px 20px / 20px 14px 22px 16px;
-  transform: rotate(-0.6deg);
-  transition: box-shadow .15s ease, transform .15s ease, filter .15s ease;
+/* Mark buttons — sharp premium rectangles; the scribble bar draws itself on hover */
+.kh-btn-mark {
+  position: relative;
+  font-family: var(--brand-font-body);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--brand-primary);
+  background: var(--brand-on-primary);
+  border: none;
+  border-radius: var(--brand-radius-sm);
+  padding: 15px 30px 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
-.kh-btn-blob:hover { transform: rotate(0deg) translateY(-1px); }
-.kh-btn-blob-alt {
-  border-radius: 22px 14px 20px 16px / 14px 20px 16px 22px;
-  transform: rotate(0.6deg);
+.kh-btn-mark::after {
+  content: '';
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 9px;
+  height: 5px;
+  background: var(--brand-accent);
+  border-radius: var(--brand-radius-full);
+  transform: scaleX(.45);
+  transform-origin: left;
+  transition: transform .25s ease;
 }
-.kh-btn-blob-alt:hover { transform: rotate(0deg) translateY(-1px); }
+.kh-btn-mark:hover::after { transform: scaleX(1); }
+.kh-btn-mark:hover { box-shadow: var(--brand-shadow-md); }
+.kh-btn-mark:active { transform: translateY(1px); }
+[dir="rtl"] .kh-btn-mark::after { transform-origin: right; }
+
+.kh-btn-mark-brick {
+  color: var(--brand-on-primary);
+  background: var(--brand-brick);
+}
+.kh-btn-mark-brick::after { background: var(--brand-on-primary); }
 
 /* Rough frame — a card that looks cut by hand, not by a machine */
 .kh-frame-rough {
