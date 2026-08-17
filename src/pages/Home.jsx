@@ -41,8 +41,8 @@ export default function Home() {
               <p className="mt-3 max-w-md text-sm sm:text-base" style={{ color: '#A89F8C' }}>{t.home.customSub}</p>
               <Link to="/custom" className="kh-d-btn-brick kh-btn-blob mt-6 !text-[14px]">{t.home.customCta}</Link>
             </div>
-            <div className="relative p-8 sm:p-12 flex items-center justify-center overflow-hidden kh-paint-stroke">
-              <span className="text-2xl sm:text-4xl text-center leading-tight" style={{ fontFamily: "'Rakkas', var(--brand-font-body)", color: 'var(--brand-primary)' }}>
+            <div className="relative p-8 sm:p-12 flex items-center justify-center kh-frame-rough kh-paint-stroke">
+              <span className="text-2xl sm:text-4xl text-center leading-tight" style={{ fontFamily: "'Rakkas', var(--brand-font-body)", color: 'var(--brand-on-primary)' }}>
                 {lang === 'ar' ? 'جملتك هون' : 'your phrase here'}
               </span>
             </div>
