@@ -36,14 +36,14 @@ export default function ShopAll() {
 
       <div className="flex flex-wrap gap-2 mb-8">
         {CATEGORIES.map((c) => (
-          <button key={c.key} onClick={() => setFilter('type', c.key)} className={`kh-btn-outline !text-[12px] !py-2 !px-3 ${type === c.key ? '!bg-primary !text-primary-foreground' : ''}`}>
+          <button key={c.key} onClick={() => setFilter('type', c.key)} className={`kh-btn-outline kh-btn-filter !text-[12px] !py-2 !px-3 ${type === c.key ? '!bg-primary !text-primary-foreground' : ''}`}>
             {lang === 'ar' ? c.label_ar : c.label_en}
           </button>
         ))}
         <span className="w-px self-stretch bg-border mx-1" />
-        <button onClick={() => setFilter('collection', '')} className={`kh-btn-outline !text-[12px] !py-2 !px-3 ${!collection ? '!bg-primary !text-primary-foreground' : ''}`}>All worlds</button>
+        <button onClick={() => setFilter('collection', '')} className={`kh-btn-outline kh-btn-filter !text-[12px] !py-2 !px-3 ${!collection ? '!bg-primary !text-primary-foreground' : ''}`}>All worlds</button>
         {collections.map((c) => (
-          <button key={c.id} onClick={() => setFilter('collection', c.slug)} className={`kh-btn-outline !text-[12px] !py-2 !px-3 ${collection === c.slug ? '!bg-primary !text-primary-foreground' : ''}`}>
+          <button key={c.id} onClick={() => setFilter('collection', c.slug)} className={`kh-btn-outline kh-btn-filter !text-[12px] !py-2 !px-3 ${collection === c.slug ? '!bg-primary !text-primary-foreground' : ''}`}>
             {c.name_en.replace('Kharbesh ', '')}
           </button>
         ))}

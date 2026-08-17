@@ -84,8 +84,8 @@ export default function ProductPage() {
             />
           </div>
           <div className="flex gap-2 mt-3">
-            <button onClick={() => setView('front')} className={`kh-btn-outline !text-[12px] !py-2 !px-3 ${view === 'front' ? '!bg-primary !text-primary-foreground' : ''}`}>{t.product.front}</button>
-            <button onClick={() => setView('back')} className={`kh-btn-outline !text-[12px] !py-2 !px-3 ${view === 'back' ? '!bg-primary !text-primary-foreground' : ''}`}>{t.product.back}</button>
+            <button onClick={() => setView('front')} className={`kh-btn-outline kh-btn-filter !text-[12px] !py-2 !px-3 ${view === 'front' ? '!bg-primary !text-primary-foreground' : ''}`}>{t.product.front}</button>
+            <button onClick={() => setView('back')} className={`kh-btn-outline kh-btn-filter !text-[12px] !py-2 !px-3 ${view === 'back' ? '!bg-primary !text-primary-foreground' : ''}`}>{t.product.back}</button>
           </div>
         </div>
 
@@ -125,7 +125,7 @@ export default function ProductPage() {
             <legend className="kh-eyebrow mb-3">{t.product.chooseSize}</legend>
             <div className="flex flex-wrap gap-2">
               {(product.sizes || []).map((s) => (
-                <button key={s} onClick={() => setSize(s)} className={`min-w-[3rem] kh-btn-outline !text-[13px] !py-2 !px-3 ${size === s ? '!bg-primary !text-primary-foreground' : ''}`}>{s}</button>
+                <button key={s} onClick={() => setSize(s)} className={`min-w-[3rem] kh-btn-outline kh-btn-filter !text-[13px] !py-2 !px-3 ${size === s ? '!bg-primary !text-primary-foreground' : ''}`}>{s}</button>
               ))}
             </div>
           </fieldset>
