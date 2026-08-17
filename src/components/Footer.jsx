@@ -36,7 +36,7 @@ export default function Footer() {
         </div>
         <div className="mt-12 pt-6 border-t border-[#322C25] flex flex-col sm:flex-row justify-between gap-2 text-xs" style={{ color: '#8A8170' }}>
           <span>© {new Date().getFullYear()} Kharbesh. {t.footer.rights}</span>
-          <span>خربش — Lebanon, but wearable. <Link to="/login" aria-label="Admin login" className="opacity-20 hover:opacity-80 transition-opacity select-none">·</Link></span>
+          <span>لبسك بيحكي عنك — Kharbesh it your way. <Link to="/login" aria-label="Admin login" className="opacity-20 hover:opacity-80 transition-opacity select-none">·</Link></span>
         </div>
       </div>
     </footer>
