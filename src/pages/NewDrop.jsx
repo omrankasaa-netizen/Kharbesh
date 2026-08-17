@@ -12,9 +12,9 @@ export default function NewDrop() {
     <div>
       <section className="bg-secondary text-secondary-foreground border-b border-border">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-16 sm:py-24">
-          <span className="kh-eyebrow" style={{ color: 'var(--brand-accent)' }}>{t.home.newDropEyebrow}</span>
-          <h1 className="mt-3 font-heading text-5xl sm:text-7xl uppercase text-white" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.home.newDropTitle}</h1>
-          <p className="mt-4 max-w-md" style={{ color: '#A89F8C' }}>{t.home.newDropSub}</p>
+          <span className="kh-eyebrow">{t.home.newDropEyebrow}</span>
+          <h1 className="mt-3 font-heading text-5xl sm:text-7xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.home.newDropTitle}</h1>
+          <p className="mt-4 max-w-md" style={{ color: 'var(--muted)' }}>{t.home.newDropSub}</p>
           <Scribble className="mt-8" width={120} />
         </div>
       </section>

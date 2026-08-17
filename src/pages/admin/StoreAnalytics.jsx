@@ -4,8 +4,8 @@ import { base44 } from '@/api/khClient';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
 
-const TICK = { fill: '#A89F8C', fontSize: 12 };
-const TOOLTIP = { contentStyle: { background: '#221E19', border: '1px solid #322C25', borderRadius: 6, color: '#F5EFE1' }, labelStyle: { color: '#A89F8C' } };
+const TICK = { fill: '#6F6757', fontSize: 12 };
+const TOOLTIP = { contentStyle: { background: '#FFFDF6', border: '1px solid rgba(23,20,14,.18)', borderRadius: 6, color: '#17140E' }, labelStyle: { color: '#6F6757' } };
 
 export default function StoreAnalytics() {
   const { t, lang } = useI18n();
@@ -75,11 +75,11 @@ export default function StoreAnalytics() {
             <h2 className="font-heading text-xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'الطلبات آخر 14 يوم' : 'Orders — last 14 days'}</h2>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={days}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#322C25" />
-                <XAxis dataKey="label" tick={TICK} stroke="#322C25" />
-                <YAxis tick={TICK} stroke="#322C25" allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(23,20,14,.18)" />
+                <XAxis dataKey="label" tick={TICK} stroke="rgba(23,20,14,.18)" />
+                <YAxis tick={TICK} stroke="rgba(23,20,14,.18)" allowDecimals={false} />
                 <Tooltip {...TOOLTIP} />
-                <Bar dataKey="orders" fill="#D4E500" radius={[3,3,0,0]} />
+                <Bar dataKey="orders" fill="#D4ED0B" radius={[3,3,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </section>
@@ -89,11 +89,11 @@ export default function StoreAnalytics() {
               <h2 className="font-heading text-xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'إيرادات حسب النوع' : 'Revenue by style'}</h2>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={styleData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#322C25" />
-                  <XAxis dataKey="name" tick={TICK} stroke="#322C25" />
-                  <YAxis tick={TICK} stroke="#322C25" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(23,20,14,.18)" />
+                  <XAxis dataKey="name" tick={TICK} stroke="rgba(23,20,14,.18)" />
+                  <YAxis tick={TICK} stroke="rgba(23,20,14,.18)" />
                   <Tooltip {...TOOLTIP} />
-                  <Bar dataKey="value" fill="#B23A2E" radius={[3,3,0,0]} />
+                  <Bar dataKey="value" fill="#17140E" radius={[3,3,0,0]} />
                 </BarChart>
               </ResponsiveContainer>
             </section>
@@ -101,11 +101,11 @@ export default function StoreAnalytics() {
               <h2 className="font-heading text-xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'الأكثر مبيعاً' : 'Top products'}</h2>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={topProducts} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#322C25" />
-                  <XAxis type="number" tick={TICK} stroke="#322C25" allowDecimals={false} />
-                  <YAxis type="category" dataKey="name" tick={TICK} stroke="#322C25" width={120} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(23,20,14,.18)" />
+                  <XAxis type="number" tick={TICK} stroke="rgba(23,20,14,.18)" allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" tick={TICK} stroke="rgba(23,20,14,.18)" width={120} />
                   <Tooltip {...TOOLTIP} />
-                  <Bar dataKey="units" fill="#D4E500" radius={[0,3,3,0]} />
+                  <Bar dataKey="units" fill="#D4ED0B" radius={[0,3,3,0]} />
                 </BarChart>
               </ResponsiveContainer>
             </section>
@@ -115,11 +115,11 @@ export default function StoreAnalytics() {
             <h2 className="font-heading text-xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'الطلبات حسب الحالة' : 'Orders by status'}</h2>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={statusData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#322C25" />
-                <XAxis dataKey="name" tick={TICK} stroke="#322C25" />
-                <YAxis tick={TICK} stroke="#322C25" allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(23,20,14,.18)" />
+                <XAxis dataKey="name" tick={TICK} stroke="rgba(23,20,14,.18)" />
+                <YAxis tick={TICK} stroke="rgba(23,20,14,.18)" allowDecimals={false} />
                 <Tooltip {...TOOLTIP} />
-                <Bar dataKey="value" fill="#A89F8C" radius={[3,3,0,0]} />
+                <Bar dataKey="value" fill="#6F6757" radius={[3,3,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </section>

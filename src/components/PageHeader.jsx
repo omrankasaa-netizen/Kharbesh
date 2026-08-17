@@ -1,13 +1,13 @@
 import React from 'react';
-import { Scribble } from '@/components/Brand';
+import { useI18n } from '@/lib/i18n';
 
-export default function PageHeader({ eyebrow, title, sub, scribbleWidth = 120 }) {
+export default function PageHeader({ eyebrow, title, sub }) {
+  const { lang } = useI18n();
   return (
     <header>
       <span className="kh-eyebrow">{eyebrow}</span>
-      <h1 className="mt-2 font-heading text-4xl sm:text-6xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{title}</h1>
-      {sub && <p className="mt-3 max-w-2xl text-muted-foreground">{sub}</p>}
-      <Scribble className="mt-6" width={scribbleWidth} />
+      <h1 className={`kh-section-title mt-4 text-4xl sm:text-6xl ${lang === 'ar' ? 'kh-section-title-ar' : ''}`}>{title}</h1>
+      {sub && <p className="mt-4 max-w-2xl" style={{ color: 'var(--muted)' }}>{sub}</p>}
     </header>
   );
 }
