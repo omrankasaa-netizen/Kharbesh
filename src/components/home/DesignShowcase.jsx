@@ -11,8 +11,8 @@ export default function DesignShowcase() {
         <div className="flex items-end justify-between gap-4 mb-10">
           <div>
             <span className="kh-d-eyebrow">{lang === 'ar' ? 'تصاميم جاهزة' : 'Ready designs'}</span>
-            <h2 className="mt-2 font-heading text-3xl sm:text-5xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)', color: 'var(--brand-on-primary)' }}>
-              {lang === 'ar' ? 'جاهزة للّبس، للّي بيفهم' : 'Ready to wear, ready to get'}
+            <h2 className="mt-2 text-3xl sm:text-5xl" style={{ fontFamily: "'Rakkas', var(--brand-font-body)", color: 'var(--brand-on-primary)' }}>
+              {lang === 'ar' ? 'جاهزة تتخربش' : 'Ready to Kharbesh'}
             </h2>
             <p className="mt-2 max-w-xl" style={{ color: '#A89F8C' }}>
               {lang === 'ar'
