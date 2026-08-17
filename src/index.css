@@ -786,6 +786,81 @@
 /* RTL helpers */
 [dir="rtl"] .flip-x { transform: scaleX(-1); }
 
+/* ---- Kharbesh-ID refresh: hand-drawn, scribbled, never rectangular ---- */
+
+/* Hero title — Rakkas, the brand's own hand */
+.kh-hero-title {
+  font-family: 'Rakkas', var(--brand-font-body);
+  font-weight: 400;
+  font-size: clamp(30px, 4.6vw, 58px);
+  line-height: 1.25;
+  color: var(--brand-on-primary);
+  max-width: 22ch;
+}
+.kh-hero-accent {
+  display: inline-block;
+  color: var(--brand-accent);
+  transform: rotate(-2deg) translateY(2px);
+  text-decoration: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 10px;
+}
+
+/* Blob buttons — uneven hand-drawn corners, slight tilt */
+.kh-btn-blob {
+  border-radius: 38% 62% 55% 45% / 55% 42% 58% 45%;
+  padding: 16px 34px;
+  transform: rotate(-1.2deg);
+  transition: box-shadow .15s ease, transform .15s ease, filter .15s ease;
+}
+.kh-btn-blob:hover { transform: rotate(0.6deg) scale(1.03); }
+.kh-btn-blob-alt {
+  border-radius: 55% 45% 40% 60% / 45% 58% 42% 55%;
+  transform: rotate(1.4deg);
+}
+.kh-btn-blob-alt:hover { transform: rotate(-0.6deg) scale(1.03); }
+
+/* Paint-stroke frame — reusable rough-edge highlight */
+.kh-paint-stroke {
+  position: relative;
+  isolation: isolate;
+}
+.kh-paint-stroke::before {
+  content: '';
+  position: absolute;
+  inset: -6px -10px;
+  z-index: -1;
+  background: var(--brand-accent);
+  border-radius: 62% 38% 55% 45% / 48% 55% 45% 52%;
+  transform: rotate(-1.5deg);
+  opacity: .9;
+}
+
+/* Product & design cards — paint-stroke edges instead of plain rectangles */
+.kh-card-product,
+.kh-d-card {
+  border-radius: 22px 34px 18px 30px / 30px 18px 34px 22px !important;
+}
+.kh-card-product:nth-child(3n+1),
+.kh-d-card:nth-child(3n+1) { border-radius: 34px 20px 30px 18px / 18px 30px 20px 34px !important; }
+.kh-card-product:nth-child(3n+2),
+.kh-d-card:nth-child(3n+2) { border-radius: 20px 30px 34px 18px / 30px 18px 20px 34px !important; }
+
+/* Slight hand-placed tilt on hover */
+.kh-card-product:hover,
+.kh-d-card:hover { transform: translateY(-3px) rotate(-0.4deg); }
+.kh-card-product:nth-child(even):hover,
+.kh-d-card:nth-child(even):hover { transform: translateY(-3px) rotate(0.4deg); }
+
+/* Cream tooltip with matching arrow */
+.kh-tooltip-cream {
+  background: #F5EFE1 !important;
+  color: #141210 !important;
+  border: none;
+}
+.kh-tooltip-cream .kh-tooltip-arrow { fill: #F5EFE1 !important; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .001ms !important;
