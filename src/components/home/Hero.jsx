@@ -11,6 +11,8 @@ export default function Hero() {
   const copy = lang === 'ar'
     ? {
         eyebrow: 'لبناني · يومي · بيقول',
+        title: 'فكر لبناني، مصنوع ومطبوع.',
+        titleAccent: 'لبناني أصلي',
         tagline: 'تيشيرتات عليها الكلام يلي بيتقال كل يوم. مطبوعة في لبنان، للّي بيفهم.',
         primary: 'شوف التصاميم',
         secondary: 'على ذوقك',
@@ -20,6 +22,8 @@ export default function Hero() {
       }
     : {
         eyebrow: 'Lebanese · daily · loud',
+        title: 'Lebanese thought, produced & printed.',
+        titleAccent: 'Lebneni Assli',
         tagline: 'Tees with the things people say every day. Printed in Lebanon, for the ones who get it.',
         primary: 'Shop the designs',
         secondary: 'Make it yours',
@@ -40,11 +44,14 @@ export default function Hero() {
               className="mt-5 w-full max-w-[540px]"
               style={{ mixBlendMode: 'screen', display: 'block' }}
             />
-            <div className="kh-wordmark-latin mt-3" style={{ color: '#A89F8C' }}>KHARBESH</div>
-            <p className="mt-6 max-w-xl text-base sm:text-lg" style={{ color: '#C8BFA9' }}>{copy.tagline}</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/shop" className="kh-d-btn-primary">{copy.primary}</Link>
-              <Link to="/custom" className="kh-d-btn-brick">{copy.secondary}</Link>
+            <h1 className="kh-hero-title mt-4">
+              {copy.title}{' '}
+              <span className="kh-hero-accent">{copy.titleAccent}</span>
+            </h1>
+            <p className="mt-5 max-w-xl text-base sm:text-lg" style={{ color: '#C8BFA9' }}>{copy.tagline}</p>
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link to="/shop" className="kh-d-btn-primary kh-btn-blob">{copy.primary}</Link>
+              <Link to="/custom" className="kh-d-btn-brick kh-btn-blob kh-btn-blob-alt">{copy.secondary}</Link>
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" style={{ color: '#8A8170' }}>
               <span style={{ fontFamily: 'var(--brand-font-body)', fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase' }}>{copy.proof1}</span>

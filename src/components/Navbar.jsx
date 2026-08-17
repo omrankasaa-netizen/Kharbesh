@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { useCart } from '@/lib/cart';
 import { BrandLogo, IconSearch, IconBag, IconThreeDots } from '@/components/Brand';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 export default function Navbar() {
   const { t, lang, toggle } = useI18n();
@@ -12,13 +13,10 @@ export default function Navbar() {
   const navigate = useNavigate();
 
   const links = [
-    { to: '/shop', label: t.nav.shop },
-    { to: '/drop', label: t.nav.drop },
-    { to: '/collections', label: t.nav.collections },
-    { to: '/custom', label: t.nav.custom },
-    { to: '/story', label: t.nav.story },
-    { to: '/faq', label: t.nav.faq },
-    { to: '/contact', label: t.nav.contact },
+    { to: '/shop', label: lang === 'ar' ? 'سلبة' : 'Salbeh', tip: 'Kharbesh Salbeh — خربش سلبة' },
+    { to: '/drop', label: lang === 'ar' ? 'لبناني' : 'Lebneni', tip: 'Kharbesh Lebneni — خربش لبناني' },
+    { to: '/collections', label: lang === 'ar' ? 'ثقافة' : 'Sa2afeh', tip: 'Kharbesh Sa2afeh — خربش ثقافة' },
+    { to: '/custom', label: lang === 'ar' ? 'ع ذوقك' : '3a Zaw2ak', tip: 'Kharbesh 3a Zaw2ak — خربش ع ذوقك' },
   ];
 
   const onSearch = (e) => {
@@ -37,16 +35,22 @@ export default function Navbar() {
 
           <nav className="hidden lg:flex items-center gap-6" aria-label="Primary">
             {links.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                style={{ fontFamily: 'var(--brand-font-body)', fontWeight: 500 }}
-                className={({ isActive }) =>
-                  `text-[13px] uppercase tracking-[0.06em] transition-colors ${isActive ? 'text-[var(--brand-on-primary)]' : 'text-[#A89F8C] hover:text-[var(--brand-on-primary)]'}`
-                }
-              >
-                {l.label}
-              </NavLink>
+              <Tooltip key={l.to}>
+                <TooltipTrigger asChild>
+                  <NavLink
+                    to={l.to}
+                    style={{ fontFamily: 'var(--brand-font-body)', fontWeight: 500 }}
+                    className={({ isActive }) =>
+                      `text-[13px] uppercase tracking-[0.06em] transition-colors ${isActive ? 'text-[var(--brand-on-primary)]' : 'text-[#A89F8C] hover:text-[var(--brand-on-primary)]'}`
+                    }
+                  >
+                    {l.label}
+                  </NavLink>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" sideOffset={10} className="kh-tooltip-cream font-semibold">
+                  {l.tip}
+                </TooltipContent>
+              </Tooltip>
             ))}
           </nav>
 
