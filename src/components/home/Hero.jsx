@@ -50,8 +50,8 @@ export default function Hero() {
             </h1>
             <p className="mt-5 max-w-xl text-base sm:text-lg" style={{ color: '#C8BFA9' }}>{copy.tagline}</p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Link to="/shop" className="kh-d-btn-primary kh-btn-blob">{copy.primary}</Link>
-              <Link to="/custom" className="kh-d-btn-brick kh-btn-blob kh-btn-blob-alt">{copy.secondary}</Link>
+              <Link to="/shop" className="kh-btn-mark">{copy.primary}</Link>
+              <Link to="/custom" className="kh-btn-mark kh-btn-mark-brick">{copy.secondary}</Link>
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" style={{ color: '#8A8170' }}>
               <span style={{ fontFamily: 'var(--brand-font-body)', fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase' }}>{copy.proof1}</span>
