@@ -26,11 +26,11 @@ export default function Navbar() {
 
   return (
     <>
-    <header className="sticky top-0 z-50 backdrop-blur" style={{ background: 'rgba(251,246,235,0.92)', borderBottom: '1px solid var(--line)' }}>
+    <header className="sticky top-0 z-50 backdrop-blur" style={{ background: 'rgba(20,17,10,0.92)', borderBottom: '1px solid var(--line)' }}>
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-[72px] gap-4">
           <Link to="/" className="shrink-0" aria-label="Kharbesh home" onClick={() => setOpen(false)}>
-            <BrandLogo tone="ink" className="!h-[38px]" />
+            <BrandLogo tone="paper" className="!h-[38px]" />
           </Link>
 
           <nav className="hidden lg:flex items-center gap-8" aria-label="Primary">
@@ -75,7 +75,7 @@ export default function Navbar() {
     {open && (
       <div className="fixed inset-0 z-[60] kh-menu-overlay" role="dialog" aria-modal="true">
           <div className="flex items-center justify-between h-[72px] px-4 sm:px-6" style={{ borderBottom: '1px solid var(--line)' }}>
-            <BrandLogo tone="ink" className="!h-[34px]" />
+            <BrandLogo tone="paper" className="!h-[34px]" />
             <button onClick={() => setOpen(false)} className="kh-nav-bag" aria-label="Close menu">
               <span>{lang === 'ar' ? 'سكّر' : 'Close'} ✕</span>
             </button>
