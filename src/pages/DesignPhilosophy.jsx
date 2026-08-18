@@ -12,7 +12,7 @@ export default function DesignPhilosophy() {
   ] : [
     { h: 'The letter is the sentence', p: 'Kharbesh isn’t a t-shirt brand. It’s a way to let the letter that’s said on the street become something you wear. Every design is a full sentence — a beginning, an end, a tone. We don’t put a logo; we put language.' },
     { h: 'The street is the source', p: 'Inspiration doesn’t come from runway shows. It comes from traffic, from the corner shop, from the hangout, from the WhatsApp messages that land at midnight. The bold type comes from shop signage, not from books.' },
-    { h: 'A Lebanese line', p: 'We use a hand-drawn Arabic script (Rakkas) because it has motion — the same motion as a word written fast on paper. Clean type lies; the crooked line tells the truth.' },
+    { h: 'A Lebanese line', p: 'We use a hand-drawn Arabic script (Playpen Sans Arabic) because it has motion — the same motion as a word written fast on paper. Clean type lies; the crooked line tells the truth.' },
     { h: 'The bolt', p: 'The jagged line under the word is the moment of reaction — before the laugh or the cuss. Kharbesh without the bolt is just a word; with it, a decision.' },
   ];
   return (
@@ -21,7 +21,7 @@ export default function DesignPhilosophy() {
       <div className="mt-10 space-y-8">
         {blocks.map((b, i) => (
           <section key={i}>
-            <h2 className="font-heading text-2xl uppercase mb-2" style={{ fontFamily: 'var(--brand-font-heading)' }}>{b.h}</h2>
+            <h2 className="font-heading text-2xl mb-2" style={{ fontFamily: 'var(--brand-font-heading)' }}>{b.h}</h2>
             <p className="text-muted-foreground leading-relaxed text-lg">{b.p}</p>
           </section>
         ))}

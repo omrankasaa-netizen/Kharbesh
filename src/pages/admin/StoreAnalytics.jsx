@@ -4,8 +4,8 @@ import { base44 } from '@/api/khClient';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
 
-const TICK = { fill: '#6F6757', fontSize: 12 };
-const TOOLTIP = { contentStyle: { background: '#FFFDF6', border: '1px solid rgba(23,20,14,.18)', borderRadius: 6, color: '#17140E' }, labelStyle: { color: '#6F6757' } };
+const TICK = { fill: '#A79E89', fontSize: 12 };
+const TOOLTIP = { contentStyle: { background: '#262017', border: '1px solid rgba(245,239,224,.18)', borderRadius: 6, color: '#F5EFE0' }, labelStyle: { color: '#A79E89' } };
 
 export default function StoreAnalytics() {
   const { t, lang } = useI18n();
@@ -72,12 +72,12 @@ export default function StoreAnalytics() {
           </div>
 
           <section className="bg-card border border-border rounded-md p-5 mt-8">
-            <h2 className="font-heading text-xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'الطلبات آخر 14 يوم' : 'Orders — last 14 days'}</h2>
+            <h2 className="font-heading text-xl mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'الطلبات آخر 14 يوم' : 'Orders — last 14 days'}</h2>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={days}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(23,20,14,.18)" />
-                <XAxis dataKey="label" tick={TICK} stroke="rgba(23,20,14,.18)" />
-                <YAxis tick={TICK} stroke="rgba(23,20,14,.18)" allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(245,239,224,.14)" />
+                <XAxis dataKey="label" tick={TICK} stroke="rgba(245,239,224,.14)" />
+                <YAxis tick={TICK} stroke="rgba(245,239,224,.14)" allowDecimals={false} />
                 <Tooltip {...TOOLTIP} />
                 <Bar dataKey="orders" fill="#D4ED0B" radius={[3,3,0,0]} />
               </BarChart>
@@ -86,24 +86,24 @@ export default function StoreAnalytics() {
 
           <div className="grid gap-6 lg:grid-cols-2 mt-8">
             <section className="bg-card border border-border rounded-md p-5">
-              <h2 className="font-heading text-xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'إيرادات حسب النوع' : 'Revenue by style'}</h2>
+              <h2 className="font-heading text-xl mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'إيرادات حسب النوع' : 'Revenue by style'}</h2>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={styleData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(23,20,14,.18)" />
-                  <XAxis dataKey="name" tick={TICK} stroke="rgba(23,20,14,.18)" />
-                  <YAxis tick={TICK} stroke="rgba(23,20,14,.18)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(245,239,224,.14)" />
+                  <XAxis dataKey="name" tick={TICK} stroke="rgba(245,239,224,.14)" />
+                  <YAxis tick={TICK} stroke="rgba(245,239,224,.14)" />
                   <Tooltip {...TOOLTIP} />
-                  <Bar dataKey="value" fill="#17140E" radius={[3,3,0,0]} />
+                  <Bar dataKey="value" fill="#D4ED0B" radius={[3,3,0,0]} />
                 </BarChart>
               </ResponsiveContainer>
             </section>
             <section className="bg-card border border-border rounded-md p-5">
-              <h2 className="font-heading text-xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'الأكثر مبيعاً' : 'Top products'}</h2>
+              <h2 className="font-heading text-xl mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'الأكثر مبيعاً' : 'Top products'}</h2>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={topProducts} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(23,20,14,.18)" />
-                  <XAxis type="number" tick={TICK} stroke="rgba(23,20,14,.18)" allowDecimals={false} />
-                  <YAxis type="category" dataKey="name" tick={TICK} stroke="rgba(23,20,14,.18)" width={120} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(245,239,224,.14)" />
+                  <XAxis type="number" tick={TICK} stroke="rgba(245,239,224,.14)" allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" tick={TICK} stroke="rgba(245,239,224,.14)" width={120} />
                   <Tooltip {...TOOLTIP} />
                   <Bar dataKey="units" fill="#D4ED0B" radius={[0,3,3,0]} />
                 </BarChart>
@@ -112,12 +112,12 @@ export default function StoreAnalytics() {
           </div>
 
           <section className="bg-card border border-border rounded-md p-5 mt-8">
-            <h2 className="font-heading text-xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'الطلبات حسب الحالة' : 'Orders by status'}</h2>
+            <h2 className="font-heading text-xl mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'الطلبات حسب الحالة' : 'Orders by status'}</h2>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={statusData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(23,20,14,.18)" />
-                <XAxis dataKey="name" tick={TICK} stroke="rgba(23,20,14,.18)" />
-                <YAxis tick={TICK} stroke="rgba(23,20,14,.18)" allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(245,239,224,.14)" />
+                <XAxis dataKey="name" tick={TICK} stroke="rgba(245,239,224,.14)" />
+                <YAxis tick={TICK} stroke="rgba(245,239,224,.14)" allowDecimals={false} />
                 <Tooltip {...TOOLTIP} />
                 <Bar dataKey="value" fill="#6F6757" radius={[3,3,0,0]} />
               </BarChart>

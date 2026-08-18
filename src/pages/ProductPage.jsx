@@ -92,9 +92,9 @@ export default function ProductPage() {
         {/* Purchase panel */}
         <div>
           <span className="kh-eyebrow">{product.collection_name}</span>
-          <h1 className="mt-2 font-heading text-3xl sm:text-5xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{name}</h1>
+          <h1 className="mt-2 font-heading text-3xl sm:text-5xl" style={{ fontFamily: 'var(--brand-font-heading)' }}>{name}</h1>
           {product.phrase_ar && (
-            <p className="mt-3 text-2xl sm:text-3xl" style={{ fontFamily: "'Rakkas', var(--brand-font-body)", color: 'var(--ink)' }}>
+            <p className="mt-3 text-2xl sm:text-3xl" style={{ fontFamily: "'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif", color: 'var(--ink)' }}>
               {product.phrase_ar}
             </p>
           )}
@@ -191,7 +191,7 @@ export default function ProductPage() {
 
           <div className="mt-6 flex items-center gap-3 text-sm">
             <Scribble width={40} />
-            <span className="font-heading uppercase tracking-wide" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.product.madeIn}</span>
+            <span className="font-heading tracking-wide" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.product.madeIn}</span>
           </div>
         </div>
       </div>
