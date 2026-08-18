@@ -28,65 +28,66 @@
 
 @layer base {
   :root {
-    --background: 41 60% 95%;
-    --foreground: 40 24% 7%;
-    --card: 46 70% 98%;
-    --card-foreground: 40 24% 7%;
-    --popover: 46 70% 98%;
-    --popover-foreground: 40 24% 7%;
-    --primary: 40 24% 7%;
-    --primary-foreground: 41 60% 95%;
-    --secondary: 44 42% 90%;
-    --secondary-foreground: 40 24% 7%;
+    --background: 40 30% 5%;
+    --foreground: 44 45% 91%;
+    --card: 38 26% 9%;
+    --card-foreground: 44 45% 91%;
+    --popover: 38 26% 9%;
+    --popover-foreground: 44 45% 91%;
+    --primary: 44 45% 91%;
+    --primary-foreground: 40 30% 5%;
+    --secondary: 38 18% 15%;
+    --secondary-foreground: 44 45% 91%;
     --accent: 64 89% 49%;
-    --accent-foreground: 40 24% 7%;
-    --muted: 44 42% 90%;
-    --muted-foreground: 40 12% 39%;
-    --destructive: 5 59% 44%;
+    --accent-foreground: 40 30% 5%;
+    --muted: 38 18% 15%;
+    --muted-foreground: 40 14% 58%;
+    --destructive: 8 62% 53%;
     --destructive-foreground: 0 0% 100%;
-    --border: 39 30% 82%;
-    --input: 39 30% 78%;
+    --border: 40 14% 20%;
+    --input: 40 12% 24%;
     --ring: 64 89% 49%;
     --radius: 6px;
-    --font-heading: 'Bricolage Grotesque', 'Anton', sans-serif;
-    --font-body: 'IBM Plex Sans Arabic', sans-serif;
+    --font-heading: 'Modern Antiqua', 'Playpen Sans Arabic', 'Anton', serif;
+    --font-body: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
     --font-heading-line-height: 1.05;
-    --font-heading-letter-spacing: -0.015em;
+    --font-heading-letter-spacing: 0.005em;
     --font-body-line-height: 1.5;
   }
 
   :root {
-    /* Kharbesh Paper — sampled from the brand ID board */
-    --paper: #FBF6EB;
-    --paper-2: #F2ECDB;
-    --paper-3: #FFFDF6;
-    --ink: #17140E;
-    --ink-2: #221E17;
+    /* Kharbesh After Dark — the same paper system, lights off */
+    --paper: #14110A;
+    --paper-2: #1C1710;
+    --paper-3: #262017;
+    --ink: #F5EFE0;
+    --ink-2: #E7DFC9;
     --lime: #D4ED0B;
-    --brick: #B23A2E;
-    --line: rgba(23, 20, 14, 0.14);
-    --line-strong: rgba(23, 20, 14, 0.38);
-    --muted: #6F6757;
-    --muted-2: #8A8170;
+    --on-lime: #14110A;
+    --brick: #D0523F;
+    --line: rgba(245, 239, 224, 0.14);
+    --line-strong: rgba(245, 239, 224, 0.38);
+    --muted: #A79E89;
+    --muted-2: #7E7663;
 
     /* Legacy aliases — same names, flipped values */
-    --brand-primary: #17140E;
-    --brand-on-primary: #FBF6EB;
-    --brand-secondary: #F2ECDB;
+    --brand-primary: #F5EFE0;
+    --brand-on-primary: #14110A;
+    --brand-secondary: #1C1710;
     --brand-accent: #D4ED0B;
-    --brand-background: #FBF6EB;
-    --brand-surface: #FFFDF6;
-    --brand-text: #17140E;
-    --brand-muted: #F2ECDB;
-    --brand-muted-foreground: #6F6757;
-    --brand-border: rgba(23, 20, 14, 0.14);
-    --brand-destructive: #B23A2E;
-    --brand-brick: #B23A2E;
+    --brand-background: #14110A;
+    --brand-surface: #262017;
+    --brand-text: #F5EFE0;
+    --brand-muted: #1C1710;
+    --brand-muted-foreground: #A79E89;
+    --brand-border: rgba(245, 239, 224, 0.14);
+    --brand-destructive: #D0523F;
+    --brand-brick: #D0523F;
     --brand-olive: #7A7A46;
     --brand-cobalt: #1E86A6;
 
-    --brand-font-heading: 'Bricolage Grotesque', 'Anton', sans-serif;
-    --brand-font-body: 'IBM Plex Sans Arabic', sans-serif;
+    --brand-font-heading: 'Modern Antiqua', 'Playpen Sans Arabic', 'Anton', serif;
+    --brand-font-body: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
     --brand-font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
     --brand-font-heading-line-height: 1.05;
     --brand-font-heading-letter-spacing: 0.01em;
@@ -94,7 +95,7 @@
     --brand-font-weight-regular: 400;
     --brand-font-weight-medium: 500;
     --brand-font-weight-bold: 700;
-    --brand-font-weight-black: 900;
+    --brand-font-weight-black: 800;
     --brand-sp-1: 4px;
     --brand-sp-2: 8px;
     --brand-sp-3: 16px;
@@ -129,7 +130,7 @@
     background: var(--paper);
     color: var(--ink);
   }
-  ::selection { background: var(--lime); color: var(--ink); }
+  ::selection { background: var(--lime); color: var(--on-lime); }
 }
 
 @layer components {
@@ -405,7 +406,7 @@
     font-size: 11px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--ink);
+    color: var(--on-lime);
     background: var(--lime);
     padding: 4px 10px;
     border-radius: var(--brand-radius-sm);
@@ -519,7 +520,7 @@
     font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--ink);
+    color: var(--on-lime);
     background: var(--lime);
     padding: 4px 10px;
     border-radius: var(--brand-radius-sm);
@@ -527,7 +528,7 @@
   .kh-card-community .kh-h {
     margin: 0;
     font-family: var(--brand-font-body);
-    font-weight: 900;
+    font-weight: 800;
     font-size: 22px;
     line-height: 1.15;
     color: var(--ink);
@@ -600,20 +601,20 @@
 
 /* ===== Wordmarks ===== */
 .kh-wordmark-ar {
-  font-family: 'Rakkas', var(--brand-font-body);
+  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
   font-size: clamp(110px, 24vw, 360px);
   line-height: 0.82;
   letter-spacing: -0.01em;
   color: var(--ink);
 }
 .kh-logo-ar {
-  font-family: 'Rakkas', var(--brand-font-body);
+  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
   font-weight: 400;
   line-height: 1;
 }
 .kh-wordmark-latin {
   font-family: var(--brand-font-heading);
-  font-weight: var(--brand-font-weight-black);
+  font-weight: 400;
   font-size: clamp(20px, 3.4vw, 44px);
   letter-spacing: 0.42em;
   color: var(--muted);
@@ -690,7 +691,7 @@
 .kh-show-card .kh-show-tag {
   position: absolute; top: 12px; left: 12px; z-index: 2;
   font-family: var(--brand-font-body); font-weight: 700; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--ink); background: var(--lime); padding: 4px 10px; border-radius: var(--brand-radius-sm);
+  color: var(--on-lime); background: var(--lime); padding: 4px 10px; border-radius: var(--brand-radius-sm);
 }
 .kh-show-card .kh-show-body { padding: var(--brand-sp-3); display: flex; justify-content: space-between; align-items: baseline; }
 .kh-show-card .kh-show-title { font-family: var(--brand-font-body); font-weight: 700; font-size: 16px; letter-spacing: 0.01em; color: var(--ink); }
@@ -816,7 +817,7 @@
 .kh-d-card .kh-d-tag {
   position: absolute; top: 12px; left: 12px; z-index: 2;
   font-family: var(--brand-font-body); font-weight: 700; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--ink); background: var(--lime); padding: 4px 10px; border-radius: var(--brand-radius-sm);
+  color: var(--on-lime); background: var(--lime); padding: 4px 10px; border-radius: var(--brand-radius-sm);
 }
 .kh-d-card .kh-d-body { padding: var(--brand-sp-3); display: flex; justify-content: space-between; align-items: baseline; }
 .kh-d-card .kh-d-title { font-family: var(--brand-font-body); font-weight: 700; font-size: 16px; color: var(--ink); }
@@ -837,7 +838,7 @@
 }
 .kh-d-coll:hover { border-color: var(--ink); }
 .kh-d-coll .kh-d-c-eyebrow { font-family: var(--brand-font-body); font-weight: 700; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-.kh-d-coll .kh-d-c-h { margin: 0; font-family: var(--brand-font-body); font-weight: 900; font-size: 34px; line-height: 1.1; color: var(--ink); }
+.kh-d-coll .kh-d-c-h { margin: 0; font-family: var(--brand-font-body); font-weight: 800; font-size: 34px; line-height: 1.1; color: var(--ink); }
 .kh-d-coll .kh-d-c-p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
 .kh-d-coll .kh-d-c-link { margin-top: auto; font-family: var(--brand-font-body); font-weight: 700; font-size: 13px; letter-spacing: 0.04em; color: var(--ink); align-self: flex-start; padding-bottom: 6px; background-image: var(--kh-zig-lime); background-repeat: no-repeat; background-position: 0 100%; background-size: 0% 5px; transition: background-size 0.3s ease; }
 .kh-d-coll:hover .kh-d-c-link { background-size: 100% 5px; }
@@ -850,8 +851,8 @@
   padding: var(--brand-sp-4);
   display: flex; flex-direction: column; gap: var(--brand-sp-3);
 }
-.kh-d-community .kh-d-badge { align-self: flex-start; font-family: var(--brand-font-body); font-weight: 700; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); background: var(--lime); padding: 4px 10px; border-radius: var(--brand-radius-sm); }
-.kh-d-community .kh-d-c-h { margin: 0; font-family: var(--brand-font-body); font-weight: 900; font-size: 22px; line-height: 1.15; color: var(--ink); }
+.kh-d-community .kh-d-badge { align-self: flex-start; font-family: var(--brand-font-body); font-weight: 700; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-lime); background: var(--lime); padding: 4px 10px; border-radius: var(--brand-radius-sm); }
+.kh-d-community .kh-d-c-h { margin: 0; font-family: var(--brand-font-body); font-weight: 800; font-size: 22px; line-height: 1.15; color: var(--ink); }
 .kh-d-community .kh-d-c-p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
 .kh-d-community .kh-d-cta { align-self: flex-start; background: var(--ink); color: var(--paper); font-family: var(--brand-font-body); font-weight: 700; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 18px; border-radius: var(--brand-radius-sm); cursor: pointer; transition: box-shadow 0.15s ease; border: 1px solid var(--ink); }
 .kh-d-community .kh-d-cta:hover { box-shadow: 0 0 0 3px var(--lime); }
@@ -860,9 +861,9 @@
 .kh-stamp {
   position: absolute;
   background: var(--lime);
-  color: var(--ink);
-  font-family: var(--brand-font-heading);
-  font-weight: var(--brand-font-weight-black);
+  color: var(--on-lime);
+  font-family: var(--brand-font-body);
+  font-weight: 800;
   font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -871,7 +872,7 @@
   box-shadow: var(--brand-shadow-md);
   transform: rotate(-8deg);
   z-index: 5;
-  border: 2px dashed var(--ink);
+  border: 2px dashed var(--on-lime);
   white-space: nowrap;
 }
 
@@ -936,15 +937,14 @@ a:hover > .kh-zig-draw,
 .kh-hero-title {
   font-family: var(--brand-font-heading);
   font-weight: 400;
-  text-transform: uppercase;
-  font-size: clamp(34px, 5.2vw, 66px);
-  line-height: 1.04;
-  letter-spacing: 0.005em;
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1.08;
+  letter-spacing: 0.01em;
   color: var(--ink);
   max-width: 18ch;
 }
 .kh-hero-title-ar {
-  font-family: 'Rakkas', var(--brand-font-body);
+  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
   text-transform: none;
   font-size: clamp(30px, 4.4vw, 54px);
   line-height: 1.25;
@@ -955,13 +955,12 @@ a:hover > .kh-zig-draw,
 .kh-section-title {
   font-family: var(--brand-font-heading);
   font-weight: 400;
-  text-transform: uppercase;
   font-size: clamp(26px, 3.4vw, 44px);
-  line-height: 1.05;
+  line-height: 1.1;
   color: var(--ink);
 }
 .kh-section-title-ar {
-  font-family: 'Rakkas', var(--brand-font-body);
+  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
   text-transform: none;
   line-height: 1.25;
 }
@@ -1062,7 +1061,7 @@ a:hover > .kh-zig-draw,
   top: 50%;
   inset-inline-end: -4%;
   transform: translateY(-50%) rotate(-3deg);
-  font-family: 'Rakkas', var(--brand-font-body);
+  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
   font-size: clamp(110px, 13vw, 190px);
   line-height: 1;
   color: transparent;
@@ -1084,8 +1083,7 @@ a:hover > .kh-zig-draw,
   position: relative;
   margin-top: 28px;
   font-family: var(--brand-font-heading);
-  font-weight: 800;
-  text-transform: uppercase;
+  font-weight: 400;
   font-size: clamp(40px, 5vw, 64px);
   line-height: 1;
   color: var(--ink);
@@ -1094,7 +1092,7 @@ a:hover > .kh-zig-draw,
 }
 .kh-world:hover .kh-world-name { transform: translateY(-4px) rotate(-0.5deg); }
 [dir="rtl"] .kh-world-name {
-  font-family: 'Rakkas', var(--brand-font-body);
+  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
   text-transform: none;
   font-weight: 400;
 }
@@ -1124,7 +1122,7 @@ a:hover > .kh-zig-draw,
   top: 22%;
   inset-inline-end: 8%;
   font-family: var(--brand-font-body);
-  font-weight: 900;
+  font-weight: 800;
   font-size: 13px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1271,7 +1269,6 @@ a:hover > .kh-zig-draw,
 }
 .kh-menu-word {
   font-family: var(--brand-font-heading);
-  text-transform: uppercase;
   font-size: clamp(34px, 9vw, 56px);
   line-height: 1;
   color: var(--ink);
@@ -1285,7 +1282,7 @@ a:hover > .kh-zig-draw,
 .kh-menu-item:hover .kh-menu-word,
 .kh-menu-item.active .kh-menu-word { background-size: 100% 7px; }
 [dir="rtl"] .kh-menu-word {
-  font-family: 'Rakkas', var(--brand-font-body);
+  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
   text-transform: none;
   background-position: 100% 100%;
 }
@@ -1305,6 +1302,129 @@ a:hover > .kh-zig-draw,
   border: none;
 }
 .kh-tooltip-cream .kh-tooltip-arrow { fill: var(--lime) !important; }
+
+/* ===== Photo hero — the visual IS the section ===== */
+.kh-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: calc(100svh - 72px);
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.kh-hero-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 28% 20%;
+}
+/* Scrim — heavy where the text sits, clear where the subject is */
+.kh-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to left, rgba(20, 17, 10, 0.92) 0%, rgba(20, 17, 10, 0.55) 38%, rgba(20, 17, 10, 0.08) 68%, rgba(20, 17, 10, 0) 100%);
+}
+.kh-hero-content {
+  position: relative;
+  z-index: 2;
+  direction: ltr; /* physical placement — the photo's negative space is fixed */
+  min-height: calc(100svh - 72px);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 48px 24px 120px;
+}
+@media (min-width: 640px) {
+  .kh-hero-content { padding: 64px 48px 120px; }
+}
+.kh-hero-block {
+  max-width: 520px;
+}
+[dir="rtl"] .kh-hero-block { direction: rtl; text-align: right; }
+[dir="rtl"] .kh-hero-block .kh-eyebrow::after { margin-inline-start: auto; margin-right: 0; }
+
+/* Drop chip — pinned bottom-left, frosted paper-dark glass */
+.kh-hero-chip {
+  position: absolute;
+  z-index: 3;
+  left: 16px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 16px;
+  background: rgba(20, 17, 10, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--brand-radius-sm);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.kh-hero-chip:hover { border-color: var(--lime); background: rgba(20, 17, 10, 0.85); }
+@media (min-width: 640px) {
+  .kh-hero-chip { left: 40px; bottom: 32px; }
+}
+
+/* Lime sticker stamp — rotated, slightly crooked on purpose */
+.kh-hero-stamp {
+  position: absolute;
+  z-index: 3;
+  top: 14%;
+  left: 6%;
+  display: none;
+  font-family: var(--brand-font-body);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--on-lime);
+  background: var(--lime);
+  padding: 10px 18px;
+  border-radius: var(--brand-radius-full);
+  border: 2px dashed var(--on-lime);
+  transform: rotate(-8deg);
+  box-shadow: var(--brand-shadow-lg);
+  pointer-events: none;
+}
+@media (min-width: 1024px) {
+  .kh-hero-stamp { display: inline-block; }
+}
+[dir="rtl"] .kh-hero-stamp { transform: rotate(8deg); }
+
+/* Color icon — bottom-right corner, half-off the frame */
+.kh-hero-icon {
+  position: absolute;
+  z-index: 3;
+  right: -18px;
+  bottom: -14px;
+  width: 84px;
+  height: 84px;
+  transform: rotate(10deg);
+  pointer-events: none;
+  display: none;
+}
+@media (min-width: 640px) {
+  .kh-hero-icon { display: block; }
+}
+
+/* Mobile: text drops to the bottom, scrim rises from below */
+@media (max-width: 1023px) {
+  .kh-hero { min-height: 92svh; }
+  .kh-hero-photo { object-position: 30% 15%; }
+  .kh-hero-scrim {
+    background: linear-gradient(to top, rgba(20, 17, 10, 0.95) 0%, rgba(20, 17, 10, 0.72) 34%, rgba(20, 17, 10, 0.15) 62%, rgba(20, 17, 10, 0.25) 100%);
+  }
+  .kh-hero-content {
+    min-height: 92svh;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding-bottom: 132px;
+  }
+  .kh-hero-block { max-width: 100%; }
+}
 
 /* RTL helpers */
 [dir="rtl"] .flip-x { transform: scaleX(-1); }
