@@ -93,11 +93,25 @@ export default function ProductPage() {
         <div>
           <span className="kh-eyebrow">{product.collection_name}</span>
           <h1 className="mt-2 font-heading text-3xl sm:text-5xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{name}</h1>
+          {product.phrase_ar && (
+            <p className="mt-3 text-2xl sm:text-3xl" style={{ fontFamily: "'Rakkas', var(--brand-font-body)", color: 'var(--ink)' }}>
+              {product.phrase_ar}
+            </p>
+          )}
           <div className="flex items-baseline gap-3 mt-4">
             <span className="font-heading text-2xl" style={{ fontFamily: 'var(--brand-font-heading)' }}>${product.price}</span>
             {product.compare_at_price && <span className="text-muted-foreground line-through">${product.compare_at_price}</span>}
           </div>
           <p className="mt-4 text-muted-foreground">{desc}</p>
+
+          {/* Spec chips — edition-card facts */}
+          <div className="mt-5 flex flex-wrap gap-2">
+            {[selectedColor && (lang === 'ar' ? selectedColor.name_ar : selectedColor.name_en), product.garment_style, product.fit_en].filter(Boolean).map((chip) => (
+              <span key={chip} className="kh-mono text-[10px] uppercase tracking-[0.14em] px-3 py-[6px]" style={{ border: '1px solid var(--line-strong)', borderRadius: 2, color: 'var(--ink)' }}>
+                {chip}
+              </span>
+            ))}
+          </div>
 
           <div className="mt-5 inline-flex items-center gap-2 bg-muted px-3 py-2 rounded-sm">
             <span className="kh-eyebrow !text-[10px]">{isPreorder ? t.product.preorder : t.product.ready}</span>
@@ -138,7 +152,7 @@ export default function ProductPage() {
               <button onClick={() => setQty((q) => q + 1)} className="w-11 h-12 text-lg" aria-label="Increase">+</button>
             </div>
             <button onClick={handleAdd} disabled={!canAdd} className="kh-btn-scribble flex-1 !justify-center">
-              {added ? '✓ Added' : t.product.addToCart}
+              {added ? '✓ Added' : (lang === 'ar' ? 'ضيفها عالخربشة ←' : 'Add to bag →')}
             </button>
             <button className="kh-btn-icon" aria-label="Save"><IconHeart size={20} /></button>
             <button className="kh-btn-icon" aria-label="Share"><IconShare size={20} /></button>
@@ -180,6 +194,27 @@ export default function ProductPage() {
             <span className="font-heading uppercase tracking-wide" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.product.madeIn}</span>
           </div>
         </div>
+      </div>
+
+      {/* THE JOKE / THE PIECE — editorial footnotes */}
+      <div className="mt-14 grid gap-px sm:grid-cols-2" style={{ background: 'var(--line)', border: '1px solid var(--line)' }}>
+        <section style={{ background: 'var(--paper)' }} className="p-6 sm:p-8">
+          <span className="kh-eyebrow">{lang === 'ar' ? 'النكتة' : 'The joke'}</span>
+          <p className="mt-4 text-base leading-relaxed" style={{ color: 'var(--ink)' }}>
+            {lang === 'ar'
+              ? (product.description_ar || desc)
+              : (product.description_en || desc)}
+          </p>
+        </section>
+        <section style={{ background: 'var(--paper)' }} className="p-6 sm:p-8">
+          <span className="kh-eyebrow">{lang === 'ar' ? 'القطعة' : 'The piece'}</span>
+          <ul className="mt-4 space-y-2 text-sm" style={{ color: 'var(--muted)' }}>
+            {product.fit_en && <li><strong style={{ color: 'var(--ink)' }}>{t.product.fit}:</strong> {product.fit_en}</li>}
+            {product.placement && <li><strong style={{ color: 'var(--ink)' }}>{t.product.print}:</strong> {product.placement}</li>}
+            {(product.care_en || product.care_ar) && <li><strong style={{ color: 'var(--ink)' }}>{t.product.care}:</strong> {lang === 'ar' ? (product.care_ar || product.care_en) : product.care_en}</li>}
+            {product.estimated_dispatch_window && <li><strong style={{ color: 'var(--ink)' }}>{t.product.estDispatch}:</strong> {product.estimated_dispatch_window}</li>}
+          </ul>
+        </section>
       </div>
     </div>
   );
