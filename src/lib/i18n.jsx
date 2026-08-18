@@ -22,7 +22,7 @@ const dictionaries = {
       newDropSub: 'Preorder closes Sep 15. Estimated dispatch late September.',
       customEyebrow: '3a Zaw2ak',
       customTitle: 'Your line. Our pens. Zero spoilers.',
-      customSub: 'Send us the phrase your family can’t stop saying — with the story behind it. We design it in secret, print it, and you meet it at the door. Don’t love it? Full refund, no hard feelings.',
+      customSub: 'Send us the phrase your family can’t stop saying — with the story behind it. We turn it into a Kharbesh piece, and you approve the design before we print.',
       customCta: 'Kharbesh it my way',
       communityEyebrow: 'Community',
       communityTitle: 'Your teta said it first.',
@@ -108,7 +108,7 @@ const dictionaries = {
     },
     custom: {
       title: 'Kharbesh 3a Zaw2ak',
-      sub: 'Send the line, add the context (who says it, when, why it’s funny). We design it in secret and print it — you see it for the first time at your door. Don’t love it? Full refund.',
+      sub: 'Send the line, add the context (who says it, when, why it’s funny). We design it as a Kharbesh piece — and you approve the artwork before anything gets printed.',
       phrase: 'The phrase',
       phraseHelp: 'The exact words you want printed.',
       story: 'The story',
@@ -151,7 +151,7 @@ const dictionaries = {
         { q: 'Can I cancel a preorder?', a: 'Yes, until the preorder window closes. After that, blanks are ordered and cancellation isn’t possible — but you can request an exchange per our policy.' },
         { q: 'How do sizes run?', a: 'Each garment lists its fit and measurements on the product page. Oversized tees run boxy; classic tees run true to size.' },
         { q: 'Do you ship outside Lebanon?', a: 'Yes. Shipping is calculated at checkout based on your destination. Duties and taxes may apply.' },
-        { q: 'What is 3a Zaw2ak?', a: 'A custom order with a twist. Send us your phrase and the story behind it — we design it in secret and print it. You see the design for the first time at your door. Don’t love it? Full refund.' },
+        { q: 'What is 3a Zaw2ak?', a: 'A custom order, your way. Send us your phrase and the story behind it — we turn it into a Kharbesh design, you approve the artwork, then we print.' },
       ],
     },
     contact: {
@@ -185,7 +185,7 @@ const dictionaries = {
       newDropSub: 'الطلب المسبق بيقفل ١٥ أيلول. التسليم المتوقع أواخر أيلول.',
       customEyebrow: 'على ذوقك',
       customTitle: 'جملتك. أقلامنا. بلا حرق.',
-      customSub: 'ابعتلنا الجملة اللي بيتكن ما بيسكتوا عنها — مع حكايتها. منصمّمها بالسر، منطبعها، وبتتعرّف عليها عند الباب. ما عجبتك؟ مصاريك بيرجعوا، بلا زعل.',
+      customSub: 'ابعتلنا الجملة اللي بيتكن ما بيسكتوا عنها — مع حكايتها. منحوّلها لقطعة خربش، وبتشوف التصميم وتوافق عليه قبل الطباعة.',
       customCta: 'خربشها ع ذوقي',
       communityEyebrow: 'المجتمع',
       communityTitle: 'تيتك قالتها أول.',
@@ -271,7 +271,7 @@ const dictionaries = {
     },
     custom: {
       title: 'خربش على ذوقك',
-      sub: 'ابعت الجملة، وزيدنا السياق (مين بيقولها، متى، وليش بتضحّك). منصمّمها بالسر ومنطبعها — أول مرة بتشوفها عند باب بيتك. ما عجبتك؟ مصاريك بيرجعوا.',
+      sub: 'ابعت الجملة، وزيدنا السياق (مين بيقولها، متى، وليش بتضحّك). منصمّمها كقطعة خربش — وبتشوف الرسمة وتوافق عليها قبل ما نطبع.',
       phrase: 'الجملة',
       phraseHelp: 'الكلمات بالضبط اللي بدك يطبعوها.',
       story: 'الحكاية',
@@ -314,7 +314,7 @@ const dictionaries = {
         { q: 'فيني ألغي طلب مسبق؟', a: 'إيه، لنقفل النافذة. بعدها منكون طلبنا القماش وما بيصير إلغاء — بس فيك تطلب تبديل حسب السياسة.' },
         { q: 'كيف المقاسات؟', a: 'كل قطعة عليها قصّتها ومقاساتها بصفحة المنتج. التيشيرت الواسع بيطلع بوكس؛ الكلاسيك بحجمه الطبيعي.' },
         { q: 'بتشحنوا خارج لبنان؟', a: 'إيه. الشحن بيحسب عند الدفع حسب وجهتك. ممكن في رسوم جمركية.' },
-        { q: 'شو هو على ذوقك؟', a: 'طلب مخصص بس بمفاجأة. بعتلنا جملتك وحكايتها — منصمّمها بالسر ومنطبعها. أول مرة بتشوف التصميم عند باب بيتك. ما عجبك؟ مصريك بيرجع.' },
+        { q: 'شو هو على ذوقك؟', a: 'طلب مخصص على ذوقك. بعتلنا جملتك وحكايتها — منحوّلها لتصميم خربش، بتشوفه وتوافق عليه، وبعدين منطبع.' },
       ],
     },
     contact: {
