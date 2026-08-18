@@ -66,7 +66,7 @@ export default function ReadItTwice() {
               </div>
 
               <div className="p-5 sm:p-6 flex flex-col flex-1">
-                <h3 className="text-xl sm:text-2xl" style={{ fontFamily: "'Rakkas', var(--brand-font-body)", color: 'var(--ink)' }}>
+                <h3 className="text-xl sm:text-2xl" style={{ fontFamily: "'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif", color: 'var(--ink)' }}>
                   {lang === 'ar' ? e.phrase.ar : e.phrase.en}
                 </h3>
 

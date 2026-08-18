@@ -45,35 +45,35 @@ export default function Zaw2akBand() {
         <div className="grid gap-10 md:grid-cols-2 items-center">
           <div>
             <span className="kh-eyebrow">{copy.eyebrow}</span>
-            <h2 className="mt-4 text-3xl sm:text-4xl" style={{ fontFamily: "'Rakkas', var(--brand-font-body)", color: 'var(--paper)', lineHeight: 1.3 }}>
+            <h2 className="mt-4 text-3xl sm:text-4xl" style={{ fontFamily: "'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif", color: 'var(--paper)', lineHeight: 1.3 }}>
               {copy.title}
             </h2>
-            <p className="mt-4 max-w-md text-sm sm:text-base" style={{ color: 'rgba(251,246,235,.62)' }}>{copy.sub}</p>
-            <p className="kh-mono mt-5 text-[11px] uppercase tracking-[0.16em]" style={{ color: 'rgba(251,246,235,.5)' }}>
+            <p className="mt-4 max-w-md text-sm sm:text-base" style={{ color: 'rgba(23,20,14,.62)' }}>{copy.sub}</p>
+            <p className="kh-mono mt-5 text-[11px] uppercase tracking-[0.16em]" style={{ color: 'rgba(23,20,14,.55)' }}>
               {copy.approve}
             </p>
             <Link to="/custom" className="kh-d-btn-brick mt-7 !text-[14px]">{copy.cta}</Link>
           </div>
 
           {/* Studio proof card — the one lime spark is the tape */}
-          <div className="relative kh-proof" style={{ border: '1px solid rgba(251,246,235,.18)', borderRadius: 2 }}>
+          <div className="relative kh-proof" style={{ border: '1px solid rgba(23,20,14,.18)', borderRadius: 2 }}>
             <span className="kh-proof-tape" aria-hidden="true" />
-            <span className="kh-mono block text-[10px] uppercase tracking-[0.2em]" style={{ color: 'rgba(251,246,235,.45)' }}>
+            <span className="kh-mono block text-[10px] uppercase tracking-[0.2em]" style={{ color: 'rgba(23,20,14,.45)' }}>
               {copy.proofLabel}
             </span>
             <div className="min-h-[120px] flex items-center justify-center py-8">
               <span
                 key={`${lang}-${idx}`}
                 className="kh-hero-line text-2xl sm:text-4xl text-center leading-snug px-4"
-                style={{ fontFamily: "'Rakkas', var(--brand-font-body)", color: 'var(--paper)' }}
+                style={{ fontFamily: "'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif", color: 'var(--paper)' }}
                 aria-live="polite"
               >
                 {lang === 'ar' ? PROOFS[idx].ar : PROOFS[idx].en}
               </span>
             </div>
-            <div className="flex items-center justify-between" style={{ borderTop: '1px solid rgba(251,246,235,.12)', paddingTop: 14 }}>
+            <div className="flex items-center justify-between" style={{ borderTop: '1px solid rgba(23,20,14,.12)', paddingTop: 14 }}>
               <DotsMark />
-              <span className="kh-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: 'rgba(251,246,235,.4)' }}>
+              <span className="kh-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: 'rgba(23,20,14,.4)' }}>
                 {String(idx + 1).padStart(2, '0')} / {String(PROOFS.length).padStart(2, '0')}
               </span>
             </div>

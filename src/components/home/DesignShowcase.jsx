@@ -32,7 +32,7 @@ export default function DesignShowcase() {
               <div className="flex items-center justify-between px-4 pt-4">
                 <span
                   className="text-[10px] font-bold uppercase"
-                  style={{ fontFamily: 'var(--brand-font-body)', letterSpacing: '.12em', color: 'var(--ink)', background: 'var(--lime)', padding: '3px 8px', borderRadius: 2 }}
+                  style={{ fontFamily: 'var(--brand-font-body)', letterSpacing: '.12em', color: 'var(--on-lime)', background: 'var(--lime)', padding: '3px 8px', borderRadius: 2 }}
                 >
                   {lang === 'ar' ? d.world_ar : d.world_en}
                 </span>
