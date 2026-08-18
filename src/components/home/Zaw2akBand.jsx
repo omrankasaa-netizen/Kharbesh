@@ -45,18 +45,18 @@ export default function Zaw2akBand() {
         <div className="grid gap-10 md:grid-cols-2 items-center">
           <div>
             <span className="kh-eyebrow">{copy.eyebrow}</span>
-            <h2 className="mt-4 text-3xl sm:text-4xl" style={{ fontFamily: "'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif", color: 'var(--paper)', lineHeight: 1.3 }}>
+            <h2 className="mt-4 text-3xl sm:text-4xl" style={{ fontFamily: "'Rakkas', 'IBM Plex Sans Arabic', sans-serif", color: 'var(--paper)', lineHeight: 1.3 }}>
               {copy.title}
             </h2>
-            <p className="mt-4 max-w-md text-sm sm:text-base" style={{ color: 'rgba(23,20,14,.62)' }}>{copy.sub}</p>
-            <p className="kh-mono mt-5 text-[11px] uppercase tracking-[0.16em]" style={{ color: 'rgba(23,20,14,.55)' }}>
+            <p className="mt-4 max-w-md text-sm sm:text-base" style={{ color: 'rgba(251,246,235,.72)' }}>{copy.sub}</p>
+            <p className="kh-mono mt-5 text-[11px] uppercase tracking-[0.16em]" style={{ color: 'rgba(251,246,235,.55)' }}>
               {copy.approve}
             </p>
             <Link to="/custom" className="kh-d-btn-brick mt-7 !text-[14px]">{copy.cta}</Link>
           </div>
 
-          {/* Studio proof card — the one lime spark is the tape */}
-          <div className="relative kh-proof" style={{ border: '1px solid rgba(23,20,14,.18)', borderRadius: 2 }}>
+          {/* Studio proof card — a paper note pinned to the dark wall, lime tape holds it up */}
+          <div className="relative kh-proof" style={{ background: 'var(--paper)', border: '1px solid rgba(23,20,14,.12)', borderRadius: 2, boxShadow: '0 18px 40px rgba(0,0,0,.35)' }}>
             <span className="kh-proof-tape" aria-hidden="true" />
             <span className="kh-mono block text-[10px] uppercase tracking-[0.2em]" style={{ color: 'rgba(23,20,14,.45)' }}>
               {copy.proofLabel}
@@ -65,7 +65,7 @@ export default function Zaw2akBand() {
               <span
                 key={`${lang}-${idx}`}
                 className="kh-hero-line text-2xl sm:text-4xl text-center leading-snug px-4"
-                style={{ fontFamily: "'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif", color: 'var(--paper)' }}
+                style={{ fontFamily: "'Rakkas', 'IBM Plex Sans Arabic', sans-serif", color: 'var(--ink)' }}
                 aria-live="polite"
               >
                 {lang === 'ar' ? PROOFS[idx].ar : PROOFS[idx].en}

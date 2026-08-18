@@ -119,7 +119,7 @@ export default function Hero() {
           {copy.dropTag} — {lead.code}
         </span>
         <span className="flex items-baseline gap-2">
-          <span style={{ fontFamily: "'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>
+          <span style={{ fontFamily: "'Rakkas', 'IBM Plex Sans Arabic', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>
             {lang === 'ar' ? lead.title_ar : lead.title_en}
           </span>
           <span className="kh-mono text-[12px]" style={{ color: 'var(--ink)' }}>

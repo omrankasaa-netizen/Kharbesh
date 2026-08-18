@@ -28,66 +28,66 @@
 
 @layer base {
   :root {
-    --background: 40 30% 5%;
-    --foreground: 44 45% 91%;
-    --card: 38 26% 9%;
-    --card-foreground: 44 45% 91%;
-    --popover: 38 26% 9%;
-    --popover-foreground: 44 45% 91%;
-    --primary: 44 45% 91%;
-    --primary-foreground: 40 30% 5%;
-    --secondary: 38 18% 15%;
-    --secondary-foreground: 44 45% 91%;
-    --accent: 64 89% 49%;
-    --accent-foreground: 40 30% 5%;
-    --muted: 38 18% 15%;
-    --muted-foreground: 40 14% 58%;
-    --destructive: 8 62% 53%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 40 14% 20%;
-    --input: 40 12% 24%;
-    --ring: 64 89% 49%;
+    --background: 41 67% 95%;
+    --foreground: 40 24% 7%;
+    --card: 44 47% 90%;
+    --card-foreground: 40 24% 7%;
+    --popover: 44 47% 90%;
+    --popover-foreground: 40 24% 7%;
+    --primary: 40 24% 7%;
+    --primary-foreground: 41 67% 95%;
+    --secondary: 45 42% 86%;
+    --secondary-foreground: 40 24% 7%;
+    --accent: 67 91% 49%;
+    --accent-foreground: 40 24% 7%;
+    --muted: 45 42% 86%;
+    --muted-foreground: 44 13% 38%;
+    --destructive: 5 59% 44%;
+    --destructive-foreground: 41 67% 95%;
+    --border: 46 28% 79%;
+    --input: 46 28% 79%;
+    --ring: 67 91% 49%;
     --radius: 6px;
-    --font-heading: 'Modern Antiqua', 'Playpen Sans Arabic', 'Anton', serif;
-    --font-body: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+    --font-heading: 'Anton', 'Rakkas', sans-serif;
+    --font-body: 'IBM Plex Sans Arabic', sans-serif;
     --font-heading-line-height: 1.05;
     --font-heading-letter-spacing: 0.005em;
     --font-body-line-height: 1.5;
   }
 
   :root {
-    /* Kharbesh After Dark — the same paper system, lights off */
-    --paper: #14110A;
-    --paper-2: #1C1710;
-    --paper-3: #262017;
-    --ink: #F5EFE0;
-    --ink-2: #E7DFC9;
+    /* Kharbesh Paper — cream stock, black ink, one lime accent */
+    --paper: #FBF6EB;
+    --paper-2: #F2ECDB;
+    --paper-3: #EAE2CB;
+    --ink: #17140E;
+    --ink-2: #2B2619;
     --lime: #D4ED0B;
-    --on-lime: #14110A;
-    --brick: #D0523F;
-    --line: rgba(245, 239, 224, 0.14);
-    --line-strong: rgba(245, 239, 224, 0.38);
-    --muted: #A79E89;
-    --muted-2: #7E7663;
+    --on-lime: #17140E;
+    --brick: #B23A2E;
+    --line: rgba(23, 20, 14, 0.12);
+    --line-strong: rgba(23, 20, 14, 0.32);
+    --muted: #6E6754;
+    --muted-2: #9C9480;
 
-    /* Legacy aliases — same names, flipped values */
-    --brand-primary: #F5EFE0;
-    --brand-on-primary: #14110A;
-    --brand-secondary: #1C1710;
+    /* Legacy aliases — same names, paper values */
+    --brand-primary: #17140E;
+    --brand-on-primary: #FBF6EB;
+    --brand-secondary: #F2ECDB;
     --brand-accent: #D4ED0B;
-    --brand-background: #14110A;
-    --brand-surface: #262017;
-    --brand-text: #F5EFE0;
-    --brand-muted: #1C1710;
-    --brand-muted-foreground: #A79E89;
-    --brand-border: rgba(245, 239, 224, 0.14);
-    --brand-destructive: #D0523F;
-    --brand-brick: #D0523F;
+    --brand-background: #FBF6EB;
+    --brand-surface: #EAE2CB;
+    --brand-text: #17140E;
+    --brand-muted: #F2ECDB;
+    --brand-muted-foreground: #6E6754;
+    --brand-border: rgba(23, 20, 14, 0.12);
+    --brand-destructive: #B23A2E;
+    --brand-brick: #B23A2E;
     --brand-olive: #7A7A46;
     --brand-cobalt: #1E86A6;
 
-    --brand-font-heading: 'Modern Antiqua', 'Playpen Sans Arabic', 'Anton', serif;
-    --brand-font-body: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+    --brand-font-heading: 'Anton', 'Rakkas', sans-serif;
+    --brand-font-body: 'IBM Plex Sans Arabic', sans-serif;
     --brand-font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
     --brand-font-heading-line-height: 1.05;
     --brand-font-heading-letter-spacing: 0.01em;
@@ -601,14 +601,14 @@
 
 /* ===== Wordmarks ===== */
 .kh-wordmark-ar {
-  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+  font-family: 'Rakkas', 'IBM Plex Sans Arabic', sans-serif;
   font-size: clamp(110px, 24vw, 360px);
   line-height: 0.82;
   letter-spacing: -0.01em;
   color: var(--ink);
 }
 .kh-logo-ar {
-  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+  font-family: 'Rakkas', 'IBM Plex Sans Arabic', sans-serif;
   font-weight: 400;
   line-height: 1;
 }
@@ -944,7 +944,7 @@ a:hover > .kh-zig-draw,
   max-width: 18ch;
 }
 .kh-hero-title-ar {
-  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+  font-family: 'Rakkas', 'IBM Plex Sans Arabic', sans-serif;
   text-transform: none;
   font-size: clamp(30px, 4.4vw, 54px);
   line-height: 1.25;
@@ -960,7 +960,7 @@ a:hover > .kh-zig-draw,
   color: var(--ink);
 }
 .kh-section-title-ar {
-  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+  font-family: 'Rakkas', 'IBM Plex Sans Arabic', sans-serif;
   text-transform: none;
   line-height: 1.25;
 }
@@ -1061,7 +1061,7 @@ a:hover > .kh-zig-draw,
   top: 50%;
   inset-inline-end: -4%;
   transform: translateY(-50%) rotate(-3deg);
-  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+  font-family: 'Rakkas', 'IBM Plex Sans Arabic', sans-serif;
   font-size: clamp(110px, 13vw, 190px);
   line-height: 1;
   color: transparent;
@@ -1092,7 +1092,7 @@ a:hover > .kh-zig-draw,
 }
 .kh-world:hover .kh-world-name { transform: translateY(-4px) rotate(-0.5deg); }
 [dir="rtl"] .kh-world-name {
-  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+  font-family: 'Rakkas', 'IBM Plex Sans Arabic', sans-serif;
   text-transform: none;
   font-weight: 400;
 }
@@ -1282,7 +1282,7 @@ a:hover > .kh-zig-draw,
 .kh-menu-item:hover .kh-menu-word,
 .kh-menu-item.active .kh-menu-word { background-size: 100% 7px; }
 [dir="rtl"] .kh-menu-word {
-  font-family: 'Playpen Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+  font-family: 'Rakkas', 'IBM Plex Sans Arabic', sans-serif;
   text-transform: none;
   background-position: 100% 100%;
 }
@@ -1323,7 +1323,7 @@ a:hover > .kh-zig-draw,
 .kh-hero-scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to left, rgba(20, 17, 10, 0.92) 0%, rgba(20, 17, 10, 0.55) 38%, rgba(20, 17, 10, 0.08) 68%, rgba(20, 17, 10, 0) 100%);
+  background: linear-gradient(to left, rgba(23, 20, 14, 0.92) 0%, rgba(23, 20, 14, 0.55) 38%, rgba(23, 20, 14, 0.08) 68%, rgba(23, 20, 14, 0) 100%);
 }
 .kh-hero-content {
   position: relative;
@@ -1356,14 +1356,14 @@ a:hover > .kh-zig-draw,
   flex-direction: column;
   gap: 3px;
   padding: 12px 16px;
-  background: rgba(20, 17, 10, 0.72);
+  background: rgba(23, 20, 14, 0.72);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--line-strong);
   border-radius: var(--brand-radius-sm);
   transition: border-color 0.2s ease, background 0.2s ease;
 }
-.kh-hero-chip:hover { border-color: var(--lime); background: rgba(20, 17, 10, 0.85); }
+.kh-hero-chip:hover { border-color: var(--lime); background: rgba(23, 20, 14, 0.85); }
 @media (min-width: 640px) {
   .kh-hero-chip { left: 40px; bottom: 32px; }
 }
@@ -1415,7 +1415,7 @@ a:hover > .kh-zig-draw,
   .kh-hero { min-height: 92svh; }
   .kh-hero-photo { object-position: 30% 15%; }
   .kh-hero-scrim {
-    background: linear-gradient(to top, rgba(20, 17, 10, 0.95) 0%, rgba(20, 17, 10, 0.72) 34%, rgba(20, 17, 10, 0.15) 62%, rgba(20, 17, 10, 0.25) 100%);
+    background: linear-gradient(to top, rgba(23, 20, 14, 0.95) 0%, rgba(23, 20, 14, 0.72) 34%, rgba(23, 20, 14, 0.15) 62%, rgba(23, 20, 14, 0.25) 100%);
   }
   .kh-hero-content {
     min-height: 92svh;
