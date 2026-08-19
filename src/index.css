@@ -121,6 +121,8 @@
 
     /* Screen-print grain -- fine noise texture at low opacity so surfaces read as inked, not flat-digital */
     --kh-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    /* Softer grain for button surfaces -- same noise, much lower alpha so button text stays crisp and legible */
+    --kh-grain-btn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     /* Halftone dot field -- small repeating dots for print-poster texture blocks */
     --kh-halftone: radial-gradient(circle, currentColor 1.2px, transparent 1.3px);
   }
@@ -164,7 +166,7 @@
     color: var(--paper);
     background: var(--ink);
     border: 1px solid var(--ink);
-    border-radius: var(--brand-radius-sm);
+    border-radius: 3px 16px 3px 16px;
     padding: 14px 28px;
     white-space: nowrap;
     cursor: pointer;
@@ -190,11 +192,11 @@
     line-height: 1;
     color: var(--paper);
     background: var(--ink);
-    background-image: var(--kh-grain);
+    background-image: var(--kh-grain-btn);
     background-size: auto, 140px 140px;
     background-blend-mode: normal, overlay;
     border: 1px solid var(--ink);
-    border-radius: var(--brand-radius-sm);
+    border-radius: 3px 18px 3px 18px;
     padding: 15px 30px 21px;
     white-space: nowrap;
     cursor: pointer;
@@ -236,10 +238,11 @@
   .kh-btn-mark-brick {
     color: var(--on-lime);
     background: var(--lime);
-    background-image: var(--kh-grain);
+    background-image: var(--kh-grain-btn);
     background-size: auto, 140px 140px;
     background-blend-mode: normal, overlay;
     border: 1px solid var(--on-lime);
+    border-radius: 3px 18px 3px 18px;
     box-shadow: 4px 4px 0 0 var(--ink);
   }
   .kh-btn-mark-brick::after { background-image: var(--kh-zig-paper); background-size: 100% 100%; opacity: 0.7; }
@@ -256,7 +259,7 @@
     color: var(--ink);
     background: var(--paper-2);
     border: 1px solid var(--line);
-    border-radius: var(--brand-radius-sm);
+    border-radius: 3px 16px 3px 16px;
     padding: 14px 28px;
     white-space: nowrap;
     cursor: pointer;
@@ -281,7 +284,7 @@
     color: var(--ink);
     background: transparent;
     border: 1px solid var(--line-strong);
-    border-radius: var(--brand-radius-sm);
+    border-radius: 3px 16px 3px 16px;
     padding: 13px 27px 15px;
     white-space: nowrap;
     cursor: pointer;
@@ -516,44 +519,77 @@
     color: var(--ink);
   }
 
-  /* ===== Collection tile ===== */
+  /* ===== Collection tile — each world gets its own accent color, oversized index numeral, and icon glyph ===== */
   .kh-card-collection {
     position: relative;
     font-family: var(--brand-font-body);
     background: var(--paper-3);
     border: 1px solid var(--line);
-    border-radius: var(--brand-radius-sm);
+    border-radius: 3px 22px 3px 22px;
     padding: var(--brand-sp-4);
     display: flex;
     flex-direction: column;
     gap: var(--brand-sp-2);
     transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-    min-height: 240px;
+    min-height: 280px;
     box-shadow: 4px 4px 0 0 var(--line);
     overflow: hidden;
+    isolation: isolate;
   }
   .kh-card-collection::before {
     content: "";
     position: absolute;
     top: 0;
     right: 0;
-    width: 64px;
-    height: 64px;
+    width: 100px;
+    height: 100px;
     background-image: var(--kh-halftone);
     background-size: 8px 8px;
-    color: var(--lime);
-    opacity: 0.22;
+    color: var(--kh-world-accent, var(--lime));
+    opacity: 0.28;
     mask-image: radial-gradient(circle at 100% 0%, black, transparent 75%);
     -webkit-mask-image: radial-gradient(circle at 100% 0%, black, transparent 75%);
     pointer-events: none;
   }
-  .kh-card-collection:hover {
-    border-color: var(--ink);
-    transform: translate(-2px, -2px);
-    box-shadow: 6px 6px 0 0 var(--lime);
+  .kh-card-collection::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-top: 4px solid var(--kh-world-accent, var(--lime));
+    border-radius: 3px 22px 0 0;
+    pointer-events: none;
   }
-  .kh-card-collection .kh-eyebrow { color: var(--muted); }
+  .kh-card-collection:hover {
+    border-color: var(--kh-world-accent, var(--ink));
+    transform: translate(-3px, -3px);
+    box-shadow: 7px 7px 0 0 var(--kh-world-accent, var(--lime));
+  }
+  .kh-card-collection-index {
+    position: absolute;
+    top: -6px;
+    right: 14px;
+    z-index: -1;
+    font-family: var(--brand-font-heading);
+    font-weight: var(--brand-font-weight-black);
+    font-size: 128px;
+    line-height: 1;
+    color: var(--kh-world-accent, var(--lime));
+    opacity: 0.14;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .kh-card-collection:hover .kh-card-collection-index { opacity: 0.24; transform: translateY(-4px); }
+  .kh-card-collection-icon {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    color: var(--kh-world-accent, var(--lime));
+    margin-bottom: 2px;
+  }
+  .kh-card-collection-icon svg { width: 100%; height: 100%; }
+  .kh-card-collection .kh-eyebrow { position: relative; color: var(--muted); }
   .kh-card-collection .kh-h {
+    position: relative;
     margin: 0;
     font-family: var(--brand-font-body);
     font-weight: var(--brand-font-weight-black);
@@ -562,12 +598,14 @@
     color: var(--ink);
   }
   .kh-card-collection .kh-p {
+    position: relative;
     margin: 0;
     font-size: 13px;
     line-height: 1.5;
     color: var(--muted);
   }
   .kh-card-collection .kh-link {
+    position: relative;
     margin-top: auto;
     font-family: var(--brand-font-body);
     font-weight: 700;
@@ -576,13 +614,13 @@
     color: var(--ink);
     align-self: flex-start;
     padding-bottom: 6px;
-    background-image: var(--kh-zig-lime);
+    background-image: linear-gradient(var(--kh-world-accent, var(--lime)), var(--kh-world-accent, var(--lime)));
     background-repeat: no-repeat;
     background-position: 0 100%;
-    background-size: 0% 5px;
+    background-size: 0% 3px;
     transition: background-size 0.3s ease;
   }
-  .kh-card-collection:hover .kh-link { background-size: 100% 5px; }
+  .kh-card-collection:hover .kh-link { background-size: 100% 3px; }
 
   /* ===== Community tile — dashed lime, the one loud tile ===== */
   .kh-card-community {

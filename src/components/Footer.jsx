@@ -72,7 +72,21 @@ export default function Footer() {
 
         <div className="mt-8 pt-6 flex flex-col sm:flex-row justify-between gap-2 text-xs" style={{ borderTop: `1px solid ${line}`, color: 'rgba(251,246,235,.45)' }}>
           <span>© {new Date().getFullYear()} Kharbesh. {t.footer.rights}</span>
-          <span>لبسك بيحكي عنك — Kharbesh it your way. <Link to="/login" aria-label="Admin login" className="opacity-20 hover:opacity-80 transition-opacity select-none">·</Link></span>
+          <span className="inline-flex items-center gap-2">
+            لبسك بيحكي عنك — Kharbesh it your way.
+            <Link
+              to="/login"
+              aria-label="Admin login"
+              title="Admin"
+              className="inline-flex items-center justify-center opacity-15 hover:opacity-90 hover:text-[#D4ED0B] transition-opacity select-none"
+              style={{ width: 16, height: 16 }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="5" y="11" width="14" height="10" rx="2" />
+                <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+              </svg>
+            </Link>
+          </span>
         </div>
       </div>
     </footer>
