@@ -55,7 +55,7 @@ export default function CollectionCard({ collection }) {
     >
       <span className="kh-card-collection-index" aria-hidden="true">{flavor.index}</span>
       {flavor.icon && <span className="kh-card-collection-icon">{flavor.icon}</span>}
-      <span className="kh-eyebrow">KHARBESH WORLD</span>
+      <span className="kh-eyebrow">3ALAM KHARBESH</span>
       <h3 className="kh-h">{name}</h3>
       <p className="kh-p">{desc}</p>
       <span className="kh-link">{flavor.cta}</span>

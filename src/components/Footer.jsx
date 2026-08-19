@@ -15,10 +15,10 @@ export default function Footer() {
           <div className="md:col-span-2">
             <img src={BRAND_ASSETS.horizontalWhite} alt="Kharbesh" style={{ height: 30, width: 'auto', display: 'block' }} />
             <p className="mt-5 max-w-sm text-sm" style={{ color: muted }}>
-              لبسك بيحكي عنك — Kharbesh it your way.
+              {lang === 'ar' ? 'لبسك بيحكي عنك — Kharbesh it your way.' : 'Labsak byehki 3annak — Kharbesh it your way.'}
             </p>
             <p className="mt-2 text-xs" style={{ color: 'rgba(251,246,235,.45)' }}>
-              {lang === 'ar' ? 'فكر، مصنوع ومطبوع في لبنان.' : 'Thought, produced & printed in Lebanon.'}
+              {lang === 'ar' ? 'فكر، مصنوع ومطبوع في لبنان.' : 'Mfakkar fiha, m3amle, w matbou3a fi Lebnan.'}
             </p>
             <DotsMark lime className="mt-6" />
           </div>
@@ -73,7 +73,7 @@ export default function Footer() {
         <div className="mt-8 pt-6 flex flex-col sm:flex-row justify-between gap-2 text-xs" style={{ borderTop: `1px solid ${line}`, color: 'rgba(251,246,235,.45)' }}>
           <span>© {new Date().getFullYear()} Kharbesh. {t.footer.rights}</span>
           <span className="inline-flex items-center gap-2">
-            لبسك بيحكي عنك — Kharbesh it your way.
+            {lang === 'ar' ? 'لبسك بيحكي عنك — Kharbesh it your way.' : 'Labsak byehki 3annak — Kharbesh it your way.'}
             <Link
               to="/login"
               aria-label="Admin login"

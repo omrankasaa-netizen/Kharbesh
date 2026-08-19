@@ -66,6 +66,8 @@
     --lime: #D4ED0B;
     --on-lime: #17140E;
     --brick: #C2453A;
+    --plum: #B79BE0;
+    --amber: #E8A33D;
     --line: rgba(245, 239, 221, 0.14);
     --line-strong: rgba(245, 239, 221, 0.30);
     --muted: #A79E86;
@@ -868,7 +870,7 @@
   letter-spacing: 0.06em;
   font-size: 15px;
   line-height: 1;
-  color: var(--ink);
+  color: var(--on-lime);
   background: var(--lime);
   border: 1px solid var(--lime);
   border-radius: var(--brand-radius-sm);
@@ -1168,18 +1170,72 @@ a:hover > .kh-zig-draw,
   .kh-piece:hover .kh-piece-back { opacity: 1; }
 }
 
-/* ===== Worlds — typography-led entry cards, one micro-action each ===== */
+/* ===== Worlds — bento layout, one accent color + shape per world, one micro-action each ===== */
 .kh-world {
   position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--paper);
-  padding: clamp(24px, 3vw, 40px);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  padding: clamp(28px, 3.2vw, 46px);
   min-height: 300px;
   overflow: hidden;
-  transition: background 0.25s ease;
+  transition: background 0.25s ease, border-color 0.25s ease;
 }
-.kh-world:hover { background: var(--paper-3); }
+.kh-world::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 5px;
+  background: var(--world-accent, var(--lime));
+}
+.kh-world:hover { background: var(--paper-3); border-color: var(--world-accent, var(--line-strong)); }
+
+/* Bento size variants — the four worlds no longer sit in a uniform grid */
+.kh-world-lg { min-height: 380px; }
+
+/* Tab shape — rounded off on one corner only, like a torn ticket stub */
+.kh-world-tab { border-radius: 3px 30px 3px 3px; }
+
+/* Notch shape — top-right corner peels back to reveal the page underneath */
+.kh-world-notch { position: relative; }
+.kh-world-notch::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  inset-inline-end: -1px;
+  width: 36px;
+  height: 36px;
+  background: var(--paper);
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+  border-inline-start: 1px solid var(--world-accent, var(--line-strong));
+  border-bottom: 1px solid var(--world-accent, var(--line-strong));
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Corner sticker tag — visible at rest, no hover required */
+.kh-world-tag {
+  position: absolute;
+  top: 18px;
+  inset-inline-start: 22px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  background: var(--world-accent, var(--lime));
+  color: var(--world-ink, var(--on-lime));
+  font-family: var(--brand-font-body);
+  font-weight: 800;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 5px 10px 4px 8px;
+  border-radius: var(--brand-radius-sm);
+  transform: rotate(-3deg);
+  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, .35);
+  z-index: 2;
+}
+.kh-world-tag b { font-size: 13px; font-weight: 800; }
 
 /* Giant Arabic ghost word — faint at rest, wakes up on hover */
 .kh-world-ghost {
@@ -1190,16 +1246,16 @@ a:hover > .kh-zig-draw,
   font-family: 'Rakkas', 'IBM Plex Sans Arabic', sans-serif;
   font-size: clamp(110px, 13vw, 190px);
   line-height: 1;
-  color: transparent;
-  -webkit-text-stroke: 1.5px var(--line);
+  color: color-mix(in srgb, var(--world-accent, var(--lime)) 16%, transparent);
+  -webkit-text-stroke: 1.5px var(--line-strong);
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
   transition: color 0.4s ease, -webkit-text-stroke-color 0.4s ease, transform 0.5s cubic-bezier(0.2, 1.2, 0.4, 1);
 }
 .kh-world:hover .kh-world-ghost {
-  color: rgba(212, 237, 11, 0.28);
-  -webkit-text-stroke-color: var(--ink);
+  color: color-mix(in srgb, var(--world-accent, var(--lime)) 32%, transparent);
+  -webkit-text-stroke-color: var(--world-accent, var(--ink));
   transform: translateY(-50%) rotate(-1deg) scale(1.04);
 }
 [dir="rtl"] .kh-world-ghost { transform: translateY(-50%) rotate(3deg); }
@@ -1237,9 +1293,9 @@ a:hover > .kh-zig-draw,
   background-repeat: no-repeat;
   background-position: 0 100%;
   background-size: 0% 5px;
-  transition: background-size 0.3s ease;
+  transition: background-size 0.3s ease, color 0.25s ease;
 }
-.kh-world:hover .kh-world-cta { background-size: 100% 5px; }
+.kh-world:hover .kh-world-cta { background-size: 100% 5px; color: var(--world-accent, var(--ink)); }
 [dir="rtl"] .kh-world-cta { background-position: 100% 100%; }
 
 /* Salbeh — a stamp lands */

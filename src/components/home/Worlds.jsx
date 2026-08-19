@@ -2,9 +2,9 @@ import React from 'react';
 import { Link } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 
-/* The four Kharbesh worlds — typography-led entry cards.
-   Each card carries its giant Arabic ghost word behind the Latin name,
-   plus ONE signature hover action. Nothing else moves. */
+/* The four Kharbesh worlds — a bento of typography-led entry cards.
+   Each one carries its own accent color, its own shape, its giant Arabic
+   ghost word behind the Latin name, plus ONE signature hover action. */
 const WORLDS = [
   {
     key: 'salbeh',
@@ -12,11 +12,15 @@ const WORLDS = [
     name: { en: 'Salbeh', ar: 'سلبة' },
     ghost: 'سلبة',
     desc: {
-      en: 'Sharp replies for slow systems, long queues, traffic, and daily survival.',
+      en: 'Rodoud 2asyeh la transport ba2i, dawr taweel, w el survival el youmi.',
       ar: 'ردود حادّة للأنظمة البطيئة، الطوابير، الازدحام، والبقاء اليومي.',
     },
     cta: { en: 'Enter Salbeh →', ar: 'ادخل سلبة ←' },
     action: 'act-stamp',
+    accent: 'var(--brick)',
+    ink: 'var(--ink)',
+    shape: 'kh-world-notch kh-world-lg',
+    span: 'sm:col-span-7',
   },
   {
     key: 'lebneni',
@@ -24,11 +28,15 @@ const WORLDS = [
     name: { en: 'Lebneni', ar: 'لبناني' },
     ghost: 'لبناني',
     desc: {
-      en: 'Local phrases, family lines, and the things only we say.',
+      en: 'Jomal mahalliyeh, 7aki 3ayle, w eshi ma byehkih ghair na7na.',
       ar: 'جمل محلية، أحاديث عائلية، وأشياء بس نحنا منقولها.',
     },
     cta: { en: 'Enter Lebneni →', ar: 'ادخل لبناني ←' },
     action: 'act-dot',
+    accent: 'var(--lime)',
+    ink: 'var(--on-lime)',
+    shape: 'kh-world-tab',
+    span: 'sm:col-span-5',
   },
   {
     key: 'sa2afeh',
@@ -36,11 +44,15 @@ const WORLDS = [
     name: { en: 'Sa2afeh', ar: 'ثقافة' },
     ghost: 'ثقافة',
     desc: {
-      en: 'Culture, poetry, theatre, music, and lines that stayed with us.',
+      en: 'Sa2afeh, shi3er, masra7, mousi2a, w jomal 2eleh ma3na.',
       ar: 'ثقافة، شعر، مسرح، موسيقى، وجمل ضلّت معنا.',
     },
     cta: { en: 'Enter Sa2afeh →', ar: 'ادخل ثقافة ←' },
     action: 'act-scribble',
+    accent: 'var(--plum)',
+    ink: 'var(--on-lime)',
+    shape: 'kh-world-tab',
+    span: 'sm:col-span-5',
   },
   {
     key: 'zaw2ak',
@@ -48,11 +60,15 @@ const WORLDS = [
     name: { en: '3a Zaw2ak', ar: 'ع ذوقك' },
     ghost: 'ع ذوقك',
     desc: {
-      en: 'Your phrase. Our pens. One piece nobody else has.',
+      en: 'Jomletak. 2lamna. 2it3a ma 3ind wala wa7ad gherak.',
       ar: 'جملتك. أقلامنا. قطعة ما حدا غيرك عنده ياها.',
     },
     cta: { en: 'Make it yours →', ar: 'على ذوقك ←' },
     action: 'act-route',
+    accent: 'var(--amber)',
+    ink: 'var(--on-lime)',
+    shape: 'kh-world-notch kh-world-lg',
+    span: 'sm:col-span-7',
   },
 ];
 
@@ -68,20 +84,22 @@ export default function Worlds() {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-px" style={{ background: 'var(--line)', border: '1px solid var(--line)' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 sm:gap-5">
         {WORLDS.map((w, i) => (
-          <Link key={w.key} to={w.to} className={`kh-world kh-world-${w.action} group`}>
+          <Link
+            key={w.key}
+            to={w.to}
+            className={`kh-world kh-world-${w.action} ${w.shape} ${w.span} group`}
+            style={{ '--world-accent': w.accent, '--world-ink': w.ink }}
+          >
             {/* Giant Arabic ghost word — the world's real name, breathing behind */}
             <span className="kh-world-ghost" aria-hidden="true">{w.ghost}</span>
 
-            <div className="relative flex items-baseline justify-between">
-              <span className="kh-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>
-                {lang === 'ar' ? `عالم ٠${i + 1}` : `World 0${i + 1}`}
-              </span>
-              <span className="kh-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted-2)' }}>
-                Kharbesh
-              </span>
-            </div>
+            {/* Corner sticker — visible at rest, no hover needed */}
+            <span className="kh-world-tag" aria-hidden="true">
+              <b>{String(i + 1).padStart(2, '0')}</b>
+              {lang === 'ar' ? 'عالم' : 'World'}
+            </span>
 
             <h3 className="kh-world-name">
               {lang === 'ar' ? w.name.ar : w.name.en}

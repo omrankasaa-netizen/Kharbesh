@@ -22,7 +22,7 @@ export default function CollectionPage() {
     <div>
       <section className="kh-ink border-b border-border">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-16 sm:py-24">
-          <span className="kh-eyebrow" style={{ color: collection.accent || 'var(--brand-accent)' }}>KHARBESH WORLD</span>
+          <span className="kh-eyebrow" style={{ color: collection.accent || 'var(--brand-accent)' }}>3ALAM KHARBESH</span>
           <h1 className="mt-3 font-body font-black text-5xl sm:text-7xl" style={{ fontFamily: 'var(--brand-font-body)' }}>{name}</h1>
           <p className="mt-4 max-w-xl" style={{ color: 'rgba(251,246,235,.85)' }}>{desc}</p>
           <Scribble className="mt-8" width={120} />
