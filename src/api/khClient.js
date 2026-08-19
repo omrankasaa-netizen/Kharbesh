@@ -33,6 +33,20 @@ const client = createTRPCClient({
 
 const empty = (v) => (v === '' || v == null ? undefined : v);
 
+/* Product/collection images are stored as root-relative paths (e.g.
+   "/assets/designs/foo.jpg"). The backend serves the built client bundle
+   (including /assets) as static files, so routing an image through the
+   same API_BASE the tRPC client uses works everywhere: locally it stays a
+   plain relative path, on Railway API_BASE is empty so the path is still
+   root-relative and correct, and in the sandbox preview API_BASE is the
+   proxy prefix deploy_website rewrote in, so the image resolves under that
+   nested path instead of 404ing against the domain root. */
+const resolveAssetUrl = (url) => {
+  if (!url || typeof url !== 'string' || !url.startsWith('/')) return url;
+  return `${API_BASE}${url}`;
+};
+const resolveAssetUrls = (urls) => (Array.isArray(urls) ? urls.map(resolveAssetUrl) : urls);
+
 const TONES = ['subtle', 'bold', 'sarcastic', 'clean', 'colorful'];
 
 function toUiUser(u) {
@@ -92,14 +106,16 @@ export const kh = {
       /** Public catalog for visitors; full catalog (incl. drafts) for admins. */
       async list() {
         const me = await cachedMe();
+        let rows;
         if (me?.role === 'admin') {
           try {
-            return await client.admin.productsAll.query();
+            rows = await client.admin.productsAll.query();
           } catch {
             /* fall through to public list */
           }
         }
-        return client.catalog.products.query();
+        if (!rows) rows = await client.catalog.products.query();
+        return (rows || []).map((p) => ({ ...p, images: resolveAssetUrls(p.images) }));
       },
       update: (id, data) =>
         client.admin.updateProduct.mutate({ id: String(id), data }),
@@ -150,7 +166,12 @@ export const kh = {
         client.admin.updateOrderStatus.mutate({ id: String(id), status: data.status }),
     },
 
-    Collection: { list: () => client.catalog.collections.query() },
+    Collection: {
+      list: async () => {
+        const rows = await client.catalog.collections.query();
+        return (rows || []).map((c) => ({ ...c, cover_image: resolveAssetUrl(c.cover_image) }));
+      },
+    },
     GarmentColor: { list: () => client.catalog.garmentColors.query() },
     GarmentStyle: { list: () => client.catalog.garmentStyles.query() },
 
