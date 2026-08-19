@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { cachedMe } from '@/api/khClient';
+import { cachedMe, hasRole } from '@/api/khClient';
 import { Scribble } from '@/components/Brand';
 
 /** Same-origin return targets only — never bounce to an external URL. */
@@ -47,7 +47,7 @@ export default function AdminLogin() {
   useEffect(() => {
     (async () => {
       const me = await cachedMe();
-      if (me?.role === 'admin') window.location.replace(returnTo);
+      if (hasRole(me, 'staff')) window.location.replace(returnTo);
       else setChecking(false);
     })();
   }, [returnTo]);

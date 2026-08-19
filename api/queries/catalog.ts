@@ -6,7 +6,7 @@ import {
   products,
   type Product,
 } from "@db/schema";
-import { asc, eq, ne } from "drizzle-orm";
+import { asc, desc, eq, ne } from "drizzle-orm";
 
 // The storefront UI (ported from the original design) expects Base44-shaped
 // records: snake_case fields, prices in USD dollars, string ids. These
@@ -64,15 +64,84 @@ export async function listCollections() {
   }));
 }
 
-export async function listGarmentColors() {
-  const rows = await getDb().select().from(garmentColors).orderBy(asc(garmentColors.sortOrder));
-  return rows.map((c) => ({
+function toUiColor(c: typeof garmentColors.$inferSelect) {
+  return {
     id: String(c.id),
     name_en: c.nameEn,
     name_ar: c.nameAr,
     hex: c.hex,
     sort_order: c.sortOrder,
-  }));
+  };
+}
+
+export async function listGarmentColors() {
+  const rows = await getDb().select().from(garmentColors).orderBy(asc(garmentColors.sortOrder));
+  return rows.map(toUiColor);
+}
+
+/** Admin CRUD for the garment color catalog — the master list of blank tee
+ * colors offered across Products, Inventory, and Factory dropdowns. */
+export async function createGarmentColor(data: { name_en: string; name_ar?: string | null; hex: string }) {
+  const db = getDb();
+  const existing = await db
+    .select({ maxSort: garmentColors.sortOrder })
+    .from(garmentColors)
+    .orderBy(desc(garmentColors.sortOrder))
+    .limit(1);
+  const nextSort = (existing[0]?.maxSort ?? -1) + 1;
+  const [{ id }] = await db
+    .insert(garmentColors)
+    .values({
+      nameEn: data.name_en.trim(),
+      nameAr: data.name_ar?.trim() || null,
+      hex: data.hex.trim(),
+      sortOrder: nextSort,
+    })
+    .$returningId();
+  const [row] = await db.select().from(garmentColors).where(eq(garmentColors.id, id)).limit(1);
+  return toUiColor(row);
+}
+
+export async function updateGarmentColor(
+  id: number,
+  data: { name_en?: string; name_ar?: string | null; hex?: string; sort_order?: number },
+) {
+  const db = getDb();
+  const patch: Record<string, unknown> = {};
+  if (data.name_en !== undefined) patch.nameEn = data.name_en.trim();
+  if (data.name_ar !== undefined) patch.nameAr = data.name_ar?.trim() || null;
+  if (data.hex !== undefined) patch.hex = data.hex.trim();
+  if (data.sort_order !== undefined) patch.sortOrder = data.sort_order;
+  await db.update(garmentColors).set(patch).where(eq(garmentColors.id, id));
+  const [row] = await db.select().from(garmentColors).where(eq(garmentColors.id, id)).limit(1);
+  return row ? toUiColor(row) : null;
+}
+
+/** Refuses to delete a color that's still selected on any product, so the
+ * storefront's saved swatches never point at a missing color. */
+export async function deleteGarmentColor(id: number) {
+  const db = getDb();
+  const [color] = await db.select().from(garmentColors).where(eq(garmentColors.id, id)).limit(1);
+  if (!color) return { success: true };
+
+  const allProducts = await db.select({ id: products.id, nameEn: products.nameEn, approvedColors: products.approvedColors }).from(products);
+  const inUse = allProducts.filter((p) => (p.approvedColors ?? []).includes(color.nameEn));
+  if (inUse.length > 0) {
+    throw new Error(
+      `"${color.nameEn}" is still used by ${inUse.length} product${inUse.length > 1 ? 's' : ''} (${inUse
+        .map((p) => p.nameEn)
+        .join(', ')}). Remove it from those products first.`,
+    );
+  }
+
+  await db.delete(garmentColors).where(eq(garmentColors.id, id));
+  return { success: true };
+}
+
+export async function reorderGarmentColors(orderedIds: number[]) {
+  const db = getDb();
+  await Promise.all(orderedIds.map((id, index) => db.update(garmentColors).set({ sortOrder: index }).where(eq(garmentColors.id, id))));
+  return listGarmentColors();
 }
 
 export async function listGarmentStyles() {

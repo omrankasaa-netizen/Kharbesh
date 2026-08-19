@@ -94,6 +94,8 @@ if (env.isProduction) {
   try {
     const { migrate } = await import("drizzle-orm/mysql2/migrator");
     const { getDb } = await import("./queries/connection");
+    const { seedAlreadyAppliedMigrations } = await import("./db-migrate");
+    await seedAlreadyAppliedMigrations(getDb(), "db/migrations");
     await migrate(getDb(), { migrationsFolder: "db/migrations" });
     console.log("[db] migrations applied.");
   } catch (error) {

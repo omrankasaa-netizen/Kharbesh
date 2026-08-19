@@ -49,6 +49,12 @@ const resolveAssetUrls = (urls) => (Array.isArray(urls) ? urls.map(resolveAssetU
 
 const TONES = ['subtle', 'bold', 'sarcastic', 'clean', 'colorful'];
 
+const ROLE_LEVEL = { user: 0, staff: 1, admin: 2, super_admin: 3 };
+/** True when the signed-in user's role is at least `minRole` in the hierarchy. */
+export function hasRole(user, minRole) {
+  return (ROLE_LEVEL[user?.role] ?? 0) >= (ROLE_LEVEL[minRole] ?? 0);
+}
+
 function toUiUser(u) {
   if (!u) return null;
   return {
@@ -103,11 +109,11 @@ async function fileToDataUrl(file, maxDim = 1400, quality = 0.85) {
 export const kh = {
   entities: {
     Product: {
-      /** Public catalog for visitors; full catalog (incl. drafts) for admins. */
+      /** Public catalog for visitors; full catalog (incl. drafts) for staff+. */
       async list() {
         const me = await cachedMe();
         let rows;
-        if (me?.role === 'admin') {
+        if (hasRole(me, 'staff')) {
           try {
             rows = await client.admin.productsAll.query();
           } catch {
@@ -117,8 +123,10 @@ export const kh = {
         if (!rows) rows = await client.catalog.products.query();
         return (rows || []).map((p) => ({ ...p, images: resolveAssetUrls(p.images) }));
       },
+      create: (data) => client.admin.createProduct.mutate(data),
       update: (id, data) =>
         client.admin.updateProduct.mutate({ id: String(id), data }),
+      delete: (id) => client.admin.deleteProduct.mutate({ id: String(id) }),
     },
 
     Order: {
@@ -202,6 +210,47 @@ export const kh = {
     },
 
     User: { list: () => client.admin.users.query() },
+
+    Staff: {
+      list: () => client.admin.staff.query(),
+      upsert: (data) => client.admin.upsertStaff.mutate(data),
+      remove: (email) => client.admin.removeStaff.mutate({ email }),
+    },
+
+    Colors: {
+      list: () => client.catalog.garmentColors.query(),
+      create: (data) => client.admin.createGarmentColor.mutate(data),
+      update: (id, data) => client.admin.updateGarmentColor.mutate({ id: String(id), ...data }),
+      remove: (id) => client.admin.deleteGarmentColor.mutate({ id: String(id) }),
+      reorder: (ids) => client.admin.reorderGarmentColors.mutate({ ids: ids.map(String) }),
+    },
+
+    BlankStock: {
+      list: () => client.admin.blankStock.query(),
+      upsertVariant: (data) => client.admin.upsertStockVariant.mutate(data),
+      adjust: (data) => client.admin.adjustStock.mutate({ ...data, id: String(data.id) }),
+      movements: (stockId) =>
+        client.admin.stockMovements.query(stockId ? { stockId: String(stockId) } : undefined),
+    },
+
+    FactoryOrder: {
+      list: () => client.admin.factoryOrders.query(),
+      generatePrintJob: (orderIds) =>
+        client.admin.generatePrintJob.mutate({ orderIds: orderIds.map(String) }),
+      createRestock: (items, notes) => client.admin.createRestockRequest.mutate({ items, notes }),
+      markSent: (id) => client.admin.markFactoryOrderSent.mutate({ id: String(id) }),
+      markFulfilled: (id) => client.admin.markFactoryOrderFulfilled.mutate({ id: String(id) }),
+      cancel: (id) => client.admin.cancelFactoryOrder.mutate({ id: String(id) }),
+    },
+
+    Financials: {
+      getUnitCosts: () => client.admin.unitCosts.query(),
+      updateUnitCosts: (data) => client.admin.updateUnitCosts.mutate(data),
+      listExpenses: (from, to) => client.admin.overheadExpenses.query({ from, to }),
+      addExpense: (data) => client.admin.addOverheadExpense.mutate(data),
+      deleteExpense: (id) => client.admin.deleteOverheadExpense.mutate({ id: String(id) }),
+      getSummary: (from, to) => client.admin.financialSummary.query({ from, to }),
+    },
   },
 
   auth: {

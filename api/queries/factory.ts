@@ -1,0 +1,248 @@
+import { and, desc, eq, inArray } from "drizzle-orm";
+import { getDb } from "./connection";
+import {
+  auditLogs,
+  blankStock,
+  factoryOrderItems,
+  factoryOrders,
+  orders,
+  stockMovements,
+  type FactoryOrder,
+  type FactoryOrderItem,
+} from "@db/schema";
+
+function toUiItem(i: FactoryOrderItem) {
+  return {
+    id: String(i.id),
+    factory_order_id: String(i.factoryOrderId),
+    source_order_id: i.sourceOrderId != null ? String(i.sourceOrderId) : null,
+    source_order_number: i.sourceOrderNumber,
+    product_id: i.productId != null ? String(i.productId) : null,
+    design_name_en: i.designNameEn,
+    phrase_en: i.phraseEn,
+    product_type: i.productType,
+    color: i.color,
+    size: i.size,
+    quantity: i.quantity,
+    placement: i.placement,
+    notes: i.notes,
+  };
+}
+
+async function toUiFactoryOrder(o: FactoryOrder, items?: FactoryOrderItem[]) {
+  const db = getDb();
+  const rows = items ?? (await db.select().from(factoryOrderItems).where(eq(factoryOrderItems.factoryOrderId, o.id)));
+  return {
+    id: String(o.id),
+    type: o.type,
+    status: o.status,
+    notes: o.notes,
+    created_date: o.createdAt.toISOString(),
+    updated_date: o.updatedAt.toISOString(),
+    sent_date: o.sentAt?.toISOString() ?? null,
+    fulfilled_date: o.fulfilledAt?.toISOString() ?? null,
+    items: rows.map(toUiItem),
+  };
+}
+
+export async function listFactoryOrders() {
+  const db = getDb();
+  const rows = await db.select().from(factoryOrders).orderBy(desc(factoryOrders.createdAt));
+  const allItems = await db.select().from(factoryOrderItems);
+  const itemsByOrder = new Map<number, FactoryOrderItem[]>();
+  for (const it of allItems) {
+    const list = itemsByOrder.get(it.factoryOrderId) ?? [];
+    list.push(it);
+    itemsByOrder.set(it.factoryOrderId, list);
+  }
+  return Promise.all(rows.map((o) => toUiFactoryOrder(o, itemsByOrder.get(o.id) ?? [])));
+}
+
+/** Builds a print-job draft from selected customer orders' line items, one factory item per line item. */
+export async function generatePrintJobFromOrders(orderIds: number[], actorUserId: number) {
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    const sourceOrders = await tx.select().from(orders).where(inArray(orders.id, orderIds));
+    if (sourceOrders.length === 0) throw new Error("NO_ORDERS_FOUND");
+
+    const [{ id: factoryOrderId }] = await tx
+      .insert(factoryOrders)
+      .values({ type: "print_job", status: "draft", createdByUserId: actorUserId })
+      .$returningId();
+
+    for (const order of sourceOrders) {
+      for (const item of order.items) {
+        await tx.insert(factoryOrderItems).values({
+          factoryOrderId,
+          sourceOrderId: order.id,
+          sourceOrderNumber: order.orderNumber,
+          productId: Number.isInteger(Number(item.productId)) ? Number(item.productId) : null,
+          designNameEn: item.productName,
+          phraseEn: item.phrase ?? null,
+          productType: (item.productType as "tee" | "hoodie" | "accessory") ?? "tee",
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+        });
+      }
+    }
+
+    await tx.insert(auditLogs).values({
+      actorUserId,
+      action: "factory_order.created",
+      entity: "factory_order",
+      entityId: String(factoryOrderId),
+      detail: { type: "print_job", orderIds },
+    });
+
+    const [row] = await tx.select().from(factoryOrders).where(eq(factoryOrders.id, factoryOrderId));
+    return toUiFactoryOrder(row);
+  });
+}
+
+/** Creates a manual restock request draft (blanks to keep on hand, not tied to a customer order). */
+export async function createRestockRequest(
+  items: { product_type: "tee" | "hoodie" | "accessory"; color: string; size: string; quantity: number }[],
+  notes: string | undefined,
+  actorUserId: number,
+) {
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    const [{ id: factoryOrderId }] = await tx
+      .insert(factoryOrders)
+      .values({ type: "restock", status: "draft", notes: notes ?? null, createdByUserId: actorUserId })
+      .$returningId();
+
+    for (const item of items) {
+      await tx.insert(factoryOrderItems).values({
+        factoryOrderId,
+        productType: item.product_type,
+        color: item.color,
+        size: item.size,
+        quantity: item.quantity,
+      });
+    }
+
+    await tx.insert(auditLogs).values({
+      actorUserId,
+      action: "factory_order.created",
+      entity: "factory_order",
+      entityId: String(factoryOrderId),
+      detail: { type: "restock", items },
+    });
+
+    const [row] = await tx.select().from(factoryOrders).where(eq(factoryOrders.id, factoryOrderId));
+    return toUiFactoryOrder(row);
+  });
+}
+
+export async function markFactoryOrderSent(id: number, actorUserId: number) {
+  const db = getDb();
+  await db
+    .update(factoryOrders)
+    .set({ status: "sent", sentAt: new Date(), updatedAt: new Date() })
+    .where(eq(factoryOrders.id, id));
+  await db.insert(auditLogs).values({
+    actorUserId,
+    action: "factory_order.sent",
+    entity: "factory_order",
+    entityId: String(id),
+    detail: null,
+  });
+  const [row] = await db.select().from(factoryOrders).where(eq(factoryOrders.id, id));
+  return toUiFactoryOrder(row);
+}
+
+/**
+ * Marks a factory order fulfilled and applies its stock effect: restock
+ * orders add blanks on hand; print jobs consume the printed blanks (best
+ * effort — logs a movement even if it would go negative would clamp at 0).
+ */
+export async function markFactoryOrderFulfilled(id: number, actorUserId: number) {
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    const [order] = await tx.select().from(factoryOrders).where(eq(factoryOrders.id, id)).for("update");
+    if (!order) throw new Error("FACTORY_ORDER_NOT_FOUND");
+    if (order.status === "fulfilled") return toUiFactoryOrder(order);
+
+    const items = await tx.select().from(factoryOrderItems).where(eq(factoryOrderItems.factoryOrderId, id));
+    const sign = order.type === "restock" ? 1 : -1;
+
+    for (const item of items) {
+      const [stock] = await tx
+        .select()
+        .from(blankStock)
+        .where(
+          and(
+            eq(blankStock.productType, item.productType),
+            eq(blankStock.color, item.color),
+            eq(blankStock.size, item.size),
+          ),
+        )
+        .for("update");
+
+      const delta = sign * item.quantity;
+      if (stock) {
+        const nextQty = Math.max(0, stock.quantityOnHand + delta);
+        await tx.update(blankStock).set({ quantityOnHand: nextQty, updatedAt: new Date() }).where(eq(blankStock.id, stock.id));
+        await tx.insert(stockMovements).values({
+          stockId: stock.id,
+          type: order.type === "restock" ? "restock" : "consumed",
+          quantityDelta: delta,
+          note: `Factory order #${id} fulfilled`,
+          actorUserId,
+        });
+      } else if (order.type === "restock") {
+        const [{ id: stockId }] = await tx
+          .insert(blankStock)
+          .values({
+            productType: item.productType,
+            color: item.color,
+            size: item.size,
+            quantityOnHand: item.quantity,
+          })
+          .$returningId();
+        await tx.insert(stockMovements).values({
+          stockId,
+          type: "restock",
+          quantityDelta: item.quantity,
+          note: `Factory order #${id} fulfilled (new variant)`,
+          actorUserId,
+        });
+      }
+    }
+
+    await tx
+      .update(factoryOrders)
+      .set({ status: "fulfilled", fulfilledAt: new Date(), updatedAt: new Date() })
+      .where(eq(factoryOrders.id, id));
+
+    await tx.insert(auditLogs).values({
+      actorUserId,
+      action: "factory_order.fulfilled",
+      entity: "factory_order",
+      entityId: String(id),
+      detail: null,
+    });
+
+    const [row] = await tx.select().from(factoryOrders).where(eq(factoryOrders.id, id));
+    return toUiFactoryOrder(row);
+  });
+}
+
+export async function cancelFactoryOrder(id: number, actorUserId: number) {
+  const db = getDb();
+  await db
+    .update(factoryOrders)
+    .set({ status: "cancelled", updatedAt: new Date() })
+    .where(eq(factoryOrders.id, id));
+  await db.insert(auditLogs).values({
+    actorUserId,
+    action: "factory_order.cancelled",
+    entity: "factory_order",
+    entityId: String(id),
+    detail: null,
+  });
+  const [row] = await db.select().from(factoryOrders).where(eq(factoryOrders.id, id));
+  return toUiFactoryOrder(row);
+}

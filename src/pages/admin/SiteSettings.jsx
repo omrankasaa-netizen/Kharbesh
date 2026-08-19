@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
+import ColorManager from '@/components/ColorManager';
 
 /* In-memory settings — sandboxed preview iframes block localStorage,
    so admin edits persist for the session only (not across reloads). */
@@ -82,6 +83,8 @@ export default function SiteSettings() {
           {saved && <span className="text-sm text-[var(--brand-accent)]">{lang === 'ar' ? 'تم الحفظ ✓' : 'Saved ✓'}</span>}
         </div>
       </form>
+
+      <ColorManager lang={lang} />
     </div>
   );
 }

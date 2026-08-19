@@ -4,7 +4,7 @@ import { env } from "../lib/env";
 import { getSessionCookieOptions } from "../lib/cookies";
 import { Session } from "@contracts/constants";
 import { signSessionToken } from "../kimi/session";
-import { upsertUser } from "../queries/users";
+import { upsertUser, resolveStaffRole } from "../queries/users";
 
 type GoogleTokenResponse = {
   access_token: string;
@@ -114,10 +114,11 @@ export function createGoogleOAuthCallbackHandler() {
       const profile = await fetchGoogleUserInfo(tokenResp.access_token);
 
       const email = profile.email?.trim().toLowerCase();
-      const isAllowed =
-        !!email &&
-        profile.email_verified !== false &&
-        env.adminAllowedEmails.includes(email);
+      const resolvedRole =
+        email && profile.email_verified !== false
+          ? await resolveStaffRole(email, `google:${profile.sub}`)
+          : undefined;
+      const isAllowed = !!resolvedRole;
 
       if (!isAllowed) {
         console.warn(
@@ -134,6 +135,7 @@ export function createGoogleOAuthCallbackHandler() {
         name: profile.name ?? email,
         email,
         avatar: profile.picture,
+        role: resolvedRole,
         lastSignInAt: new Date(),
       });
 

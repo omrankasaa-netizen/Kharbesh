@@ -26,6 +26,10 @@ import AdminGuard from '@/components/AdminGuard';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import AdminOrders from '@/pages/admin/AdminOrders';
 import AdminInventory from '@/pages/admin/AdminInventory';
+import AdminProducts from '@/pages/admin/AdminProducts';
+import AdminFactory from '@/pages/admin/AdminFactory';
+import AdminFinancials from '@/pages/admin/AdminFinancials';
+import AdminStaff from '@/pages/admin/AdminStaff';
 import CustomerCRM from '@/pages/admin/CustomerCRM';
 import StoreAnalytics from '@/pages/admin/StoreAnalytics';
 import SiteSettings from '@/pages/admin/SiteSettings';
@@ -69,14 +73,16 @@ const AuthenticatedApp = () => {
         <Route path="/track" element={<TrackOrder />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin/login" element={<AdminLogin />} />
-        <Route element={<AdminGuard />}>
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/orders" element={<AdminOrders />} />
-          <Route path="/admin/inventory" element={<AdminInventory />} />
-          <Route path="/admin/customers" element={<CustomerCRM />} />
-          <Route path="/admin/analytics" element={<StoreAnalytics />} />
-          <Route path="/admin/settings" element={<SiteSettings />} />
-        </Route>
+        <Route path="/admin/dashboard" element={<AdminGuard minRole="staff"><AdminDashboard /></AdminGuard>} />
+        <Route path="/admin/orders" element={<AdminGuard minRole="staff"><AdminOrders /></AdminGuard>} />
+        <Route path="/admin/products" element={<AdminGuard minRole="staff"><AdminProducts /></AdminGuard>} />
+        <Route path="/admin/inventory" element={<AdminGuard minRole="staff"><AdminInventory /></AdminGuard>} />
+        <Route path="/admin/factory" element={<AdminGuard minRole="staff"><AdminFactory /></AdminGuard>} />
+        <Route path="/admin/customers" element={<AdminGuard minRole="admin"><CustomerCRM /></AdminGuard>} />
+        <Route path="/admin/analytics" element={<AdminGuard minRole="admin"><StoreAnalytics /></AdminGuard>} />
+        <Route path="/admin/settings" element={<AdminGuard minRole="admin"><SiteSettings /></AdminGuard>} />
+        <Route path="/admin/financials" element={<AdminGuard minRole="super_admin"><AdminFinancials /></AdminGuard>} />
+        <Route path="/admin/staff" element={<AdminGuard minRole="super_admin"><AdminStaff /></AdminGuard>} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/lookbook" element={<Lookbook />} />
         <Route path="/production-timeline" element={<ProductionTimeline />} />
