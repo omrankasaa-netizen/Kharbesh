@@ -23,7 +23,7 @@ export default function Footer() {
             <DotsMark lime className="mt-6" />
           </div>
           <div>
-            <h4 className="kh-eyebrow mb-5" style={{ color: 'var(--paper)' }}>Shop</h4>
+            <h4 className="kh-eyebrow mb-5">Shop</h4>
             <ul className="space-y-2 text-sm" style={{ color: muted }}>
               <li><Link to="/shop" className="hover:text-[#D4ED0B] transition-colors">{t.nav.shop}</Link></li>
               <li><Link to="/drop" className="hover:text-[#D4ED0B] transition-colors">{t.nav.drop}</Link></li>
@@ -32,7 +32,7 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <h4 className="kh-eyebrow mb-5" style={{ color: 'var(--paper)' }}>Help</h4>
+            <h4 className="kh-eyebrow mb-5">Help</h4>
             <ul className="space-y-2 text-sm" style={{ color: muted }}>
               <li><Link to="/track" className="hover:text-[#D4ED0B] transition-colors">{t.nav.track}</Link></li>
               <li><Link to="/faq" className="hover:text-[#D4ED0B] transition-colors">{t.nav.faq}</Link></li>
@@ -41,7 +41,7 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <h4 className="kh-eyebrow mb-5" style={{ color: 'var(--paper)' }}>Social</h4>
+            <h4 className="kh-eyebrow mb-5">Social</h4>
             <ul className="space-y-2 text-sm" style={{ color: muted }}>
               <li><a href="https://instagram.com/kharbesh.lb" target="_blank" rel="noreferrer" className="hover:text-[#D4ED0B] transition-colors">Instagram</a></li>
               <li><a href="https://tiktok.com/@kharbesh.lb" target="_blank" rel="noreferrer" className="hover:text-[#D4ED0B] transition-colors">TikTok</a></li>
