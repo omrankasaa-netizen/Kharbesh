@@ -15,8 +15,10 @@ RUN sh scripts/restore-assets.sh
 # be passed as Docker build args (Railway: set them as service variables).
 ARG VITE_KIMI_AUTH_URL
 ARG VITE_APP_ID
+ARG VITE_GOOGLE_CLIENT_ID
 ENV VITE_KIMI_AUTH_URL=$VITE_KIMI_AUTH_URL
 ENV VITE_APP_ID=$VITE_APP_ID
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN npm run build
 
 FROM node:22-slim AS runtime

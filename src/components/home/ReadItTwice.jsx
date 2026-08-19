@@ -9,22 +9,22 @@ const ENTRIES = [
   {
     id: 'financially-unstable',
     phrase: { en: "I'M FINE", ar: 'تمام' },
-    first: { en: 'A calm reassurance, said out loud.', ar: 'طمأنة هادية، مقولة بصوت واضح.' },
-    second: { en: 'Until the red line breaks the sentence in half: financially unstable.', ar: 'لحد ما الخط الأحمر بيقطع الجملة نصين: مالياً منهار.' },
+    first: { en: 'Tatmine hadye, ma2oule bsawt wadeh.', ar: 'طمأنة هادية، مقولة بصوت واضح.' },
+    second: { en: 'La7ad ma el khat el a7mar byi2ta3 el jomle nossein: financially unstable.', ar: 'لحد ما الخط الأحمر بيقطع الجملة نصين: مالياً منهار.' },
     crop: { x: '58%', y: '45%', scale: 1.8 },
   },
   {
     id: 'masari-be-amen',
     phrase: { en: 'MONEY IS SAFE', ar: 'المصاري بأمان' },
-    first: { en: 'A reassuring headline, straight off the vault door.', ar: 'عنوان مطمّن، طالع من باب الخزنة.' },
-    second: { en: 'Just not with us. It never was.', ar: 'بس مش معنا. وما كانت أبداً.' },
+    first: { en: '3onwan mtamen, tale3 min bab el khazneh.', ar: 'عنوان مطمّن، طالع من باب الخزنة.' },
+    second: { en: 'Bass mish ma3na. W ma kanet abadan.', ar: 'بس مش معنا. وما كانت أبداً.' },
     crop: { x: '50%', y: '55%', scale: 1.8 },
   },
   {
     id: 'jeyeh-3a-beli',
     phrase: { en: 'IT CROSSED MY MIND', ar: 'جاي عبالي' },
-    first: { en: 'A quiet thought, alone at the table.', ar: 'خطرة هادية، لحالك عالطاولة.' },
-    second: { en: 'The kind that only shows up with the third cigarette.', ar: 'النوع يلي ما بيجي إلا مع السيكارة التالتة.' },
+    first: { en: 'Khatra hadye, la7alak 3al tawle.', ar: 'خطرة هادية، لحالك عالطاولة.' },
+    second: { en: 'El no3 yalli ma byiji illa ma3 el sigara el talte.', ar: 'النوع يلي ما بيجي إلا مع السيكارة التالتة.' },
     crop: { x: '50%', y: '58%', scale: 1.8 },
   },
 ];
@@ -37,14 +37,14 @@ export default function ReadItTwice() {
     <section style={{ background: 'var(--paper-2)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-16 sm:py-24">
         <div className="max-w-2xl">
-          <span className="kh-eyebrow">{lang === 'ar' ? 'النكتة بالتفصيل' : 'The joke, up close'}</span>
+          <span className="kh-eyebrow">{lang === 'ar' ? 'النكتة بالتفصيل' : 'El nekte, 3an 2orb'}</span>
           <h2 className={`kh-section-title mt-3 ${lang === 'ar' ? 'kh-section-title-ar' : ''}`}>
             {lang === 'ar' ? 'اقراها مرتين.' : 'Read it twice.'}
           </h2>
           <p className="mt-3" style={{ color: 'var(--muted)' }}>
             {lang === 'ar'
               ? 'كل خربشة بتبلّش من جملة. النظرة التانية — هونيك ساكنة النكتة.'
-              : 'Every Kharbesh starts with a phrase. The second look is where the joke lives.'}
+              : 'Kel kharbesha btbalesh min jomleh. El nazra el tanyeh — honik sakneh el nekte.'}
           </p>
         </div>
 
@@ -73,13 +73,13 @@ export default function ReadItTwice() {
                 <dl className="mt-5 space-y-4 flex-1">
                   <div>
                     <dt className="kh-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted-2)' }}>
-                      {lang === 'ar' ? 'النظرة الأولى' : 'First look'}
+                      {lang === 'ar' ? 'النظرة الأولى' : 'El nazra el awwaleh'}
                     </dt>
                     <dd className="mt-1 text-sm" style={{ color: 'var(--ink)' }}>{lang === 'ar' ? e.first.ar : e.first.en}</dd>
                   </div>
                   <div>
                     <dt className="kh-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--ink)' }}>
-                      {lang === 'ar' ? 'النظرة التانية' : 'Second look'}
+                      {lang === 'ar' ? 'النظرة التانية' : 'El nazra el tanyeh'}
                     </dt>
                     <dd className="mt-1 text-sm font-semibold" style={{ color: 'var(--ink)' }}>{lang === 'ar' ? e.second.ar : e.second.en}</dd>
                   </div>
