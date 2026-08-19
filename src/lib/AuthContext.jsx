@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { kh, cachedMe } from '@/api/khClient';
 
 const AuthContext = createContext();
@@ -8,6 +9,7 @@ const AuthContext = createContext();
  * Kimi-OAuth session instead of the hosted Base44 auth.
  */
 export const AuthProvider = ({ children }) => {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
@@ -39,11 +41,11 @@ export const AuthProvider = ({ children }) => {
     await kh.auth.logout();
     setUser(null);
     setIsAuthenticated(false);
-    if (shouldRedirect) window.location.href = '/';
+    if (shouldRedirect) navigate('/');
   };
 
   const navigateToLogin = () => {
-    kh.auth.redirectToLogin(window.location.href);
+    navigate(`/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
   };
 
   return (

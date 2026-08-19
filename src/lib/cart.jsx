@@ -2,15 +2,17 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const CartContext = createContext();
 
-const STORAGE_KEY = 'kh-cart';
+/* In-memory cart state — persists across route changes within the same
+   session (SPA navigation never reloads the page). Sandboxed preview
+   iframes block localStorage/sessionStorage, so we keep it in module
+   scope instead of writing to browser storage. */
+let memoryCart = [];
 
 export const CartProvider = ({ children }) => {
-  const [items, setItems] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
-  });
+  const [items, setItems] = useState(() => memoryCart);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    memoryCart = items;
   }, [items]);
 
   const addItem = (item) => {

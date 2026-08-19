@@ -20,6 +20,9 @@ const dictionaries = {
       newDropEyebrow: 'Autumn complaints drop',
       newDropTitle: 'New drop — open for preorder',
       newDropSub: 'Preorder closes Sep 15. Estimated dispatch late September.',
+      noDropEyebrow: 'Kharbesh Drops',
+      noDropTitle: 'Nothing\u2019s brewing right now',
+      noDropSub: 'We\u2019re between phrases. Follow along \u2014 first ones to comment get first dibs on what\u2019s next.',
       customEyebrow: '3a Zaw2ak',
       customTitle: 'Your line. Our pens. Zero spoilers.',
       customSub: 'Send us the phrase your family can’t stop saying — with the story behind it. We turn it into a Kharbesh piece, and you approve the design before we print.',
@@ -183,6 +186,9 @@ const dictionaries = {
       newDropEyebrow: 'دروب شكاوي الخريف',
       newDropTitle: 'دروب جديد — مفتوح للطلب المسبق',
       newDropSub: 'الطلب المسبق بيقفل ١٥ أيلول. التسليم المتوقع أواخر أيلول.',
+      noDropEyebrow: 'دروبات خربش',
+      noDropTitle: 'هلّق مافي شي عالنار',
+      noDropSub: 'نحنا بين جملة وجملة. تابعنا — أول ما يعلّق حدا، بيكون أول واحد يلبس الجديد.',
       customEyebrow: 'على ذوقك',
       customTitle: 'جملتك. أقلامنا. بلا حرق.',
       customSub: 'ابعتلنا الجملة اللي بيتكن ما بيسكتوا عنها — مع حكايتها. منحوّلها لقطعة خربش، وبتشوف التصميم وتوافق عليه قبل الطباعة.',
@@ -331,13 +337,17 @@ const dictionaries = {
   },
 };
 
+/* In-memory language preference — sandboxed preview iframes block
+   localStorage, so we remember the choice for the session only. */
+let memoryLang = 'en';
+
 export const I18nProvider = ({ children }) => {
-  const [lang, setLang] = useState(() => localStorage.getItem('kh-lang') || 'en');
+  const [lang, setLang] = useState(() => memoryLang);
   const t = dictionaries[lang];
   const dir = t.dir;
 
   useEffect(() => {
-    localStorage.setItem('kh-lang', lang);
+    memoryLang = lang;
     document.documentElement.lang = lang;
     document.documentElement.dir = dir;
   }, [lang, dir]);

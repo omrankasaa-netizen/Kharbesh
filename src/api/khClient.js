@@ -10,10 +10,19 @@
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import superjson from 'superjson';
 
+/* In the sandbox preview, deploy_website rewrites this placeholder to a
+   proxy path pointing at the backend running on that port. Locally (npm run
+   dev), the placeholder stays literal, so we fall back to the relative path
+   that Vite's dev-server plugin already proxies to the same-process API. */
+const API_BASE = (() => {
+  const placeholder = '__PORT_8090__';
+  return placeholder.startsWith('__') ? '' : placeholder;
+})();
+
 const client = createTRPCClient({
   links: [
     httpBatchLink({
-      url: '/api/trpc',
+      url: `${API_BASE}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, { ...(init ?? {}), credentials: 'include' });

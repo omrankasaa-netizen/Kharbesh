@@ -27,11 +27,11 @@ export default function Archive() {
       <h2 className="font-heading text-xl uppercase mt-10 mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'مجموعات مضت' : 'Past collections'}</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {collections.map((c) => (
-          <Link to={`/collections/${c.slug}`} key={c.id} className="kh-d-coll">
-            <span className="kh-d-c-eyebrow">ARCHIVE</span>
-            <h3 className="kh-d-c-h">{lang === 'ar' ? c.name_ar : c.name_en}</h3>
-            <p className="kh-d-c-p">{lang === 'ar' ? c.description_ar : c.description_en}</p>
-            <span className="kh-d-c-link">{lang === 'ar' ? 'تصفح' : 'View'} →</span>
+          <Link to={`/collections/${c.slug}`} key={c.id} className="kh-card-collection">
+            <span className="kh-eyebrow">ARCHIVE</span>
+            <h3 className="kh-h">{lang === 'ar' ? c.name_ar : c.name_en}</h3>
+            <p className="kh-p">{lang === 'ar' ? c.description_ar : c.description_en}</p>
+            <span className="kh-link">{lang === 'ar' ? 'تصفح' : 'View'} →</span>
           </Link>
         ))}
       </div>

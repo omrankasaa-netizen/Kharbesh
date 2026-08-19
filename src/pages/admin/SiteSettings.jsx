@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
 
-const KEY = 'kharbesh_settings_v1';
+/* In-memory settings — sandboxed preview iframes block localStorage,
+   so admin edits persist for the session only (not across reloads). */
+let memorySettings = null;
+
 const DEFAULTS = {
   storeName: 'Kharbesh',
   tagline_en: 'Tees with the things people say every day.',
@@ -22,10 +25,7 @@ export default function SiteSettings() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setS({ ...DEFAULTS, ...JSON.parse(raw) });
-    } catch { /* ignore */ }
+    if (memorySettings) setS({ ...DEFAULTS, ...memorySettings });
   }, []);
 
   const set = (k) => (e) => {
@@ -36,7 +36,8 @@ export default function SiteSettings() {
 
   const save = (e) => {
     e.preventDefault();
-    try { localStorage.setItem(KEY, JSON.stringify(s)); setSaved(true); } catch { /* ignore */ }
+    memorySettings = s;
+    setSaved(true);
   };
 
   const toggles = [

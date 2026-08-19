@@ -20,13 +20,22 @@ export default function ProductCard({ product }) {
       <div className="kh-media" style={{ background: 'var(--brand-surface)' }}>
         {coll && <span className="kh-tag">{coll.toUpperCase()}</span>}
         {isPreorder && <span className="kh-tag" style={{ left: 'auto', right: 12, background: 'var(--brand-brick)', color: '#fff' }}>{t.product.preorder}</span>}
-        <GarmentMockup
-          type={product.product_type}
-          color={hex}
-          textColor={ink}
-          phrase={product.phrase_ar}
-          className="w-[78%] h-[78%] transition-transform duration-300 group-hover:scale-[1.03]"
-        />
+        {product.images?.[0] ? (
+          <img
+            src={product.images[0]}
+            alt={name}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <GarmentMockup
+            type={product.product_type}
+            color={hex}
+            textColor={ink}
+            phrase={product.phrase_ar}
+            className="w-[78%] h-[78%] transition-transform duration-300 group-hover:scale-[1.03]"
+          />
+        )}
       </div>
       <div className="kh-body">
         <div className="kh-row">

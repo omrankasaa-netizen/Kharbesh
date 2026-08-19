@@ -46,6 +46,7 @@ export default function ProductPage() {
       productName: name,
       phrase: product.phrase_ar,
       productType: product.product_type,
+      image: product.images?.[0],
       color: colorName,
       size,
       quantity: qty,
@@ -74,14 +75,23 @@ export default function ProductPage() {
         {/* Gallery */}
         <div className="lg:sticky lg:top-24 lg:self-start">
           <div className="bg-card border border-border rounded-md aspect-[4/5] flex items-center justify-center overflow-hidden">
-            <GarmentMockup
-              type={product.product_type}
-              color={hex}
-              textColor={ink}
-              phrase={view === 'front' ? product.phrase_ar : (product.payoff_en || product.phrase_ar)}
-              view={view}
-              className="w-[75%] h-[75%]"
-            />
+            {view === 'front' && product.images?.[0] ? (
+              <img
+                src={product.images[0]}
+                alt={name}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <GarmentMockup
+                type={product.product_type}
+                color={hex}
+                textColor={ink}
+                phrase={view === 'front' ? product.phrase_ar : (product.payoff_en || product.phrase_ar)}
+                view={view}
+                className="w-[75%] h-[75%]"
+              />
+            )}
           </div>
           <div className="flex gap-2 mt-3">
             <button onClick={() => setView('front')} className={`kh-btn-outline kh-btn-filter !text-[12px] !py-2 !px-3 ${view === 'front' ? '!bg-primary !text-primary-foreground' : ''}`}>{t.product.front}</button>

@@ -50,14 +50,25 @@ export default function Footer() {
           </div>
         </div>
 
-        <img
-          src={BRAND_ASSETS.markWhite}
-          alt=""
-          aria-hidden="true"
-          className="w-full max-w-[520px] mx-auto mt-10 select-none"
-          style={{ display: 'block', opacity: 0.1 }}
-          loading="lazy"
-        />
+        <div className="relative mt-10" aria-hidden="true">
+          <div
+            className="absolute inset-0 mx-auto max-w-[640px]"
+            style={{
+              backgroundImage: 'var(--kh-halftone)',
+              backgroundSize: '14px 14px',
+              color: 'rgba(212,237,11,0.14)',
+              maskImage: 'radial-gradient(ellipse 60% 100% at center, black 0%, transparent 75%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 60% 100% at center, black 0%, transparent 75%)',
+            }}
+          />
+          <img
+            src={BRAND_ASSETS.markWhite}
+            alt=""
+            className="relative w-full max-w-[520px] mx-auto select-none"
+            style={{ display: 'block', opacity: 0.1 }}
+            loading="lazy"
+          />
+        </div>
 
         <div className="mt-8 pt-6 flex flex-col sm:flex-row justify-between gap-2 text-xs" style={{ borderTop: `1px solid ${line}`, color: 'rgba(251,246,235,.45)' }}>
           <span>© {new Date().getFullYear()} Kharbesh. {t.footer.rights}</span>

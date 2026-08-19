@@ -7,25 +7,25 @@ import { READY_DESIGNS } from '@/lib/readyDesigns';
    Each entry pairs a detail crop of the artwork with the two readings. */
 const ENTRIES = [
   {
-    id: 'memo',
-    phrase: { en: 'URGENT REQUEST', ar: 'طلب عاجل' },
-    first: { en: 'A bureaucratic stamp of urgency.', ar: 'ختم رسمي بصيغة الاستعجال.' },
-    second: { en: 'The urgent thing is never stated. It never is.', ar: 'الطلب العاجل ما بينكتب أبداً. هيك بيصير.' },
-    crop: { x: '50%', y: '30%', scale: 2.2 },
+    id: 'financially-unstable',
+    phrase: { en: "I'M FINE", ar: 'تمام' },
+    first: { en: 'A calm reassurance, said out loud.', ar: 'طمأنة هادية، مقولة بصوت واضح.' },
+    second: { en: 'Until the red line breaks the sentence in half: financially unstable.', ar: 'لحد ما الخط الأحمر بيقطع الجملة نصين: مالياً منهار.' },
+    crop: { x: '58%', y: '45%', scale: 1.8 },
   },
   {
-    id: 'door',
-    phrase: { en: 'YOUR OPINION?', ar: 'هيدا رأيك؟' },
-    first: { en: 'A genuine question at the door.', ar: 'سؤال حقيقي عند الباب.' },
-    second: { en: 'The door is already closed. The answer never mattered.', ar: 'الباب مسكّر من زمان. الجواب ما كان مهم.' },
-    crop: { x: '50%', y: '60%', scale: 2.0 },
+    id: 'masari-be-amen',
+    phrase: { en: 'MONEY IS SAFE', ar: 'المصاري بأمان' },
+    first: { en: 'A reassuring headline, straight off the vault door.', ar: 'عنوان مطمّن، طالع من باب الخزنة.' },
+    second: { en: 'Just not with us. It never was.', ar: 'بس مش معنا. وما كانت أبداً.' },
+    crop: { x: '50%', y: '55%', scale: 1.8 },
   },
   {
-    id: 'paperboat',
-    phrase: { en: 'PAPER BOAT', ar: 'قارب ورق' },
-    first: { en: 'A Rahbani childhood image, folded neatly.', ar: 'صورة رحبانية من الطفولة، مطويّة بعناية.' },
-    second: { en: 'Paper floats until it doesn’t. So do we.', ar: 'الورق بيطفو… لفترة. ونحن كمان.' },
-    crop: { x: '50%', y: '45%', scale: 2.4 },
+    id: 'jeyeh-3a-beli',
+    phrase: { en: 'IT CROSSED MY MIND', ar: 'جاي عبالي' },
+    first: { en: 'A quiet thought, alone at the table.', ar: 'خطرة هادية، لحالك عالطاولة.' },
+    second: { en: 'The kind that only shows up with the third cigarette.', ar: 'النوع يلي ما بيجي إلا مع السيكارة التالتة.' },
+    crop: { x: '50%', y: '58%', scale: 1.8 },
   },
 ];
 

@@ -31,8 +31,12 @@ export default function Cart() {
             const ink = contrastInk(hex);
             return (
               <div key={item.key} className="flex gap-4 py-6 first:pt-0">
-                <div className="w-24 h-32 bg-card border border-border flex items-center justify-center rounded-sm shrink-0">
-                  <GarmentMockup type={item.productType} color={hex} textColor={ink} phrase={item.phrase} className="w-[85%] h-[85%]" />
+                <div className="w-24 h-32 bg-card border border-border flex items-center justify-center rounded-sm shrink-0 overflow-hidden">
+                  {item.image ? (
+                    <img src={item.image} alt={item.productName} className="w-full h-full object-cover" loading="lazy" />
+                  ) : (
+                    <GarmentMockup type={item.productType} color={hex} textColor={ink} phrase={item.phrase} className="w-[85%] h-[85%]" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-heading text-lg uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{item.productName}</h3>

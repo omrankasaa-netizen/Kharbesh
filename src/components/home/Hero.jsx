@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { READY_DESIGNS } from '@/lib/readyDesigns';
 import { BRAND_ASSETS } from '@/lib/brandAssets';
+import heroMain from '@/assets/designs/hero-main.jpg';
 
 /* Rotating campaign statements — swap one line per drop.
    AR list is the primary voice; EN mirrors it. */
@@ -20,6 +21,15 @@ const CAMPAIGNS = {
     'اقراها مرتين.',
   ],
 };
+
+/* Split a headline into [lead, accentWord] -- the last word renders in lime.
+   Pure presentation split, never rewrites or drops any character of the source string. */
+function splitAccent(line) {
+  const words = line.trim().split(/\s+/);
+  if (words.length < 2) return [line, ''];
+  const accent = words.pop();
+  return [words.join(' ') + ' ', accent];
+}
 
 export default function Hero() {
   const { lang } = useI18n();
@@ -64,7 +74,7 @@ export default function Hero() {
     <section className="kh-hero" aria-label="Kharbesh — current campaign">
       {/* The visual IS the section — everything else is embedded in it */}
       <img
-        src="/assets/designs/hero-main.jpg"
+        src={heroMain}
         alt={lang === 'ar' ? 'شاب لبناني بتيشيرت خربش، بيهز كتفيه' : 'A Lebanese guy in a Kharbesh tee, shrugging'}
         className="kh-hero-photo"
         fetchpriority="high"
@@ -78,7 +88,10 @@ export default function Hero() {
 
           <h1 className={`kh-hero-title mt-6 ${lang === 'ar' ? 'kh-hero-title-ar' : ''}`} aria-live="polite">
             <span key={`${lang}-${idx}`} className="kh-hero-line block">
-              {lines[idx]}
+              {(() => {
+                const [lead, accent] = splitAccent(lines[idx]);
+                return accent ? (<>{lead}<span className="kh-accent-word">{accent}</span></>) : lead;
+              })()}
             </span>
           </h1>
           <div className="mt-5 flex items-center gap-3" aria-hidden="true">

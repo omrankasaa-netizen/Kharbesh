@@ -28,24 +28,25 @@
 
 @layer base {
   :root {
-    --background: 41 67% 95%;
-    --foreground: 40 24% 7%;
-    --card: 44 47% 90%;
-    --card-foreground: 40 24% 7%;
-    --popover: 44 47% 90%;
-    --popover-foreground: 40 24% 7%;
-    --primary: 40 24% 7%;
-    --primary-foreground: 41 67% 95%;
-    --secondary: 45 42% 86%;
-    --secondary-foreground: 40 24% 7%;
+    /* Kharbesh Night — dark base, cream ink, lime accent. Dark is the brand's deliberate, permanent choice. */
+    --background: 40 20% 6%;
+    --foreground: 41 67% 95%;
+    --card: 40 16% 10%;
+    --card-foreground: 41 67% 95%;
+    --popover: 40 16% 10%;
+    --popover-foreground: 41 67% 95%;
+    --primary: 41 67% 95%;
+    --primary-foreground: 40 24% 7%;
+    --secondary: 40 14% 13%;
+    --secondary-foreground: 41 50% 92%;
     --accent: 67 91% 49%;
     --accent-foreground: 40 24% 7%;
-    --muted: 45 42% 86%;
-    --muted-foreground: 44 13% 38%;
-    --destructive: 5 59% 44%;
+    --muted: 40 14% 13%;
+    --muted-foreground: 44 15% 62%;
+    --destructive: 5 65% 52%;
     --destructive-foreground: 41 67% 95%;
-    --border: 46 28% 79%;
-    --input: 46 28% 79%;
+    --border: 42 15% 22%;
+    --input: 42 15% 22%;
     --ring: 67 91% 49%;
     --radius: 6px;
     --font-heading: 'Anton', 'Rakkas', sans-serif;
@@ -56,35 +57,35 @@
   }
 
   :root {
-    /* Kharbesh Paper — cream stock, black ink, one lime accent */
-    --paper: #FBF6EB;
-    --paper-2: #F2ECDB;
-    --paper-3: #EAE2CB;
-    --ink: #17140E;
-    --ink-2: #2B2619;
+    /* Kharbesh Night — near-black stock, cream ink, one lime accent, one brick red */
+    --paper: #100D08;
+    --paper-2: #1B160D;
+    --paper-3: #262015;
+    --ink: #F5EFDD;
+    --ink-2: #C9C0A6;
     --lime: #D4ED0B;
     --on-lime: #17140E;
-    --brick: #B23A2E;
-    --line: rgba(23, 20, 14, 0.12);
-    --line-strong: rgba(23, 20, 14, 0.32);
-    --muted: #6E6754;
-    --muted-2: #9C9480;
+    --brick: #C2453A;
+    --line: rgba(245, 239, 221, 0.14);
+    --line-strong: rgba(245, 239, 221, 0.30);
+    --muted: #A79E86;
+    --muted-2: #6B6350;
 
-    /* Legacy aliases — same names, paper values */
-    --brand-primary: #17140E;
-    --brand-on-primary: #FBF6EB;
-    --brand-secondary: #F2ECDB;
+    /* Legacy aliases — same names, night values */
+    --brand-primary: #F5EFDD;
+    --brand-on-primary: #100D08;
+    --brand-secondary: #1B160D;
     --brand-accent: #D4ED0B;
-    --brand-background: #FBF6EB;
-    --brand-surface: #EAE2CB;
-    --brand-text: #17140E;
-    --brand-muted: #F2ECDB;
-    --brand-muted-foreground: #6E6754;
-    --brand-border: rgba(23, 20, 14, 0.12);
-    --brand-destructive: #B23A2E;
-    --brand-brick: #B23A2E;
-    --brand-olive: #7A7A46;
-    --brand-cobalt: #1E86A6;
+    --brand-background: #100D08;
+    --brand-surface: #262015;
+    --brand-text: #F5EFDD;
+    --brand-muted: #1B160D;
+    --brand-muted-foreground: #A79E86;
+    --brand-border: rgba(245, 239, 221, 0.14);
+    --brand-destructive: #C2453A;
+    --brand-brick: #C2453A;
+    --brand-olive: #9A9A5E;
+    --brand-cobalt: #3AA7C7;
 
     --brand-font-heading: 'Anton', 'Rakkas', sans-serif;
     --brand-font-body: 'IBM Plex Sans Arabic', sans-serif;
@@ -109,14 +110,19 @@
     --brand-radius-full: 9999px;
     --brand-radius: 6px;
     --brand-shadow-none: none;
-    --brand-shadow-sm: 0 1px 2px rgba(23, 20, 14, 0.05);
-    --brand-shadow-md: 0 2px 10px rgba(23, 20, 14, 0.07);
-    --brand-shadow-lg: 0 10px 30px rgba(23, 20, 14, 0.09);
-    --brand-shadow: 0 2px 10px rgba(23, 20, 14, 0.07);
+    --brand-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+    --brand-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.55);
+    --brand-shadow-lg: 0 14px 40px rgba(0, 0, 0, 0.6);
+    --brand-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
 
     /* Hand-drawn zigzag strokes (the logo's energetic underline), reusable */
     --kh-zig-lime: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8 L16 3 L30 9 L44 4 L58 9 L72 3 L86 8 L100 4 L118 8' fill='none' stroke='%23D4ED0B' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    --kh-zig-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8 L16 3 L30 9 L44 4 L58 9 L72 3 L86 8 L100 4 L118 8' fill='none' stroke='%23FBF6EB' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --kh-zig-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8 L16 3 L30 9 L44 4 L58 9 L72 3 L86 8 L100 4 L118 8' fill='none' stroke='%23F5EFDD' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+    /* Screen-print grain -- fine noise texture at low opacity so surfaces read as inked, not flat-digital */
+    --kh-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch' result='t'/%3E%3CfeColorMatrix in='t' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    /* Halftone dot field -- small repeating dots for print-poster texture blocks */
+    --kh-halftone: radial-gradient(circle, currentColor 1.2px, transparent 1.3px);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -129,6 +135,19 @@
     line-height: var(--font-body-line-height);
     background: var(--paper);
     color: var(--ink);
+    position: relative;
+  }
+  /* Global screen-print grain -- sits above every surface so the whole site reads like printed stock, not a flat screen */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    pointer-events: none;
+    background-image: var(--kh-grain);
+    background-size: 180px 180px;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
   }
   ::selection { background: var(--lime); color: var(--on-lime); }
 }
@@ -159,7 +178,7 @@
   .kh-btn-primary:active { transform: translateY(1px); box-shadow: var(--brand-shadow-none); }
   .kh-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* Mark button — ink block, zigzag stroke draws itself on hover */
+  /* Mark button — inked block, hard-pressed stamp shadow, zigzag stroke draws itself on hover */
   .kh-btn-mark,
   .kh-btn-scribble {
     position: relative;
@@ -171,11 +190,15 @@
     line-height: 1;
     color: var(--paper);
     background: var(--ink);
+    background-image: var(--kh-grain);
+    background-size: auto, 140px 140px;
+    background-blend-mode: normal, overlay;
     border: 1px solid var(--ink);
     border-radius: var(--brand-radius-sm);
     padding: 15px 30px 21px;
     white-space: nowrap;
     cursor: pointer;
+    box-shadow: 4px 4px 0 0 var(--lime);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     display: inline-flex;
     align-items: center;
@@ -200,22 +223,28 @@
   .kh-btn-mark:hover::after { background-size: 100% 100%; }
   .kh-btn-scribble:hover::after { background-size: 45% 100%; }
   .kh-btn-mark:hover,
-  .kh-btn-scribble:hover { box-shadow: var(--brand-shadow-md); }
+  .kh-btn-scribble:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 0 var(--lime); }
   .kh-btn-mark:active,
-  .kh-btn-scribble:active { transform: translateY(1px); }
+  .kh-btn-scribble:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 0 var(--lime); }
   .kh-btn-mark:disabled,
-  .kh-btn-scribble:disabled { opacity: 0.5; cursor: not-allowed; }
+  .kh-btn-scribble:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
   [dir="rtl"] .kh-btn-mark::after,
   [dir="rtl"] .kh-btn-scribble::after { background-position: 100% 100%; }
 
-  /* Outline sibling — hairline ink, fills on hover */
+  /* Loud sibling — solid lime fill, ink text/border. Paired with the ink-block primary, this is the second half
+     of the two-tone system (black + lime) that carries the brand's loudest accent into every CTA pair. */
   .kh-btn-mark-brick {
-    color: var(--ink);
-    background: transparent;
-    border: 1px solid var(--ink);
+    color: var(--on-lime);
+    background: var(--lime);
+    background-image: var(--kh-grain);
+    background-size: auto, 140px 140px;
+    background-blend-mode: normal, overlay;
+    border: 1px solid var(--on-lime);
+    box-shadow: 4px 4px 0 0 var(--ink);
   }
-  .kh-btn-mark-brick::after { background-image: var(--kh-zig-lime); background-size: 100% 100%; }
-  .kh-btn-mark-brick:hover { background: var(--ink); color: var(--paper); }
+  .kh-btn-mark-brick::after { background-image: var(--kh-zig-paper); background-size: 100% 100%; opacity: 0.7; }
+  .kh-btn-mark-brick:hover { background-color: var(--ink); color: var(--paper); border-color: var(--ink); transform: translate(-2px, -2px); box-shadow: 6px 6px 0 0 var(--ink); }
+  .kh-btn-mark-brick:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 0 var(--ink); }
 
   .kh-btn-secondary {
     font-family: var(--brand-font-body);
@@ -456,8 +485,40 @@
     color: var(--muted);
   }
 
+  /* ===== Our Story page marks ===== */
+  .kh-story-halftone {
+    position: absolute;
+    top: -40px;
+    right: -60px;
+    width: 220px;
+    height: 220px;
+    background-image: var(--kh-halftone);
+    background-size: 10px 10px;
+    color: var(--lime);
+    opacity: 0.16;
+    mask-image: radial-gradient(circle at 70% 30%, black, transparent 70%);
+    -webkit-mask-image: radial-gradient(circle at 70% 30%, black, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .kh-story-pullquote {
+    position: relative;
+    margin: var(--brand-sp-6) 0 0;
+    padding-inline-start: var(--brand-sp-4);
+    border-inline-start: 3px solid var(--lime);
+  }
+  .kh-story-pullquote span {
+    display: block;
+    font-family: var(--brand-font-heading);
+    font-weight: var(--brand-font-weight-black);
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.15;
+    color: var(--ink);
+  }
+
   /* ===== Collection tile ===== */
   .kh-card-collection {
+    position: relative;
     font-family: var(--brand-font-body);
     background: var(--paper-3);
     border: 1px solid var(--line);
@@ -466,10 +527,31 @@
     display: flex;
     flex-direction: column;
     gap: var(--brand-sp-2);
-    transition: border-color 0.2s ease;
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     min-height: 240px;
+    box-shadow: 4px 4px 0 0 var(--line);
+    overflow: hidden;
   }
-  .kh-card-collection:hover { border-color: var(--ink); }
+  .kh-card-collection::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 64px;
+    height: 64px;
+    background-image: var(--kh-halftone);
+    background-size: 8px 8px;
+    color: var(--lime);
+    opacity: 0.22;
+    mask-image: radial-gradient(circle at 100% 0%, black, transparent 75%);
+    -webkit-mask-image: radial-gradient(circle at 100% 0%, black, transparent 75%);
+    pointer-events: none;
+  }
+  .kh-card-collection:hover {
+    border-color: var(--ink);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 0 var(--lime);
+  }
   .kh-card-collection .kh-eyebrow { color: var(--muted); }
   .kh-card-collection .kh-h {
     margin: 0;
@@ -912,9 +994,9 @@ a:hover > .kh-zig-draw,
 .kh-dots i:nth-child(3) { width: 8px; height: 8px; }
 .kh-dots-lime i { background: var(--lime); }
 
-/* Ink flip — the dark band used sparingly (custom CTA, footer) */
-.kh-ink { background: var(--ink); color: var(--paper); }
-.kh-ink .kh-eyebrow { color: var(--paper); }
+/* Ink flip — a raised dark band used sparingly (custom CTA, footer) — must read distinct from the base page */
+.kh-ink { background: var(--paper-3); color: var(--ink); }
+.kh-ink .kh-eyebrow { color: var(--lime); }
 
 /* Hairline grid — cells divided by 1px rules, no card chrome */
 .kh-grid-hair {
@@ -950,6 +1032,12 @@ a:hover > .kh-zig-draw,
   line-height: 1.25;
   max-width: 24ch;
 }
+/* Mixed-weight/color headline accent -- the closing phrase of each rotating line lands in lime */
+.kh-hero-title .kh-accent-word {
+  color: var(--lime);
+  font-style: italic;
+}
+.kh-hero-title-ar .kh-accent-word { font-style: normal; }
 
 /* Section title — same voice, smaller */
 .kh-section-title {
@@ -1297,9 +1385,9 @@ a:hover > .kh-zig-draw,
 
 /* Ink tooltip with lime arrow */
 .kh-tooltip-cream {
-  background: var(--ink) !important;
-  color: var(--paper) !important;
-  border: none;
+  background: var(--paper-3) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--line-strong);
 }
 .kh-tooltip-cream .kh-tooltip-arrow { fill: var(--lime) !important; }
 
