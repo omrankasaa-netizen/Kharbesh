@@ -6,6 +6,7 @@ import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
 import { createOAuthCallbackHandler } from "./kimi/auth";
+import { createGoogleOAuthCallbackHandler } from "./google/auth";
 import { Paths } from "@contracts/constants";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
@@ -70,6 +71,7 @@ if (env.isProduction) {
 
 app.use(bodyLimit({ maxSize: 2 * 1024 * 1024 }));
 app.get(Paths.oauthCallback, createOAuthCallbackHandler());
+app.get(Paths.googleOauthCallback, createGoogleOAuthCallbackHandler());
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
     endpoint: "/api/trpc",

@@ -75,7 +75,7 @@ export default function Footer() {
           <span className="inline-flex items-center gap-2">
             {lang === 'ar' ? 'لبسك بيحكي عنك — Kharbesh it your way.' : 'Labsak byehki 3annak — Kharbesh it your way.'}
             <Link
-              to="/login"
+              to="/admin/login"
               aria-label="Admin login"
               title="Admin"
               className="inline-flex items-center justify-center opacity-15 hover:opacity-90 hover:text-[#D4ED0B] transition-opacity select-none"

@@ -20,10 +20,14 @@ export async function upsertUser(data: InsertUser) {
     ...data,
   };
 
+  const isAllowedStaffEmail =
+    !!values.email &&
+    env.adminAllowedEmails.includes(values.email.trim().toLowerCase());
+
   if (
     values.role === undefined &&
     values.unionId &&
-    values.unionId === env.ownerUnionId
+    (values.unionId === env.ownerUnionId || isAllowedStaffEmail)
   ) {
     values.role = "admin";
     updateSet.role = "admin";

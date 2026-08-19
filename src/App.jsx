@@ -21,6 +21,7 @@ import FAQ from '@/pages/FAQ';
 import Contact from '@/pages/Contact';
 import TrackOrder from '@/pages/TrackOrder';
 import Login from '@/pages/Login';
+import AdminLogin from '@/pages/AdminLogin';
 import AdminGuard from '@/components/AdminGuard';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import AdminOrders from '@/pages/admin/AdminOrders';
@@ -67,6 +68,7 @@ const AuthenticatedApp = () => {
         <Route path="/contact" element={<Contact />} />
         <Route path="/track" element={<TrackOrder />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
         <Route element={<AdminGuard />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/orders" element={<AdminOrders />} />

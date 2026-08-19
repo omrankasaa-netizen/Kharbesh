@@ -16,4 +16,12 @@ export const env = {
   kimiAuthUrl: required("KIMI_AUTH_URL"),
   kimiOpenUrl: required("KIMI_OPEN_URL"),
   ownerUnionId: process.env.OWNER_UNION_ID ?? "",
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  // Comma-separated staff emails allowed to sign in as admin via Google.
+  // Matching is case-insensitive. Example: "omar@kharbesh.com,sara@kharbesh.com"
+  adminAllowedEmails: (process.env.ADMIN_ALLOWED_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
 };
