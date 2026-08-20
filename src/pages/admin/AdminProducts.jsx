@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { base44 } from '@/api/khClient';
-import { useColors, useGarmentStyles } from '@/lib/useCatalog.jsx';
+import { useColors, useGarmentStyles, useCatalogRefresh } from '@/lib/useCatalog.jsx';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
 
@@ -275,6 +275,80 @@ function CoverPhotosField({ images, onUpload, onRemove, uploading, lang }) {
   );
 }
 
+/**
+ * Garment style dropdown with an inline "add new" escape hatch. Staff pick
+ * from the seeded list (Oversized Tee, Classic Tee, ...) but can add a style
+ * that isn't there yet (Regular Fit, Pique, ...) without leaving the form —
+ * it's saved to the shared catalog immediately and selected on this product.
+ */
+function GarmentStyleField({ value, onChange, styles, lang }) {
+  const { refreshStyles } = useCatalogRefresh();
+  const [adding, setAdding] = useState(false);
+  const [nameEn, setNameEn] = useState('');
+  const [nameAr, setNameAr] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const startAdd = () => { setAdding(true); setNameEn(''); setNameAr(''); setError(''); };
+  const cancelAdd = () => { setAdding(false); setError(''); };
+
+  const save = async () => {
+    if (!nameEn.trim()) { setError(lang === 'ar' ? 'لازم اسم بالإنكليزي.' : 'Name (EN) is required.'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      const created = await base44.entities.Styles.create({ name_en: nameEn.trim(), name_ar: nameAr.trim() || null });
+      await refreshStyles();
+      onChange(created.name_en);
+      setAdding(false);
+    } catch (err) {
+      setError(err?.message || (lang === 'ar' ? 'ما قدرنا نضيف هالستايل.' : 'Could not add this style.'));
+    } finally { setSaving(false); }
+  };
+
+  if (adding) {
+    return (
+      <div className="space-y-2 p-3 rounded-md border border-dashed" style={{ borderColor: 'var(--brand-accent)' }}>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <input
+            autoFocus
+            className="kh-input"
+            placeholder={lang === 'ar' ? 'اسم الستايل (EN) — Regular Fit' : 'Style name (EN) — e.g. Regular Fit'}
+            value={nameEn}
+            onChange={(e) => setNameEn(e.target.value)}
+          />
+          <input
+            className="kh-input"
+            dir="rtl"
+            placeholder={lang === 'ar' ? 'اسم الستايل (AR) — اختياري' : 'Style name (AR) — optional'}
+            value={nameAr}
+            onChange={(e) => setNameAr(e.target.value)}
+          />
+        </div>
+        {error && <p className="text-xs" style={{ color: 'var(--brand-destructive)' }}>{error}</p>}
+        <div className="flex gap-2">
+          <button type="button" disabled={saving} onClick={save} className="kh-btn-primary text-xs px-3 py-1.5">
+            {saving ? '…' : (lang === 'ar' ? 'إضافة وإختيار' : 'Add & select')}
+          </button>
+          <button type="button" onClick={cancelAdd} className="kh-btn-text text-xs">{lang === 'ar' ? 'إلغاء' : 'Cancel'}</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      className="kh-input"
+      value={value || ''}
+      onChange={(e) => (e.target.value === '__add_new__' ? startAdd() : onChange(e.target.value))}
+    >
+      <option value="">—</option>
+      {styles.map((s) => <option key={s.id} value={s.name_en}>{s.name_en}</option>)}
+      <option value="__add_new__">{lang === 'ar' ? '+ إضافة ستايل جديد…' : '+ Add new style…'}</option>
+    </select>
+  );
+}
+
 export default function AdminProducts() {
   const { lang } = useI18n();
   const colors = useColors();
@@ -411,6 +485,14 @@ export default function AdminProducts() {
               <Field label={lang === 'ar' ? 'المجموعة' : 'Collection'}>
                 <input className="kh-input" value={form.collection_name || ''} onChange={set('collection_name')} placeholder="Kharbesh Quotes" />
               </Field>
+              <Field label={lang === 'ar' ? 'قصة القطعة' : 'Garment style'} help={lang === 'ar' ? 'مثلاً: أوفرسايز، ريغولر، بيكيه' : 'e.g. Oversized, Regular Fit, Pique'}>
+                <GarmentStyleField
+                  value={form.garment_style}
+                  onChange={(v) => setForm((f) => ({ ...f, garment_style: v }))}
+                  styles={styles}
+                  lang={lang}
+                />
+              </Field>
             </div>
           </SectionCard>
 
@@ -499,12 +581,6 @@ export default function AdminProducts() {
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Payoff (EN)"><input className="kh-input" value={form.payoff_en || ''} onChange={set('payoff_en')} /></Field>
               <Field label="Mood"><input className="kh-input" value={form.mood || ''} onChange={set('mood')} /></Field>
-              <Field label="Garment style">
-                <select className="kh-input" value={form.garment_style || ''} onChange={set('garment_style')}>
-                  <option value="">—</option>
-                  {styles.map((s) => <option key={s.id} value={s.name_en}>{s.name_en}</option>)}
-                </select>
-              </Field>
               <Field label="Placement"><input className="kh-input" value={form.placement || ''} onChange={set('placement')} placeholder="Front, centered" /></Field>
               <Field label="Fit (EN)"><input className="kh-input" value={form.fit_en || ''} onChange={set('fit_en')} /></Field>
               <Field label="Measurements (EN)"><input className="kh-input" value={form.measurements_en || ''} onChange={set('measurements_en')} /></Field>

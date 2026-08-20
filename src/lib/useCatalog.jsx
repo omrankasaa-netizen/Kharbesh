@@ -1,11 +1,21 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { base44 } from '@/api/khClient';
 
-const CatalogContext = createContext({ colors: [], styles: [] });
+const CatalogContext = createContext({ colors: [], styles: [], refreshStyles: async () => {}, refreshColors: async () => {} });
 
 export const CatalogProvider = ({ children }) => {
   const [colors, setColors] = useState([]);
   const [styles, setStyles] = useState([]);
+
+  const refreshColors = async () => {
+    try { setColors((await base44.entities.GarmentColor.list('sort_order', 50)) || []); }
+    catch { /* keep previous list on failure */ }
+  };
+  const refreshStyles = async () => {
+    try { setStyles((await base44.entities.GarmentStyle.list('sort_order', 50)) || []); }
+    catch { /* keep previous list on failure */ }
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -20,11 +30,15 @@ export const CatalogProvider = ({ children }) => {
       }
     })();
   }, []);
-  return <CatalogContext.Provider value={{ colors, styles }}>{children}</CatalogContext.Provider>;
+  return <CatalogContext.Provider value={{ colors, styles, refreshColors, refreshStyles }}>{children}</CatalogContext.Provider>;
 };
 
 export const useColors = () => useContext(CatalogContext).colors;
 export const useGarmentStyles = () => useContext(CatalogContext).styles;
+export const useCatalogRefresh = () => {
+  const { refreshColors, refreshStyles } = useContext(CatalogContext);
+  return { refreshColors, refreshStyles };
+};
 
 export const resolveColor = (name, colors) => colors.find((c) => c.name_en === name);
 

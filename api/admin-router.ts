@@ -13,6 +13,9 @@ import {
   updateGarmentColor,
   deleteGarmentColor,
   reorderGarmentColors,
+  createGarmentStyle,
+  updateGarmentStyle,
+  deleteGarmentStyle,
   listProductColorImages,
   upsertProductColorImages,
   deleteProductColorImages,
@@ -305,6 +308,29 @@ export const adminRouter = createRouter({
   reorderGarmentColors: adminQuery
     .input(z.object({ ids: z.array(idParam) }))
     .mutation(({ input }) => reorderGarmentColors(input.ids.map(Number))),
+
+  createGarmentStyle: adminQuery
+    .input(z.object({
+      name_en: z.string().min(1).max(120),
+      name_ar: z.string().max(120).nullable().optional(),
+      price_modifier: z.number().optional(),
+      sizes: z.array(z.string()).optional(),
+    }))
+    .mutation(({ input }) => createGarmentStyle(input)),
+
+  updateGarmentStyle: adminQuery
+    .input(z.object({
+      id: idParam,
+      name_en: z.string().min(1).max(120).optional(),
+      name_ar: z.string().max(120).nullable().optional(),
+      price_modifier: z.number().optional(),
+      sizes: z.array(z.string()).optional(),
+    }))
+    .mutation(({ input }) => updateGarmentStyle(Number(input.id), input)),
+
+  deleteGarmentStyle: adminQuery
+    .input(z.object({ id: idParam }))
+    .mutation(({ input }) => deleteGarmentStyle(Number(input.id))),
 
   // ── Admin tier: discounts, promo codes, homepage campaigns ───────────────
   promoCodes: adminQuery.query(() => listPromoCodes()),

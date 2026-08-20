@@ -145,16 +145,86 @@ export async function reorderGarmentColors(orderedIds: number[]) {
   return listGarmentColors();
 }
 
-export async function listGarmentStyles() {
-  const rows = await getDb().select().from(garmentStyles).orderBy(asc(garmentStyles.sortOrder));
-  return rows.map((s) => ({
+function toUiStyle(s: typeof garmentStyles.$inferSelect) {
+  return {
     id: String(s.id),
     name_en: s.nameEn,
     name_ar: s.nameAr,
     price_modifier: s.priceModifierCents / 100,
     sizes: s.sizes,
     sort_order: s.sortOrder,
-  }));
+  };
+}
+
+export async function listGarmentStyles() {
+  const rows = await getDb().select().from(garmentStyles).orderBy(asc(garmentStyles.sortOrder));
+  return rows.map(toUiStyle);
+}
+
+/** Admin CRUD for the garment style catalog — the master list of fits
+ * (Oversized Tee, Classic Tee, Regular Fit, Pique, etc.) offered in the
+ * product form's "Garment style" dropdown. */
+export async function createGarmentStyle(data: {
+  name_en: string;
+  name_ar?: string | null;
+  price_modifier?: number;
+  sizes?: string[];
+}) {
+  const db = getDb();
+  const existing = await db
+    .select({ maxSort: garmentStyles.sortOrder })
+    .from(garmentStyles)
+    .orderBy(desc(garmentStyles.sortOrder))
+    .limit(1);
+  const nextSort = (existing[0]?.maxSort ?? -1) + 1;
+  const [{ id }] = await db
+    .insert(garmentStyles)
+    .values({
+      nameEn: data.name_en.trim(),
+      nameAr: data.name_ar?.trim() || null,
+      priceModifierCents: Math.round((data.price_modifier ?? 0) * 100),
+      sizes: data.sizes?.length ? data.sizes : ["S", "M", "L", "XL", "XXL"],
+      sortOrder: nextSort,
+    })
+    .$returningId();
+  const [row] = await db.select().from(garmentStyles).where(eq(garmentStyles.id, id)).limit(1);
+  return toUiStyle(row);
+}
+
+export async function updateGarmentStyle(
+  id: number,
+  data: { name_en?: string; name_ar?: string | null; price_modifier?: number; sizes?: string[]; sort_order?: number },
+) {
+  const db = getDb();
+  const patch: Record<string, unknown> = {};
+  if (data.name_en !== undefined) patch.nameEn = data.name_en.trim();
+  if (data.name_ar !== undefined) patch.nameAr = data.name_ar?.trim() || null;
+  if (data.price_modifier !== undefined) patch.priceModifierCents = Math.round(data.price_modifier * 100);
+  if (data.sizes !== undefined) patch.sizes = data.sizes;
+  if (data.sort_order !== undefined) patch.sortOrder = data.sort_order;
+  await db.update(garmentStyles).set(patch).where(eq(garmentStyles.id, id));
+  const [row] = await db.select().from(garmentStyles).where(eq(garmentStyles.id, id)).limit(1);
+  return row ? toUiStyle(row) : null;
+}
+
+/** Refuses to delete a style that's still selected on any product. */
+export async function deleteGarmentStyle(id: number) {
+  const db = getDb();
+  const [style] = await db.select().from(garmentStyles).where(eq(garmentStyles.id, id)).limit(1);
+  if (!style) return { success: true };
+
+  const allProducts = await db.select({ id: products.id, nameEn: products.nameEn, garmentStyle: products.garmentStyle }).from(products);
+  const inUse = allProducts.filter((p) => p.garmentStyle === style.nameEn);
+  if (inUse.length > 0) {
+    throw new Error(
+      `"${style.nameEn}" is still used by ${inUse.length} product${inUse.length > 1 ? 's' : ''} (${inUse
+        .map((p) => p.nameEn)
+        .join(', ')}). Change those products' style first.`,
+    );
+  }
+
+  await db.delete(garmentStyles).where(eq(garmentStyles.id, id));
+  return { success: true };
 }
 
 /** Public catalog: everything except drafts. */

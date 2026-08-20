@@ -226,6 +226,13 @@ export const kh = {
       reorder: (ids) => client.admin.reorderGarmentColors.mutate({ ids: ids.map(String) }),
     },
 
+    Styles: {
+      list: () => client.catalog.garmentStyles.query(),
+      create: (data) => client.admin.createGarmentStyle.mutate(data),
+      update: (id, data) => client.admin.updateGarmentStyle.mutate({ id: String(id), ...data }),
+      remove: (id) => client.admin.deleteGarmentStyle.mutate({ id: String(id) }),
+    },
+
     BlankStock: {
       list: () => client.admin.blankStock.query(),
       upsertVariant: (data) => client.admin.upsertStockVariant.mutate(data),

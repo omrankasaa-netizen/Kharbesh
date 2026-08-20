@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
 import ColorManager from '@/components/ColorManager';
+import StyleManager from '@/components/StyleManager';
 
 /* In-memory settings — sandboxed preview iframes block localStorage,
    so admin edits persist for the session only (not across reloads). */
@@ -85,6 +86,7 @@ export default function SiteSettings() {
       </form>
 
       <ColorManager lang={lang} />
+      <StyleManager lang={lang} />
     </div>
   );
 }
