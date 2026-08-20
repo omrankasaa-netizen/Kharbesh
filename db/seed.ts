@@ -85,7 +85,7 @@ const productSeeds = [
     collectionName: "Kharbesh Quotes",
     mood: "Dry",
     image: "/assets/designs/financially-unstable.jpg",
-    priceCents: 3400,
+    priceCents: 3500,
     sortOrder: 1,
   },
   {
@@ -99,7 +99,7 @@ const productSeeds = [
     collectionName: "Kharbesh Quotes",
     mood: "Witty",
     image: "/assets/designs/jeyeh-3a-beli.jpg",
-    priceCents: 3200,
+    priceCents: 3500,
     sortOrder: 2,
   },
   {
@@ -113,7 +113,7 @@ const productSeeds = [
     collectionName: "Kharbesh Quotes",
     mood: "Sarcastic",
     image: "/assets/designs/masari-be-amen.jpg",
-    priceCents: 3400,
+    priceCents: 3500,
     sortOrder: 3,
   },
   {
@@ -127,7 +127,7 @@ const productSeeds = [
     collectionName: "Kharbesh Quotes",
     mood: "Bold",
     image: "/assets/designs/greatest-weapon.jpg",
-    priceCents: 3400,
+    priceCents: 3500,
     sortOrder: 4,
   },
   {
@@ -141,7 +141,7 @@ const productSeeds = [
     collectionName: "Kharbesh Rahbaniet",
     mood: "Nostalgic",
     image: "/assets/designs/bala-hob-bala-batikh.jpg",
-    priceCents: 3600,
+    priceCents: 3500,
     sortOrder: 5,
   },
   {
@@ -155,7 +155,7 @@ const productSeeds = [
     collectionName: "Kharbesh Quotes",
     mood: "Sarcastic",
     image: "/assets/designs/ceo-of-everything.jpg",
-    priceCents: 3200,
+    priceCents: 3500,
     sortOrder: 6,
   },
 ] as const;
@@ -217,7 +217,7 @@ async function seed() {
       priceCents: p.priceCents,
       approvedColors: [...TEE_COLORS],
       sizes: [...TEE_SIZES],
-      images: [p.image],
+      images: ["/assets/brand/placeholder-front.jpg", "/assets/brand/placeholder-back.jpg"],
       status: "active",
       preorderType: "always_on",
       estimatedProductionDays: 10,
