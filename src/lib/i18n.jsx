@@ -113,6 +113,7 @@ const dictionaries = {
     custom: {
       title: 'Kharbesh 3a Zaw2ak',
       sub: 'Send the line, add the context (who says it, when, why it’s funny). We design it as a Kharbesh piece — and you approve the artwork before anything gets printed.',
+      startingAt: 'Starting at $40 — final quote depends on garment and placement.',
       phrase: 'The phrase',
       phraseHelp: 'The exact words you want printed.',
       story: 'The story',
@@ -155,7 +156,7 @@ const dictionaries = {
         { q: 'Can I cancel a preorder?', a: 'Yes, until the preorder window closes. After that, blanks are ordered and cancellation isn’t possible — but you can request an exchange per our policy.' },
         { q: 'How do sizes run?', a: 'Each garment lists its fit and measurements on the product page. Oversized tees run boxy; classic tees run true to size.' },
         { q: 'Do you ship outside Lebanon?', a: 'Yes. Shipping is calculated at checkout based on your destination. Duties and taxes may apply.' },
-        { q: 'What is 3a Zaw2ak?', a: 'A custom order, your way. Send us your phrase and the story behind it — we turn it into a Kharbesh design, you approve the artwork, then we print.' },
+        { q: 'What is 3a Zaw2ak?', a: 'A custom order, your way. Send us your phrase and the story behind it — we turn it into a Kharbesh design, you approve the artwork, then we print. Starts at $40.' },
       ],
     },
     contact: {
@@ -280,6 +281,7 @@ const dictionaries = {
     custom: {
       title: 'خربش على ذوقك',
       sub: 'ابعت الجملة، وزيدنا السياق (مين بيقولها، متى، وليش بتضحّك). منصمّمها كقطعة خربش — وبتشوف الرسمة وتوافق عليها قبل ما نطبع.',
+      startingAt: 'بيبلّش من ٤٠$ — السعر النهائي حسب القطعة ومكان الطباعة.',
       phrase: 'الجملة',
       phraseHelp: 'الكلمات بالضبط اللي بدك يطبعوها.',
       story: 'الحكاية',
@@ -322,7 +324,7 @@ const dictionaries = {
         { q: 'فيني ألغي طلب مسبق؟', a: 'إيه، لنقفل النافذة. بعدها منكون طلبنا القماش وما بيصير إلغاء — بس فيك تطلب تبديل حسب السياسة.' },
         { q: 'كيف المقاسات؟', a: 'كل قطعة عليها قصّتها ومقاساتها بصفحة المنتج. التيشيرت الواسع بيطلع بوكس؛ الكلاسيك بحجمه الطبيعي.' },
         { q: 'بتشحنوا خارج لبنان؟', a: 'إيه. الشحن بيحسب عند الدفع حسب وجهتك. ممكن في رسوم جمركية.' },
-        { q: 'شو هو على ذوقك؟', a: 'طلب مخصص على ذوقك. بعتلنا جملتك وحكايتها — منحوّلها لتصميم خربش، بتشوفه وتوافق عليه، وبعدين منطبع.' },
+        { q: 'شو هو على ذوقك؟', a: 'طلب مخصص على ذوقك. بعتلنا جملتك وحكايتها — منحوّلها لتصميم خربش، بتشوفه وتوافق عليه، وبعدين منطبع. بيبلّش من ٤٠$.' },
       ],
     },
     contact: {

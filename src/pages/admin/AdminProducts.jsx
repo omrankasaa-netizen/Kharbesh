@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { base44 } from '@/api/khClient';
 import { useColors, useGarmentStyles } from '@/lib/useCatalog.jsx';
 import PageHeader from '@/components/PageHeader';
@@ -8,12 +8,16 @@ const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
 const STATUSES = ['active', 'draft', 'archived'];
 const PREORDER_TYPES = ['always_on', 'open_until', 'quantity_target', 'limited_quantity'];
 
+// Sensible starting price per garment type — staff can still override.
+// Tees default to $35 per the brand's current pricing (Aug 2026).
+const DEFAULT_PRICE_BY_TYPE = { tee: 35, hoodie: 55, accessory: 20 };
+
 const emptyForm = {
   name_en: '', name_ar: '', phrase_en: '', phrase_ar: '', payoff_en: '',
   description_en: '', description_ar: '', collection_name: '', mood: '',
   product_type: 'tee', garment_style: '', fit_en: '', care_en: '', care_ar: '',
   measurements_en: '', approved_colors: [], sizes: [], placement: '',
-  price: 0, compare_at_price: '', images: [], status: 'draft',
+  price: DEFAULT_PRICE_BY_TYPE.tee, compare_at_price: '', images: [], status: 'draft',
   preorder_type: 'always_on', preorder_close_date: '', preorder_capacity: '',
   units_sold: 0, estimated_production_days: 10, estimated_dispatch_window: '',
   drop_name: '', sort_order: 0,
@@ -61,12 +65,44 @@ function toPayload(f) {
   };
 }
 
-function Field({ label, children }) {
+function Field({ label, help, children }) {
   return (
     <label className="block">
       <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-1.5">{label}</span>
       {children}
+      {help && <span className="block text-[11px] text-muted-foreground mt-1">{help}</span>}
     </label>
+  );
+}
+
+/** Grouped card with a title — the visual container for each form section. */
+function SectionCard({ title, sub, children }) {
+  return (
+    <section className="bg-card border border-border rounded-md p-5 sm:p-6">
+      <h3 className="font-heading text-sm uppercase tracking-wide mb-1" style={{ fontFamily: 'var(--brand-font-heading)', color: 'var(--brand-accent)' }}>
+        {title}
+      </h3>
+      {sub && <p className="text-xs text-muted-foreground mb-4">{sub}</p>}
+      <div className={sub ? 'grid gap-4' : 'grid gap-4 mt-4'}>{children}</div>
+    </section>
+  );
+}
+
+/** Collapsed-by-default section for rarely-used fields, so the default form
+ * a non-technical staffer sees stays short. Native <details> — no extra libs. */
+function AdvancedSection({ title, lang, children }) {
+  return (
+    <details className="bg-card border border-border rounded-md group">
+      <summary
+        className="cursor-pointer select-none list-none px-5 sm:px-6 py-4 flex items-center justify-between text-sm font-medium"
+        style={{ color: 'var(--ink)' }}
+      >
+        <span>{title}</span>
+        <span className="text-xs text-muted-foreground group-open:hidden">{lang === 'ar' ? 'فتح ▾' : 'Show ▾'}</span>
+        <span className="text-xs text-muted-foreground hidden group-open:inline">{lang === 'ar' ? 'إغلاق ▴' : 'Hide ▴'}</span>
+      </summary>
+      <div className="px-5 sm:px-6 pb-6 grid gap-4">{children}</div>
+    </details>
   );
 }
 
@@ -199,6 +235,46 @@ function ColorImagesSection({ productId, approvedColors, lang }) {
   );
 }
 
+/** Cover photo uploader with explicit Front/Back slots (index 0/1 of the
+ * top-level `images` array) — used as the Shop-grid thumbnail and the
+ * gallery fallback before a shopper picks a color. */
+function CoverPhotosField({ images, onUpload, onRemove, uploading, lang }) {
+  const slots = [
+    { idx: 0, label: lang === 'ar' ? 'الأمام' : 'Front' },
+    { idx: 1, label: lang === 'ar' ? 'الخلف' : 'Back' },
+  ];
+  return (
+    <div className="flex flex-wrap gap-4">
+      {slots.map((slot) => {
+        const url = images[slot.idx];
+        return (
+          <div key={slot.idx} className="w-32">
+            <div className="relative w-32 h-40 rounded-md overflow-hidden border border-border bg-background flex items-center justify-center">
+              {url ? (
+                <>
+                  <img src={url} alt={slot.label} className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => onRemove(slot.idx)} className="absolute top-1 right-1 bg-black/70 text-white text-xs w-5 h-5 rounded-full">×</button>
+                </>
+              ) : (
+                <span className="text-[11px] text-muted-foreground px-2 text-center">{lang === 'ar' ? 'صورة كخربش' : 'Kharbesh placeholder'}</span>
+              )}
+              <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">{slot.label}</span>
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => onUpload(slot.idx, e)}
+              disabled={uploading === slot.idx}
+              className="text-xs mt-2 w-full"
+            />
+            {uploading === slot.idx && <span className="text-[11px] text-muted-foreground">{lang === 'ar' ? 'عم يرفع…' : 'Uploading…'}</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function AdminProducts() {
   const { lang } = useI18n();
   const colors = useColors();
@@ -208,9 +284,10 @@ export default function AdminProducts() {
   const [editingId, setEditingId] = useState(null); // 'new' | id | null
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState(null);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const priceTouched = useRef(false);
 
   const load = async () => {
     setLoading(true);
@@ -232,26 +309,47 @@ export default function AdminProducts() {
       (p.collection_name || '').toLowerCase().includes(s));
   }, [products, search]);
 
-  const startCreate = () => { setForm(emptyForm); setEditingId('new'); setError(''); };
-  const startEdit = (p) => { setForm(toFormShape(p)); setEditingId(p.id); setError(''); };
+  const startCreate = () => { setForm(emptyForm); priceTouched.current = false; setEditingId('new'); setError(''); };
+  const startEdit = (p) => { setForm(toFormShape(p)); priceTouched.current = true; setEditingId(p.id); setError(''); };
   const cancelEdit = () => { setEditingId(null); setForm(emptyForm); setError(''); };
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const onImages = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    setUploading(true);
-    try {
-      const urls = [];
-      for (const file of files) {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
-        urls.push(file_url);
+  const setPrice = (e) => { priceTouched.current = true; setForm((f) => ({ ...f, price: e.target.value })); };
+
+  // A new product's price auto-fills to a sensible default for the chosen
+  // garment type, until the staffer types a price themselves.
+  const setProductType = (e) => {
+    const value = e.target.value;
+    setForm((f) => {
+      const next = { ...f, product_type: value };
+      if (editingId === 'new' && !priceTouched.current && DEFAULT_PRICE_BY_TYPE[value] != null) {
+        next.price = DEFAULT_PRICE_BY_TYPE[value];
       }
-      setForm((f) => ({ ...f, images: [...f.images, ...urls] }));
-    } finally { setUploading(false); }
+      return next;
+    });
   };
-  const removeImage = (idx) => setForm((f) => ({ ...f, images: f.images.filter((_, i) => i !== idx) }));
+
+  const onCoverUpload = async (slotIdx, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingSlot(slotIdx);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setForm((f) => {
+        const next = [...f.images];
+        next[slotIdx] = file_url;
+        return { ...f, images: next };
+      });
+    } finally { setUploadingSlot(null); }
+  };
+  const removeCoverImage = (slotIdx) => setForm((f) => {
+    const next = [...f.images];
+    next[slotIdx] = undefined;
+    // trim trailing empty slots so we don't save a hole-filled array
+    while (next.length && next[next.length - 1] === undefined) next.pop();
+    return { ...f, images: next };
+  });
 
   const save = async () => {
     if (!form.name_en.trim()) { setError(lang === 'ar' ? 'الاسم مطلوب' : 'Name is required.'); return; }
@@ -288,116 +386,156 @@ export default function AdminProducts() {
       <PageHeader eyebrow="Admin" title={lang === 'ar' ? 'المنتجات' : 'Products'} />
 
       {editingId ? (
-        <div className="mt-8 bg-card border border-border rounded-md p-6 max-w-4xl">
-          <h2 className="font-heading text-xl uppercase mb-6" style={{ fontFamily: 'var(--brand-font-heading)' }}>
-            {editingId === 'new' ? (lang === 'ar' ? 'منتج جديد' : 'New product') : (lang === 'ar' ? 'تعديل المنتج' : 'Edit product')}
-          </h2>
+        <div className="mt-8 max-w-3xl space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>
+              {editingId === 'new' ? (lang === 'ar' ? 'منتج جديد' : 'New product') : (lang === 'ar' ? 'تعديل المنتج' : 'Edit product')}
+            </h2>
+            <button onClick={cancelEdit} className="kh-btn-text text-sm">{lang === 'ar' ? '← رجوع للائحة' : '← Back to list'}</button>
+          </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Name (EN)"><input className="kh-input" value={form.name_en} onChange={set('name_en')} /></Field>
-            <Field label="Name (AR)"><input className="kh-input" dir="rtl" value={form.name_ar || ''} onChange={set('name_ar')} /></Field>
-            <Field label="Phrase (EN)"><input className="kh-input" value={form.phrase_en || ''} onChange={set('phrase_en')} /></Field>
-            <Field label="Phrase (AR)"><input className="kh-input" dir="rtl" value={form.phrase_ar || ''} onChange={set('phrase_ar')} /></Field>
-            <Field label="Payoff (EN)"><input className="kh-input" value={form.payoff_en || ''} onChange={set('payoff_en')} /></Field>
-            <Field label="Collection">
-              <input className="kh-input" value={form.collection_name || ''} onChange={set('collection_name')} placeholder="Kharbesh Quotes" />
-            </Field>
-            <Field label="Description (EN)">
-              <textarea className="kh-input" rows={3} value={form.description_en || ''} onChange={set('description_en')} />
-            </Field>
-            <Field label="Description (AR)">
-              <textarea className="kh-input" dir="rtl" rows={3} value={form.description_ar || ''} onChange={set('description_ar')} />
-            </Field>
+          {/* 1. Basics — the only fields required to describe the piece */}
+          <SectionCard title={lang === 'ar' ? '١. الأساسيات' : '1. Basics'}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={lang === 'ar' ? 'اسم المنتج (EN)' : 'Product name (EN)'}>
+                <input className="kh-input" value={form.name_en} onChange={set('name_en')} placeholder="Financially Unstable Tee" />
+              </Field>
+              <Field label={lang === 'ar' ? 'اسم المنتج (AR)' : 'Product name (AR)'}>
+                <input className="kh-input" dir="rtl" value={form.name_ar || ''} onChange={set('name_ar')} />
+              </Field>
+              <Field label={lang === 'ar' ? 'النوع' : 'Product type'}>
+                <select className="kh-input" value={form.product_type} onChange={setProductType}>
+                  {PRODUCT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Field>
+              <Field label={lang === 'ar' ? 'المجموعة' : 'Collection'}>
+                <input className="kh-input" value={form.collection_name || ''} onChange={set('collection_name')} placeholder="Kharbesh Quotes" />
+              </Field>
+            </div>
+          </SectionCard>
 
-            <Field label="Product type">
-              <select className="kh-input" value={form.product_type} onChange={set('product_type')}>
-                {PRODUCT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </Field>
-            <Field label="Garment style">
-              <select className="kh-input" value={form.garment_style || ''} onChange={set('garment_style')}>
-                <option value="">—</option>
-                {styles.map((s) => <option key={s.id} value={s.name_en}>{s.name_en}</option>)}
-              </select>
-            </Field>
-            <Field label="Mood"><input className="kh-input" value={form.mood || ''} onChange={set('mood')} /></Field>
-            <Field label="Placement"><input className="kh-input" value={form.placement || ''} onChange={set('placement')} placeholder="Front, centered" /></Field>
-            <Field label="Fit (EN)"><input className="kh-input" value={form.fit_en || ''} onChange={set('fit_en')} /></Field>
-            <Field label="Measurements (EN)"><input className="kh-input" value={form.measurements_en || ''} onChange={set('measurements_en')} /></Field>
-            <Field label="Care (EN)"><textarea className="kh-input" rows={2} value={form.care_en || ''} onChange={set('care_en')} /></Field>
-            <Field label="Care (AR)"><textarea className="kh-input" dir="rtl" rows={2} value={form.care_ar || ''} onChange={set('care_ar')} /></Field>
+          {/* 2. The words — the phrase and copy that carry the joke */}
+          <SectionCard title={lang === 'ar' ? '٢. الكلام' : '2. The words'} sub={lang === 'ar' ? 'الجملة الأساسية على القطعة ووصفها' : 'The headline phrase on the piece, and how you describe it.'}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={lang === 'ar' ? 'الجملة (EN)' : 'Phrase (EN)'}><input className="kh-input" value={form.phrase_en || ''} onChange={set('phrase_en')} /></Field>
+              <Field label={lang === 'ar' ? 'الجملة (AR)' : 'Phrase (AR)'}><input className="kh-input" dir="rtl" value={form.phrase_ar || ''} onChange={set('phrase_ar')} /></Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={lang === 'ar' ? 'الوصف (EN)' : 'Description (EN)'}>
+                <textarea className="kh-input" rows={3} value={form.description_en || ''} onChange={set('description_en')} />
+              </Field>
+              <Field label={lang === 'ar' ? 'الوصف (AR)' : 'Description (AR)'}>
+                <textarea className="kh-input" dir="rtl" rows={3} value={form.description_ar || ''} onChange={set('description_ar')} />
+              </Field>
+            </div>
+          </SectionCard>
 
-            <Field label="Approved colors">
+          {/* 3. Pricing & status — what it costs and whether it's live */}
+          <SectionCard title={lang === 'ar' ? '٣. السعر والحالة' : '3. Pricing & status'}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={lang === 'ar' ? 'السعر ($)' : 'Price ($)'} help={lang === 'ar' ? 'التيشيرت الافتراضي ٣٥$' : 'Tees default to $35 — override if this piece is different.'}>
+                <input type="number" step="0.01" className="kh-input" value={form.price} onChange={setPrice} />
+              </Field>
+              <Field label={lang === 'ar' ? 'سعر قبل الخصم ($) — اختياري' : 'Compare-at price ($) — optional'}>
+                <input type="number" step="0.01" className="kh-input" value={form.compare_at_price} onChange={set('compare_at_price')} />
+              </Field>
+              <Field label={lang === 'ar' ? 'الحالة' : 'Status'} help={lang === 'ar' ? 'فعّال = ظاهر للزبائن، مسودة = مخفي' : 'Active = visible to shoppers. Draft = hidden while you finish it.'}>
+                <select className="kh-input" value={form.status} onChange={set('status')}>
+                  {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </Field>
+            </div>
+          </SectionCard>
+
+          {/* 4. Colors & sizes */}
+          <SectionCard title={lang === 'ar' ? '٤. الألوان والمقاسات' : '4. Colors & sizes'}>
+            <Field label={lang === 'ar' ? 'الألوان المعتمدة' : 'Approved colors'}>
               <TogglePills
                 options={colors.map((c) => c.name_en)}
                 selected={form.approved_colors}
                 onChange={(v) => setForm((f) => ({ ...f, approved_colors: v }))}
               />
             </Field>
-            <Field label="Sizes">
+            <Field label={lang === 'ar' ? 'المقاسات' : 'Sizes'}>
               <TogglePills
                 options={['XS', 'S', 'M', 'L', 'XL', 'XXL']}
                 selected={form.sizes}
                 onChange={(v) => setForm((f) => ({ ...f, sizes: v }))}
               />
             </Field>
+          </SectionCard>
 
-            <Field label="Price ($)"><input type="number" step="0.01" className="kh-input" value={form.price} onChange={set('price')} /></Field>
-            <Field label="Compare-at price ($)"><input type="number" step="0.01" className="kh-input" value={form.compare_at_price} onChange={set('compare_at_price')} /></Field>
+          {/* 5. Photos — cover front/back, plus per-color photos once saved */}
+          <SectionCard
+            title={lang === 'ar' ? '٥. الصور' : '5. Photos'}
+            sub={lang === 'ar'
+              ? 'صورة الأمام والخلف الأساسية. لبيك ما في صور مرفوعة، بيظهر شعار خربش كصورة مؤقتة.'
+              : 'The main front and back photo. Until you upload real garment photos, the Kharbesh logo placeholder shows instead.'}
+          >
+            <CoverPhotosField
+              images={form.images}
+              onUpload={onCoverUpload}
+              onRemove={removeCoverImage}
+              uploading={uploadingSlot}
+              lang={lang}
+            />
+            {editingId !== 'new' && (
+              <div className="mt-6 border-t border-border pt-6">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-1">
+                  {lang === 'ar' ? 'صور حسب اللون (اختياري)' : 'Photos by color (optional)'}
+                </span>
+                <p className="text-xs text-muted-foreground mb-4">
+                  {lang === 'ar'
+                    ? 'حمّل صورة القميص الحقيقية لكل لون معتمد، ليشوف الزبون شكل التصميم عاللون يلي اختاره.'
+                    : 'Upload the real garment photo per approved color, so shoppers see the actual printed design on the color they picked.'}
+                </p>
+                <ColorImagesSection productId={editingId} approvedColors={form.approved_colors} lang={lang} />
+              </div>
+            )}
+          </SectionCard>
 
-            <Field label="Status">
-              <select className="kh-input" value={form.status} onChange={set('status')}>
-                {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </Field>
-            <Field label="Sort order"><input type="number" className="kh-input" value={form.sort_order} onChange={set('sort_order')} /></Field>
-
-            <Field label="Preorder type">
-              <select className="kh-input" value={form.preorder_type} onChange={set('preorder_type')}>
-                {PREORDER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </Field>
-            <Field label="Preorder capacity">
-              <input type="number" className="kh-input" value={form.preorder_capacity} onChange={set('preorder_capacity')} />
-            </Field>
-            <Field label="Preorder close date"><input type="date" className="kh-input" value={form.preorder_close_date} onChange={set('preorder_close_date')} /></Field>
-            <Field label="Units sold"><input type="number" className="kh-input" value={form.units_sold} onChange={set('units_sold')} /></Field>
-            <Field label="Est. production days"><input type="number" className="kh-input" value={form.estimated_production_days} onChange={set('estimated_production_days')} /></Field>
-            <Field label="Est. dispatch window"><input className="kh-input" value={form.estimated_dispatch_window || ''} onChange={set('estimated_dispatch_window')} placeholder="7–10 days" /></Field>
-            <Field label="Drop name"><input className="kh-input" value={form.drop_name || ''} onChange={set('drop_name')} /></Field>
-          </div>
-
-          <div className="mt-6">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-2">Images</span>
-            <div className="flex flex-wrap gap-3 mb-3">
-              {form.images.map((url, i) => (
-                <div key={i} className="relative w-20 h-20 rounded-md overflow-hidden border border-border">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                  <button type="button" onClick={() => removeImage(i)} className="absolute top-0.5 right-0.5 bg-black/70 text-white text-xs w-5 h-5 rounded-full">×</button>
-                </div>
-              ))}
+          {/* 6. Advanced — collapsed by default, rarely touched fields */}
+          <AdvancedSection title={lang === 'ar' ? 'إعدادات متقدمة' : 'Advanced settings'} lang={lang}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Payoff (EN)"><input className="kh-input" value={form.payoff_en || ''} onChange={set('payoff_en')} /></Field>
+              <Field label="Mood"><input className="kh-input" value={form.mood || ''} onChange={set('mood')} /></Field>
+              <Field label="Garment style">
+                <select className="kh-input" value={form.garment_style || ''} onChange={set('garment_style')}>
+                  <option value="">—</option>
+                  {styles.map((s) => <option key={s.id} value={s.name_en}>{s.name_en}</option>)}
+                </select>
+              </Field>
+              <Field label="Placement"><input className="kh-input" value={form.placement || ''} onChange={set('placement')} placeholder="Front, centered" /></Field>
+              <Field label="Fit (EN)"><input className="kh-input" value={form.fit_en || ''} onChange={set('fit_en')} /></Field>
+              <Field label="Measurements (EN)"><input className="kh-input" value={form.measurements_en || ''} onChange={set('measurements_en')} /></Field>
+              <Field label="Care (EN)"><textarea className="kh-input" rows={2} value={form.care_en || ''} onChange={set('care_en')} /></Field>
+              <Field label="Care (AR)"><textarea className="kh-input" dir="rtl" rows={2} value={form.care_ar || ''} onChange={set('care_ar')} /></Field>
+              <Field label="Sort order"><input type="number" className="kh-input" value={form.sort_order} onChange={set('sort_order')} /></Field>
+              <Field label="Drop name"><input className="kh-input" value={form.drop_name || ''} onChange={set('drop_name')} /></Field>
             </div>
-            <input type="file" accept="image/*" multiple onChange={onImages} disabled={uploading} className="text-sm" />
-            {uploading && <span className="text-xs text-muted-foreground ml-2">Uploading…</span>}
-          </div>
 
-          {editingId !== 'new' && (
-            <div className="mt-8 border-t border-border pt-6">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-1">
-                {lang === 'ar' ? 'صور حسب اللون' : 'Photos by color'}
-              </span>
-              <p className="text-xs text-muted-foreground mb-4">
-                {lang === 'ar'
-                  ? 'حمّل صورة القميص الحقيقية لكل لون معتمد، ليشوف الزبون شكل التصميم عاللون يلي اختاره.'
-                  : 'Upload real garment photos per approved color, so shoppers see the actual printed design on the color they picked.'}
-              </p>
-              <ColorImagesSection productId={editingId} approvedColors={form.approved_colors} lang={lang} />
+            <div className="border-t border-border pt-4">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-3">Preorder</span>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Preorder type">
+                  <select className="kh-input" value={form.preorder_type} onChange={set('preorder_type')}>
+                    {PREORDER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </Field>
+                <Field label="Preorder capacity">
+                  <input type="number" className="kh-input" value={form.preorder_capacity} onChange={set('preorder_capacity')} />
+                </Field>
+                <Field label="Preorder close date"><input type="date" className="kh-input" value={form.preorder_close_date} onChange={set('preorder_close_date')} /></Field>
+                <Field label="Units sold"><input type="number" className="kh-input" value={form.units_sold} onChange={set('units_sold')} /></Field>
+                <Field label="Est. production days"><input type="number" className="kh-input" value={form.estimated_production_days} onChange={set('estimated_production_days')} /></Field>
+                <Field label="Est. dispatch window"><input className="kh-input" value={form.estimated_dispatch_window || ''} onChange={set('estimated_dispatch_window')} placeholder="7–10 days" /></Field>
+              </div>
             </div>
-          )}
+          </AdvancedSection>
 
-          {error && <p className="text-sm mt-4" style={{ color: 'var(--brand-destructive)' }}>{error}</p>}
+          {error && <p className="text-sm" style={{ color: 'var(--brand-destructive)' }}>{error}</p>}
 
-          <div className="flex gap-3 mt-6">
+          <div className="flex gap-3">
             <button onClick={save} disabled={saving} className="kh-btn-primary">
               {saving ? 'Saving…' : (lang === 'ar' ? 'حفظ' : 'Save')}
             </button>

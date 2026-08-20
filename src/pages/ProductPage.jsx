@@ -106,9 +106,9 @@ export default function ProductPage() {
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
-            ) : view === 'front' && product.images?.[0] ? (
+            ) : (view === 'front' ? product.images?.[0] : (product.images?.[1] ?? product.images?.[0])) ? (
               <img
-                src={product.images[0]}
+                src={view === 'front' ? product.images[0] : (product.images[1] ?? product.images[0])}
                 alt={name}
                 className="w-full h-full object-cover"
                 loading="lazy"

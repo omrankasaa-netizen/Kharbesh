@@ -61,6 +61,12 @@ export default function CustomDesign() {
       <span className="kh-eyebrow">{t.custom.title}</span>
       <h1 className="mt-2 font-heading text-4xl sm:text-6xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.custom.title}</h1>
       <p className="mt-3 text-muted-foreground max-w-xl">{t.custom.sub}</p>
+      <span
+        className="kh-mono inline-block mt-4 text-xs uppercase tracking-[0.14em] px-3 py-1.5 rounded-full border"
+        style={{ borderColor: 'var(--brand-accent)', color: 'var(--brand-accent)', background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)' }}
+      >
+        {t.custom.startingAt}
+      </span>
       <Scribble className="mt-6" width={100} />
 
       <form onSubmit={submit} className="mt-10 space-y-8">
