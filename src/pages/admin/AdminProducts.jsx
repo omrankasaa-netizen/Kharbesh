@@ -3,6 +3,7 @@ import { base44 } from '@/api/khClient';
 import { useColors, useGarmentStyles, useCatalogRefresh } from '@/lib/useCatalog.jsx';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
+import { STANDARD_FRONT_BY_COLOR, DEFAULT_COVER_FRONT } from '@/lib/standardPhotos';
 
 const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
 const STATUSES = ['active', 'draft', 'archived'];
@@ -17,7 +18,7 @@ const emptyForm = {
   description_en: '', description_ar: '', collection_name: '', mood: '',
   product_type: 'tee', garment_style: '', fit_en: '', care_en: '', care_ar: '',
   measurements_en: '', approved_colors: [], sizes: [], placement: '',
-  price: DEFAULT_PRICE_BY_TYPE.tee, compare_at_price: '', images: [], status: 'draft',
+  price: DEFAULT_PRICE_BY_TYPE.tee, compare_at_price: '', images: [DEFAULT_COVER_FRONT], status: 'draft',
   preorder_type: 'always_on', preorder_close_date: '', preorder_capacity: '',
   units_sold: 0, estimated_production_days: 10, estimated_dispatch_window: '',
   drop_name: '', sort_order: 0,
@@ -151,12 +152,21 @@ function ColorImagesSection({ productId, approvedColors, lang }) {
         if (cancelled) return;
         const map = {};
         for (const r of rows || []) map[r.color_name] = r.images || [];
+        // Pre-fill the standard front photo for any approved color that
+        // doesn't have real photos saved yet. This is local, unsaved state —
+        // staff just hits "Save for this color", or swaps the front image
+        // out first if this particular design also prints on the front.
+        for (const colorName of approvedColors) {
+          if (!map[colorName] && STANDARD_FRONT_BY_COLOR[colorName]) {
+            map[colorName] = [STANDARD_FRONT_BY_COLOR[colorName]];
+          }
+        }
         setByColor(map);
       })
       .catch(() => { if (!cancelled) setByColor({}); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [productId]);
+  }, [productId, approvedColors]);
 
   const onUpload = async (colorName, e) => {
     const files = Array.from(e.target.files || []);

@@ -67,3 +67,33 @@ export const IconNewDrop = ({ size = 24 }) => (
 export const IconThreeDots = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="2.4" /><circle cx="12" cy="12" r="2.4" /><circle cx="18" cy="12" r="2.4" /></svg>
 );
+export const IconCotton = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="9" r="3" /><circle cx="7" cy="12" r="2.4" /><circle cx="17" cy="12" r="2.4" /><path d="M12 12v3a3 3 0 0 1-3 3H8" />
+  </svg>
+);
+export const IconNoSweat = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3.5c2.4 3.4 5 6.7 5 9.7a5 5 0 0 1-10 0c0-3 2.6-6.3 5-9.7z" /><line x1="4" y1="20" x2="20" y2="4" />
+  </svg>
+);
+export const IconNoWrinkle = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 8c3-2.5 5.5-2.5 8 0s5 2.5 8 0" /><path d="M3 14c3-2.5 5.5-2.5 8 0s5 2.5 8 0" /><path d="M3 20c3-2.5 5.5-2.5 8 0s5 2.5 8 0" opacity="0.4" />
+  </svg>
+);
+export const IconFit = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 4l4 2 4-2 3 4-2.5 2v11a1 1 0 0 1-1 1H8.5a1 1 0 0 1-1-1V10L5 8l3-4z" />
+  </svg>
+);
+export const IconCash = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2.5" y="6" width="19" height="12" rx="1.5" /><circle cx="12" cy="12" r="3" /><line x1="5.5" y1="9" x2="5.5" y2="9" /><line x1="18.5" y1="15" x2="18.5" y2="15" />
+  </svg>
+);
+export const IconTruck = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2.5 7.5h11v8h-11v-8z" /><path d="M13.5 11h4l3 3v1.5h-7V11z" /><circle cx="6.5" cy="17.5" r="1.6" /><circle cx="16.5" cy="17.5" r="1.6" />
+  </svg>
+);

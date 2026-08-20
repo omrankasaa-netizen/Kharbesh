@@ -5,7 +5,8 @@ import { useProducts, useColors, resolveColor } from '@/lib/useCatalog.jsx';
 import { useCart } from '@/lib/cart';
 import { base44 } from '@/api/khClient';
 import GarmentMockup, { contrastInk } from '@/components/GarmentMockup';
-import { Scribble, IconHeart, IconShare } from '@/components/Brand';
+import { Scribble, IconHeart, IconShare, IconCotton, IconNoSweat, IconNoWrinkle, IconFit, IconCash, IconTruck } from '@/components/Brand';
+import { STANDARD_FRONT_BY_COLOR } from '@/lib/standardPhotos';
 
 export default function ProductPage() {
   const { id } = useParams();
@@ -52,9 +53,15 @@ export default function ProductPage() {
   const ink = contrastInk(hex);
   const canAdd = colorName && size;
   const activeColorPhotos = colorImages[selectedColor?.name_en] || null;
-  const activePhoto = activeColorPhotos
-    ? (view === 'front' ? activeColorPhotos[0] : (activeColorPhotos[1] ?? activeColorPhotos[0]))
-    : null;
+  // Front: prefer a real per-color photo, else fall back to the standard
+  // front-of-shirt shot for the selected color (every design ships with a
+  // plain standard front unless it explicitly prints something there).
+  // Back: prefer a real per-color photo, else fall back to the product's
+  // generic back cover — the actual design that makes this product unique.
+  const standardFront = selectedColor ? STANDARD_FRONT_BY_COLOR[selectedColor.name_en] : null;
+  const frontPhoto = activeColorPhotos?.[0] || standardFront || product?.images?.[0] || null;
+  const backPhoto = activeColorPhotos?.[1] || product?.images?.[1] || product?.images?.[0] || null;
+  const activePhoto = view === 'front' ? frontPhoto : backPhoto;
 
   if (loading) return <div className="max-w-[1400px] mx-auto px-6 py-20 text-muted-foreground">{t.common.loading}</div>;
   if (!product) return <div className="max-w-[1400px] mx-auto px-6 py-20"><p>Product not found.</p><Link to="/shop" className="kh-btn-text mt-4">{t.nav.shop}</Link></div>;
@@ -70,7 +77,7 @@ export default function ProductPage() {
       productName: name,
       phrase: product.phrase_ar,
       productType: product.product_type,
-      image: product.images?.[0],
+      image: product.images?.[1] ?? product.images?.[0],
       color: colorName,
       size,
       quantity: qty,
@@ -103,13 +110,6 @@ export default function ProductPage() {
               <img
                 src={activePhoto}
                 alt={`${name} — ${selectedColor?.name_en}`}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            ) : (view === 'front' ? product.images?.[0] : (product.images?.[1] ?? product.images?.[0])) ? (
-              <img
-                src={view === 'front' ? product.images[0] : (product.images[1] ?? product.images[0])}
-                alt={name}
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
@@ -199,6 +199,26 @@ export default function ProductPage() {
             <button className="kh-btn-icon" aria-label="Share"><IconShare size={20} /></button>
           </div>
           {!canAdd && <p className="text-xs text-muted-foreground mt-3">{t.product.preorderNote}</p>}
+
+          {/* Feature highlights */}
+          <div className="mt-8 border-t border-border pt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[
+              { Icon: IconCotton, label: t.product.featSoftCotton },
+              { Icon: IconNoSweat, label: t.product.featAntiSweat },
+              { Icon: IconNoWrinkle, label: t.product.featNoWrinkle },
+              { Icon: IconFit, label: t.product.featClassicFit, note: t.product.featClassicFitNote },
+              { Icon: IconCash, label: t.product.featCod },
+              { Icon: IconTruck, label: t.product.featDeliveryLebanon, note: `${t.product.featShipping} · ${t.product.featShippingNote}` },
+            ].map(({ Icon, label, note }) => (
+              <div key={label} className="flex items-start gap-3">
+                <span className="shrink-0 mt-0.5" style={{ color: 'hsl(var(--accent))' }}><Icon size={20} /></span>
+                <div>
+                  <p className="text-sm leading-tight" style={{ color: 'var(--ink)' }}>{label}</p>
+                  {note && <p className="text-xs text-muted-foreground mt-0.5">{note}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
 
           {/* Product specs */}
           <div className="mt-8 border-t border-border pt-6 grid grid-cols-2 gap-x-4 gap-y-5 text-sm">
