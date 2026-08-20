@@ -71,7 +71,21 @@ export default function Footer() {
         </div>
 
         <div className="mt-8 pt-6 flex flex-col sm:flex-row justify-between gap-2 text-xs" style={{ borderTop: `1px solid ${line}`, color: 'rgba(251,246,235,.45)' }}>
-          <span>© {new Date().getFullYear()} Kharbesh. {t.footer.rights}</span>
+          <span className="inline-flex items-center gap-3 flex-wrap">
+            <span>© {new Date().getFullYear()} Kharbesh. {t.footer.rights}</span>
+            <a
+              href="https://ops-shift.com"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity"
+              style={{ color: 'rgba(251,246,235,.45)' }}
+            >
+              {lang === 'ar' ? 'تصميم وتطوير' : 'Developed by'}
+              <span style={{ fontWeight: 700, letterSpacing: '-0.01em', color: 'rgba(251,246,235,.6)' }}>
+                OPS<span style={{ color: '#D4ED0B', fontWeight: 300 }}>/</span>SHFT
+              </span>
+            </a>
+          </span>
           <span className="inline-flex items-center gap-2">
             {lang === 'ar' ? 'لبسك بيحكي عنك — Kharbesh it your way.' : 'Labsak byehki 3annak — Kharbesh it your way.'}
             <Link

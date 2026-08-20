@@ -1,7 +1,11 @@
 import React from 'react';
 import { BRAND_ASSETS, INK_FILTER } from '@/lib/brandAssets';
 
-export const BrandLogo = ({ className = '', showLatin = true, tone = 'ink' }) => (
+/* `tone="ink"` is reserved for the rare light/cream background — the site's
+   dark theme means the default (no filter) renders the true white lockup,
+   matching the footer. Passing tone="ink" on a dark background will make
+   the logo invisible (black-on-black), so only use it on light surfaces. */
+export const BrandLogo = ({ className = '', showLatin = true, tone = 'default' }) => (
   <img
     src={BRAND_ASSETS.horizontalWhite}
     alt="Kharbesh"
