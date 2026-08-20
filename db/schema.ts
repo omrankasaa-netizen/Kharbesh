@@ -102,6 +102,10 @@ export const products = mysqlTable(
     placement: varchar("placement", { length: 180 }),
     priceCents: int("priceCents").notNull(),
     compareAtPriceCents: int("compareAtPriceCents"),
+    // Landed cost per unit (blank + print + packaging, or a manual override).
+    // Never exposed to customers or plain staff — super_admin only, used to
+    // compute per-product profit margin alongside the unit cost settings.
+    costPriceCents: int("costPriceCents"),
     images: json("images").$type<string[]>().notNull(),
     status: mysqlEnum("status", ["active", "draft", "archived"]).default("draft").notNull(),
     preorderType: mysqlEnum("preorderType", [
@@ -123,6 +127,29 @@ export const products = mysqlTable(
   (t) => ({
     statusIdx: index("products_status_idx").on(t.status),
     collectionIdx: index("products_collection_idx").on(t.collectionName),
+  }),
+);
+
+// Real product photos per garment color (front/back/etc), so the storefront
+// can show the actual printed design on the color the shopper picked instead
+// of the generic mockup. One row per product+color; `images[0]` is treated
+// as the primary/front shot.
+export const productColorImages = mysqlTable(
+  "product_color_images",
+  {
+    id: serial("id").primaryKey(),
+    productId: bigint("productId", { mode: "number", unsigned: true })
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    colorName: varchar("colorName", { length: 80 }).notNull(),
+    images: json("images").$type<string[]>().notNull(),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  (t) => ({
+    variantIdx: uniqueIndex("product_color_images_variant_idx").on(t.productId, t.colorName),
+    productIdx: index("product_color_images_product_idx").on(t.productId),
   }),
 );
 
@@ -158,6 +185,9 @@ export const orders = mysqlTable(
     items: json("items").$type<OrderLineItem[]>().notNull(),
     subtotalCents: int("subtotalCents").notNull(),
     shippingCents: int("shippingCents").default(0).notNull(),
+    discountCents: int("discountCents").default(0).notNull(),
+    promoCode: varchar("promoCode", { length: 40 }),
+    appliedDiscounts: json("appliedDiscounts").$type<{ name: string; amountCents: number }[]>(),
     totalCents: int("totalCents").notNull(),
     status: mysqlEnum("status", [
       "order_received",
@@ -348,6 +378,69 @@ export const overheadExpenses = mysqlTable(
   }),
 );
 
+// ── Promotions: discounts, promo codes, homepage campaigns ───────────────────
+// Code-based discounts a shopper types at checkout. Value is a percent
+// (1-100) when type is "percent", or cents when type is "fixed".
+export const promoCodes = mysqlTable("promo_codes", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 40 }).notNull().unique(),
+  type: mysqlEnum("type", ["percent", "fixed"]).notNull(),
+  value: int("value").notNull(),
+  minOrderCents: int("minOrderCents"),
+  maxUses: int("maxUses"),
+  usesCount: int("usesCount").default(0).notNull(),
+  active: boolean("active").default(true).notNull(),
+  startsAt: timestamp("startsAt"),
+  expiresAt: timestamp("expiresAt"),
+  createdByUserId: bigint("createdByUserId", { mode: "number", unsigned: true }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// Automatic discounts: no code needed, applied at checkout to matching
+// items (or the whole order) while active and within its date window.
+export const discounts = mysqlTable("discounts", {
+  id: serial("id").primaryKey(),
+  nameEn: varchar("nameEn", { length: 160 }).notNull(),
+  nameAr: varchar("nameAr", { length: 160 }),
+  type: mysqlEnum("type", ["percent", "fixed"]).notNull(),
+  value: int("value").notNull(),
+  appliesTo: mysqlEnum("appliesTo", ["all", "product_type", "collection"]).default("all").notNull(),
+  appliesValue: varchar("appliesValue", { length: 160 }),
+  active: boolean("active").default(true).notNull(),
+  startsAt: timestamp("startsAt"),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// Scheduled homepage promo banners, optionally tied to a promo code or an
+// automatic discount so the banner and the actual checkout math stay linked.
+export const campaigns = mysqlTable("campaigns", {
+  id: serial("id").primaryKey(),
+  titleEn: varchar("titleEn", { length: 200 }).notNull(),
+  titleAr: varchar("titleAr", { length: 200 }),
+  subtitleEn: varchar("subtitleEn", { length: 300 }),
+  subtitleAr: varchar("subtitleAr", { length: 300 }),
+  ctaLabelEn: varchar("ctaLabelEn", { length: 80 }),
+  ctaLabelAr: varchar("ctaLabelAr", { length: 80 }),
+  linkUrl: varchar("linkUrl", { length: 255 }),
+  promoCodeId: bigint("promoCodeId", { mode: "number", unsigned: true }).references(
+    () => promoCodes.id,
+    { onDelete: "set null" },
+  ),
+  discountId: bigint("discountId", { mode: "number", unsigned: true }).references(
+    () => discounts.id,
+    { onDelete: "set null" },
+  ),
+  active: boolean("active").default(true).notNull(),
+  startsAt: timestamp("startsAt"),
+  expiresAt: timestamp("expiresAt"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type StaffRole = typeof staffRoles.$inferSelect;
@@ -363,3 +456,7 @@ export type FactoryOrder = typeof factoryOrders.$inferSelect;
 export type FactoryOrderItem = typeof factoryOrderItems.$inferSelect;
 export type UnitCostSettings = typeof unitCostSettings.$inferSelect;
 export type OverheadExpense = typeof overheadExpenses.$inferSelect;
+export type ProductColorImages = typeof productColorImages.$inferSelect;
+export type PromoCode = typeof promoCodes.$inferSelect;
+export type Discount = typeof discounts.$inferSelect;
+export type Campaign = typeof campaigns.$inferSelect;

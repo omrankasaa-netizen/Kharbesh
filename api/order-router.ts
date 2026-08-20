@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createRouter, publicQuery, authedQuery } from "./middleware";
 import { createOrder, getOrderById, listOrdersForUser, trackOrder } from "./queries/orders";
+import { previewPromoCode, previewCartDiscounts, listActiveCampaigns } from "./queries/promotions";
 
 export const createOrderSchema = z.object({
   email: z.string().email().max(320),
@@ -22,6 +23,7 @@ export const createOrderSchema = z.object({
     )
     .min(1)
     .max(30),
+  promoCode: z.string().max(40).optional(),
 });
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -31,6 +33,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   SOLD_OUT: "One of the items just sold out.",
   INVALID_PRODUCT: "Invalid item in cart.",
   INVALID_QUANTITY: "Invalid quantity.",
+  PROMO_NOT_FOUND: "That promo code doesn't exist.",
+  PROMO_INACTIVE: "That promo code is no longer active.",
+  PROMO_EXPIRED: "That promo code has expired.",
+  PROMO_MAX_USES: "That promo code has reached its usage limit.",
+  PROMO_MIN_ORDER: "Your order doesn't meet the minimum for that promo code.",
 };
 
 export const orderRouter = createRouter({
@@ -54,4 +61,30 @@ export const orderRouter = createRouter({
     .query(({ input }) => trackOrder(input.orderNumber, input.contact)),
 
   mine: authedQuery.query(({ ctx }) => listOrdersForUser(ctx.user.email ?? "")),
+
+  previewPromoCode: publicQuery
+    .input(z.object({ code: z.string().min(1).max(40), subtotal: z.number().min(0).max(1_000_000) }))
+    .query(async ({ input }) => {
+      try {
+        return await previewPromoCode(input.code, Math.round(input.subtotal * 100));
+      } catch (err) {
+        const code = err instanceof Error ? err.message : "";
+        throw new Error(ERROR_MESSAGES[code] ?? "That promo code isn't valid.");
+      }
+    }),
+
+  // Used by the checkout page so the displayed total matches what createOrder
+  // will actually charge: automatic discounts apply silently (no code
+  // needed), so without this preview the total shown before "Place order"
+  // could be higher than the final charged amount.
+  previewCartDiscounts: publicQuery
+    .input(
+      z
+        .array(z.object({ productId: z.string().regex(/^\d+$/), quantity: z.number().int().min(1).max(20) }))
+        .min(1)
+        .max(30),
+    )
+    .query(({ input }) => previewCartDiscounts(input)),
+
+  activeCampaigns: publicQuery.query(() => listActiveCampaigns()),
 });

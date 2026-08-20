@@ -168,6 +168,7 @@ export const kh = {
             size: i.size,
             quantity: i.quantity,
           })),
+          promoCode: empty(data.promo_code),
         }),
 
       update: (id, data) =>
@@ -250,6 +251,44 @@ export const kh = {
       addExpense: (data) => client.admin.addOverheadExpense.mutate(data),
       deleteExpense: (id) => client.admin.deleteOverheadExpense.mutate({ id: String(id) }),
       getSummary: (from, to) => client.admin.financialSummary.query({ from, to }),
+      listMargins: () => client.admin.productMargins.query(),
+      updateProductCost: (id, costPrice) =>
+        client.admin.updateProductCost.mutate({ id: String(id), cost_price: costPrice }),
+    },
+
+    ProductColorImages: {
+      list: async (productId) => {
+        const rows = await client.admin.productColorImages.query({ productId: String(productId) });
+        return (rows || []).map((r) => ({ ...r, images: resolveAssetUrls(r.images) }));
+      },
+      upsert: (productId, colorName, images) =>
+        client.admin.upsertProductColorImages.mutate({ productId: String(productId), colorName, images }),
+      remove: (productId, colorName) =>
+        client.admin.deleteProductColorImages.mutate({ productId: String(productId), colorName }),
+    },
+
+    Promotions: {
+      promoCodes: {
+        list: () => client.admin.promoCodes.query(),
+        create: (data) => client.admin.createPromoCode.mutate(data),
+        update: (id, data) => client.admin.updatePromoCode.mutate({ id: String(id), data }),
+        remove: (id) => client.admin.deletePromoCode.mutate({ id: String(id) }),
+      },
+      discounts: {
+        list: () => client.admin.discounts.query(),
+        create: (data) => client.admin.createDiscount.mutate(data),
+        update: (id, data) => client.admin.updateDiscount.mutate({ id: String(id), data }),
+        remove: (id) => client.admin.deleteDiscount.mutate({ id: String(id) }),
+      },
+      campaigns: {
+        list: () => client.admin.campaigns.query(),
+        create: (data) => client.admin.createCampaign.mutate(data),
+        update: (id, data) => client.admin.updateCampaign.mutate({ id: String(id), data }),
+        remove: (id) => client.admin.deleteCampaign.mutate({ id: String(id) }),
+      },
+      previewCode: (code, subtotal) => client.orders.previewPromoCode.query({ code, subtotal }),
+      previewCartDiscounts: (items) => client.orders.previewCartDiscounts.query(items),
+      activeCampaigns: () => client.orders.activeCampaigns.query(),
     },
   },
 

@@ -29,6 +29,7 @@ import AdminInventory from '@/pages/admin/AdminInventory';
 import AdminProducts from '@/pages/admin/AdminProducts';
 import AdminFactory from '@/pages/admin/AdminFactory';
 import AdminFinancials from '@/pages/admin/AdminFinancials';
+import AdminPromotions from '@/pages/admin/AdminPromotions';
 import AdminStaff from '@/pages/admin/AdminStaff';
 import CustomerCRM from '@/pages/admin/CustomerCRM';
 import StoreAnalytics from '@/pages/admin/StoreAnalytics';
@@ -81,6 +82,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin/customers" element={<AdminGuard minRole="admin"><CustomerCRM /></AdminGuard>} />
         <Route path="/admin/analytics" element={<AdminGuard minRole="admin"><StoreAnalytics /></AdminGuard>} />
         <Route path="/admin/settings" element={<AdminGuard minRole="admin"><SiteSettings /></AdminGuard>} />
+        <Route path="/admin/promotions" element={<AdminGuard minRole="admin"><AdminPromotions /></AdminGuard>} />
         <Route path="/admin/financials" element={<AdminGuard minRole="super_admin"><AdminFinancials /></AdminGuard>} />
         <Route path="/admin/staff" element={<AdminGuard minRole="super_admin"><AdminStaff /></AdminGuard>} />
         <Route path="/profile" element={<Profile />} />

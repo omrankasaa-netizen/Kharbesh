@@ -1,6 +1,6 @@
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, lte, ne } from "drizzle-orm";
 import { getDb } from "./connection";
-import { orders, overheadExpenses, unitCostSettings, type OrderLineItem } from "@db/schema";
+import { orders, overheadExpenses, products, unitCostSettings, type OrderLineItem } from "@db/schema";
 
 function toUiExpense(e: typeof overheadExpenses.$inferSelect) {
   return {
@@ -136,5 +136,62 @@ export async function getFinancialSummary(from?: string, to?: string) {
     overhead,
     net_profit: netProfit,
     margin_pct: revenue > 0 ? Math.round((netProfit / revenue) * 1000) / 10 : 0,
+  };
+}
+
+/**
+ * Per-product cost vs. profit view, super_admin only. Uses each product's
+ * explicit `costPriceCents` when set; otherwise falls back to the flat
+ * global unit-cost total (same approximation `getFinancialSummary` uses)
+ * so every product still shows a usable margin before costs are itemized.
+ */
+export async function listProductMargins() {
+  const db = getDb();
+  const unitCosts = await getUnitCosts();
+  const flatCostCents = Math.round(unitCosts.unit_cost_total * 100);
+
+  const rows = await db.select().from(products).where(ne(products.status, "archived"));
+
+  return rows
+    .map((p) => {
+      const costCents = p.costPriceCents ?? flatCostCents;
+      const marginCents = p.priceCents - costCents;
+      const totalProfitCents = marginCents * p.unitsSold;
+      return {
+        id: String(p.id),
+        name: p.nameEn,
+        status: p.status,
+        price: p.priceCents / 100,
+        cost: costCents / 100,
+        cost_is_estimated: p.costPriceCents == null,
+        margin: marginCents / 100,
+        margin_pct: p.priceCents > 0 ? Math.round((marginCents / p.priceCents) * 1000) / 10 : 0,
+        units_sold: p.unitsSold,
+        total_profit: totalProfitCents / 100,
+      };
+    })
+    .sort((a, b) => b.total_profit - a.total_profit);
+}
+
+/** Sets (or clears, when `costPrice` is null) a product's explicit landed unit cost. Super_admin only. */
+export async function updateProductCost(id: number, costPrice: number | null) {
+  const db = getDb();
+  await db
+    .update(products)
+    .set({ costPriceCents: costPrice == null ? null : Math.round(costPrice * 100) })
+    .where(eq(products.id, id));
+  const [row] = await db.select().from(products).where(eq(products.id, id)).limit(1);
+  if (!row) throw new Error("NOT_FOUND");
+  const flatCostCents = Math.round((await getUnitCosts()).unit_cost_total * 100);
+  const costCents = row.costPriceCents ?? flatCostCents;
+  const marginCents = row.priceCents - costCents;
+  return {
+    id: String(row.id),
+    name: row.nameEn,
+    price: row.priceCents / 100,
+    cost: costCents / 100,
+    cost_is_estimated: row.costPriceCents == null,
+    margin: marginCents / 100,
+    margin_pct: row.priceCents > 0 ? Math.round((marginCents / row.priceCents) * 1000) / 10 : 0,
   };
 }

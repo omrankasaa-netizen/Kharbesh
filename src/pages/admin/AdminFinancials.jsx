@@ -19,22 +19,39 @@ export default function AdminFinancials() {
   const [range, setRange] = useState({ from: '', to: '' });
   const [loading, setLoading] = useState(true);
   const [savingCosts, setSavingCosts] = useState(false);
+  const [margins, setMargins] = useState([]);
+  const [costDrafts, setCostDrafts] = useState({});
+  const [savingCostId, setSavingCostId] = useState(null);
 
   const loadAll = async (from, to) => {
     setLoading(true);
     try {
-      const [uc, exp, sum] = await Promise.all([
+      const [uc, exp, sum, marg] = await Promise.all([
         base44.entities.Financials.getUnitCosts(),
         base44.entities.Financials.listExpenses(from || undefined, to || undefined),
         base44.entities.Financials.getSummary(from || undefined, to || undefined),
+        base44.entities.Financials.listMargins(),
       ]);
       setUnitCosts(uc);
       setUnitForm({ blank_tee_cost: uc.blank_tee_cost, print_fee: uc.print_fee, packaging_cost: uc.packaging_cost });
       setExpenses(exp || []);
       setSummary(sum);
+      setMargins(marg || []);
     } finally { setLoading(false); }
   };
   useEffect(() => { loadAll(); }, []);
+
+  const saveCost = async (productId) => {
+    const draft = costDrafts[productId];
+    const cost_price = draft === '' || draft == null ? null : Number(draft);
+    setSavingCostId(productId);
+    try {
+      await base44.entities.Financials.updateProductCost(productId, cost_price);
+      const marg = await base44.entities.Financials.listMargins();
+      setMargins(marg || []);
+      setCostDrafts((d) => { const next = { ...d }; delete next[productId]; return next; });
+    } finally { setSavingCostId(null); }
+  };
 
   const applyRange = () => loadAll(range.from, range.to);
 
@@ -125,6 +142,61 @@ export default function AdminFinancials() {
               </div>
               <button onClick={addExpense} className="kh-btn-primary mt-3">{lang === 'ar' ? 'إضافة' : 'Add expense'}</button>
             </section>
+          </div>
+
+          <h2 className="font-heading text-xl uppercase mt-10 mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'التكلفة والهامش لكل منتج' : 'Product costs & margins'}</h2>
+          <p className="text-xs text-muted-foreground mb-4">
+            {lang === 'ar'
+              ? 'الكلفة المقدرة تستعمل تكلفة الوحدة العامة لحد ما بتحدد كلفة خاصة بالمنتج — مرئي لل super admin فقط.'
+              : 'Estimated costs use the flat unit-cost setting until a specific cost is set here — visible to super admins only.'}
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="text-left text-muted-foreground border-b border-border">
+                <th className="py-3 pr-3">{lang === 'ar' ? 'المنتج' : 'Product'}</th>
+                <th className="py-3 pr-3">{lang === 'ar' ? 'السعر' : 'Price'}</th>
+                <th className="py-3 pr-3">{lang === 'ar' ? 'الكلفة (COGS)' : 'Cost (COGS)'}</th>
+                <th className="py-3 pr-3">{lang === 'ar' ? 'الهامش' : 'Margin'}</th>
+                <th className="py-3 pr-3">%</th>
+                <th className="py-3 pr-3">{lang === 'ar' ? 'المبيوع' : 'Sold'}</th>
+                <th className="py-3 pr-3">{lang === 'ar' ? 'الربح الإجمالي' : 'Total profit'}</th>
+                <th className="py-3 pr-3"></th>
+              </tr></thead>
+              <tbody>
+                {margins.map((m) => {
+                  const draft = costDrafts[m.id];
+                  const value = draft !== undefined ? draft : m.cost;
+                  return (
+                    <tr key={m.id} className="border-b border-border">
+                      <td className="py-3 pr-3">{m.name}<div className="text-xs text-muted-foreground">{m.status}</div></td>
+                      <td className="py-3 pr-3">{money(m.price)}</td>
+                      <td className="py-3 pr-3">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number" step="0.01" className="kh-input !h-9 !py-1 max-w-[100px]"
+                            value={value}
+                            onChange={(e) => setCostDrafts((d) => ({ ...d, [m.id]: e.target.value }))}
+                          />
+                          {m.cost_is_estimated && draft === undefined && <span className="text-[10px] text-muted-foreground">est.</span>}
+                        </div>
+                      </td>
+                      <td className="py-3 pr-3" style={{ color: m.margin >= 0 ? 'var(--brand-accent)' : 'var(--brand-destructive)' }}>{money(m.margin)}</td>
+                      <td className="py-3 pr-3">{m.margin_pct}%</td>
+                      <td className="py-3 pr-3">{m.units_sold}</td>
+                      <td className="py-3 pr-3">{money(m.total_profit)}</td>
+                      <td className="py-3 pr-3 text-right">
+                        {draft !== undefined && (
+                          <button onClick={() => saveCost(m.id)} disabled={savingCostId === m.id} className="kh-btn-text text-xs">
+                            {savingCostId === m.id ? 'Saving…' : (lang === 'ar' ? 'حفظ' : 'Save')}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {margins.length === 0 && <tr><td colSpan={8} className="py-8 text-muted-foreground">No products.</td></tr>}
+              </tbody>
+            </table>
           </div>
 
           <h2 className="font-heading text-xl uppercase mt-10 mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'سجل المصاريف' : 'Expense log'}</h2>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { useCart } from '@/lib/cart';
@@ -12,8 +12,50 @@ export default function Checkout() {
   const [ack, setAck] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [promoInput, setPromoInput] = useState('');
+  const [promo, setPromo] = useState(null); // { code, type, value, discount_cents, discount }
+  const [promoApplying, setPromoApplying] = useState(false);
+  const [promoError, setPromoError] = useState('');
+  // Automatic (no-code) discounts apply silently server-side, same as at order
+  // creation — fetched here so the total shown matches what actually gets
+  // charged instead of only reflecting the promo code.
+  const [autoDiscount, setAutoDiscount] = useState(null); // { automatic_discount, net_subtotal, applied_discounts }
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  useEffect(() => {
+    if (items.length === 0) { setAutoDiscount(null); return; }
+    let cancelled = false;
+    base44.entities.Promotions.previewCartDiscounts(
+      items.map((i) => ({ productId: String(i.productId), quantity: i.quantity })),
+    )
+      .then((result) => { if (!cancelled) setAutoDiscount(result); })
+      .catch(() => { if (!cancelled) setAutoDiscount(null); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(items.map((i) => [i.productId, i.quantity]))]);
+
+  const netSubtotal = autoDiscount ? autoDiscount.net_subtotal : subtotal;
+  const autoDiscountAmount = autoDiscount?.automatic_discount || 0;
+  const discountAmount = promo?.discount || 0;
+  const total = Math.max(0, subtotal - autoDiscountAmount - discountAmount);
+
+  const applyPromo = async () => {
+    if (!promoInput.trim()) return;
+    setPromoApplying(true);
+    setPromoError('');
+    try {
+      // Match server logic: promo codes apply on top of the already
+      // automatic-discounted subtotal, not the raw cart subtotal.
+      const result = await base44.entities.Promotions.previewCode(promoInput.trim(), netSubtotal);
+      setPromo(result);
+    } catch (err) {
+      setPromo(null);
+      setPromoError(err?.message || (lang === 'ar' ? 'كود غير صالح' : 'Invalid code.'));
+    } finally { setPromoApplying(false); }
+  };
+
+  const removePromo = () => { setPromo(null); setPromoInput(''); setPromoError(''); };
 
   if (items.length === 0 && !loading) {
     return (
@@ -43,7 +85,8 @@ export default function Checkout() {
         items: items.map((i) => ({ productId: i.productId, productName: i.productName, phrase: i.phrase, productType: i.productType, color: i.color, size: i.size, quantity: i.quantity, unitPrice: i.unitPrice, lineTotal: i.unitPrice * i.quantity })),
         subtotal,
         shipping: 0,
-        total: subtotal,
+        total,
+        promo_code: promo?.code,
         status: 'order_received',
         internal_status: 'payment_pending',
         language: lang,
@@ -102,7 +145,40 @@ export default function Checkout() {
               </div>
             ))}
           </div>
-          <div className="flex justify-between py-3 border-t border-border mt-2 font-heading text-lg" style={{ fontFamily: 'var(--brand-font-heading)' }}><span>{t.cart.total}</span><span>${subtotal}</span></div>
+
+          {autoDiscountAmount > 0 && (
+            <div className="flex items-center justify-between text-sm py-3 border-t border-border mt-2">
+              <span>{t.checkout.autoDiscount}</span>
+              <span style={{ color: 'var(--brand-accent)' }}>-${autoDiscountAmount.toFixed(2)}</span>
+            </div>
+          )}
+
+          <div className="py-3 border-t border-border mt-2">
+            {promo ? (
+              <div className="flex items-center justify-between text-sm">
+                <span>{t.checkout.discount} <span className="font-medium">({promo.code})</span></span>
+                <span className="flex items-center gap-2">
+                  <span style={{ color: 'var(--brand-accent)' }}>-${discountAmount.toFixed(2)}</span>
+                  <button type="button" onClick={removePromo} className="kh-btn-text !text-[11px]">×</button>
+                </span>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  className="kh-input flex-1"
+                  placeholder={t.checkout.discount}
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value)}
+                />
+                <button type="button" onClick={applyPromo} disabled={promoApplying || !promoInput.trim()} className="kh-btn-secondary !px-4 whitespace-nowrap">
+                  {promoApplying ? '…' : t.checkout.apply}
+                </button>
+              </div>
+            )}
+            {promoError && <p className="text-destructive text-xs mt-2">{promoError}</p>}
+          </div>
+
+          <div className="flex justify-between py-3 border-t border-border mt-2 font-heading text-lg" style={{ fontFamily: 'var(--brand-font-heading)' }}><span>{t.cart.total}</span><span>${total.toFixed(2)}</span></div>
           {error && <p className="text-destructive text-sm mt-3">{error}</p>}
           <button type="submit" disabled={loading || !ack} className="kh-btn-scribble w-full mt-4 !justify-center">
             {loading ? t.common.loading : t.checkout.placeOrder}

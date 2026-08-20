@@ -4,9 +4,10 @@ import {
   garmentColors,
   garmentStyles,
   products,
+  productColorImages,
   type Product,
 } from "@db/schema";
-import { asc, desc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, ne } from "drizzle-orm";
 
 // The storefront UI (ported from the original design) expects Base44-shaped
 // records: snake_case fields, prices in USD dollars, string ids. These
@@ -174,4 +175,68 @@ export async function listAllProducts() {
 
 export async function getProductRow(id: number) {
   return getDb().query.products.findFirst({ where: eq(products.id, id) });
+}
+
+// ── Per-color product photos ───────────────────────────────────────────────
+// Real garment photos keyed by product + color name, so the storefront can
+// show the actual printed shirt in the color the shopper picked instead of
+// the generic SVG mockup. `images[0]` is treated as the primary/front shot,
+// `images[1]` (if present) as the back shot.
+function toUiColorImages(row: typeof productColorImages.$inferSelect) {
+  return {
+    id: String(row.id),
+    product_id: String(row.productId),
+    color_name: row.colorName,
+    images: row.images,
+    sort_order: row.sortOrder,
+  };
+}
+
+export async function listProductColorImages(productId: number) {
+  const rows = await getDb()
+    .select()
+    .from(productColorImages)
+    .where(eq(productColorImages.productId, productId))
+    .orderBy(asc(productColorImages.sortOrder));
+  return rows.map(toUiColorImages);
+}
+
+/** Creates or replaces the photo set for one product+color combo. */
+export async function upsertProductColorImages(
+  productId: number,
+  colorName: string,
+  images: string[],
+) {
+  const db = getDb();
+  const existing = await db
+    .select()
+    .from(productColorImages)
+    .where(and(eq(productColorImages.productId, productId), eq(productColorImages.colorName, colorName)))
+    .limit(1);
+
+  if (existing[0]) {
+    await db
+      .update(productColorImages)
+      .set({ images, updatedAt: new Date() })
+      .where(eq(productColorImages.id, existing[0].id));
+    return toUiColorImages({ ...existing[0], images });
+  }
+
+  const countRows = await db
+    .select({ n: productColorImages.id })
+    .from(productColorImages)
+    .where(eq(productColorImages.productId, productId));
+  const [{ id }] = await db
+    .insert(productColorImages)
+    .values({ productId, colorName, images, sortOrder: countRows.length })
+    .$returningId();
+  const [row] = await db.select().from(productColorImages).where(eq(productColorImages.id, id)).limit(1);
+  return toUiColorImages(row);
+}
+
+export async function deleteProductColorImages(productId: number, colorName: string) {
+  await getDb()
+    .delete(productColorImages)
+    .where(and(eq(productColorImages.productId, productId), eq(productColorImages.colorName, colorName)));
+  return { success: true };
 }

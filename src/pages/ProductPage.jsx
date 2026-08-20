@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { useProducts, useColors, resolveColor } from '@/lib/useCatalog.jsx';
 import { useCart } from '@/lib/cart';
+import { base44 } from '@/api/khClient';
 import GarmentMockup, { contrastInk } from '@/components/GarmentMockup';
 import { Scribble, IconHeart, IconShare } from '@/components/Brand';
 
@@ -21,6 +22,25 @@ export default function ProductPage() {
   const [size, setSize] = useState('');
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [colorImages, setColorImages] = useState({});
+
+  useEffect(() => {
+    if (!product) return;
+    let cancelled = false;
+    base44.entities.ProductColorImages.list(product.id)
+      .then((rows) => {
+        if (cancelled) return;
+        const map = {};
+        for (const r of rows || []) map[r.color_name] = r.images || [];
+        setColorImages(map);
+      })
+      .catch(() => {
+        if (!cancelled) setColorImages({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [product?.id]);
 
   const approvedColors = useMemo(
     () => (product ? (product.approved_colors || []).map((n) => resolveColor(n, colors)).filter(Boolean) : []),
@@ -31,6 +51,10 @@ export default function ProductPage() {
   const hex = selectedColor?.hex || '#F0E9D6';
   const ink = contrastInk(hex);
   const canAdd = colorName && size;
+  const activeColorPhotos = colorImages[selectedColor?.name_en] || null;
+  const activePhoto = activeColorPhotos
+    ? (view === 'front' ? activeColorPhotos[0] : (activeColorPhotos[1] ?? activeColorPhotos[0]))
+    : null;
 
   if (loading) return <div className="max-w-[1400px] mx-auto px-6 py-20 text-muted-foreground">{t.common.loading}</div>;
   if (!product) return <div className="max-w-[1400px] mx-auto px-6 py-20"><p>Product not found.</p><Link to="/shop" className="kh-btn-text mt-4">{t.nav.shop}</Link></div>;
@@ -75,7 +99,14 @@ export default function ProductPage() {
         {/* Gallery */}
         <div className="lg:sticky lg:top-24 lg:self-start">
           <div className="bg-card border border-border rounded-md aspect-[4/5] flex items-center justify-center overflow-hidden">
-            {view === 'front' && product.images?.[0] ? (
+            {activePhoto ? (
+              <img
+                src={activePhoto}
+                alt={`${name} — ${selectedColor?.name_en}`}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : view === 'front' && product.images?.[0] ? (
               <img
                 src={product.images[0]}
                 alt={name}

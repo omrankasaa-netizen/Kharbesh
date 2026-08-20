@@ -1,6 +1,7 @@
 import { getDb } from "./connection";
-import { auditLogs, orders, products, type Order, type OrderLineItem } from "@db/schema";
+import { auditLogs, discounts, orders, products, promoCodes, type Order, type OrderLineItem } from "@db/schema";
 import { and, desc, eq, or, sql } from "drizzle-orm";
+import { discountAmountCents, isWithinWindow, matchesDiscount } from "./promotions";
 
 export function toUiOrder(o: Order) {
   return {
@@ -16,6 +17,9 @@ export function toUiOrder(o: Order) {
     items: o.items,
     subtotal: o.subtotalCents / 100,
     shipping: o.shippingCents / 100,
+    discount: o.discountCents / 100,
+    promo_code: o.promoCode,
+    applied_discounts: o.appliedDiscounts ?? [],
     total: o.totalCents / 100,
     status: o.status,
     internal_status: o.internalStatus,
@@ -43,6 +47,7 @@ export type CreateOrderInput = {
   language: "en" | "ar";
   userId?: number;
   items: { productId: string; color: string; size: string; quantity: number }[];
+  promoCode?: string;
 };
 
 /**
@@ -52,9 +57,20 @@ export type CreateOrderInput = {
  */
 export async function createOrder(input: CreateOrderInput) {
   const db = getDb();
+
+  // Loaded once per order, outside the transaction — a slightly stale read
+  // of "active" automatic discounts is an acceptable trade-off (they're
+  // marketing-controlled, not inventory-critical like stock/capacity below).
+  const now = new Date();
+  const activeDiscounts = (await db.select().from(discounts).where(eq(discounts.active, true))).filter((d) =>
+    isWithinWindow(d.startsAt, d.expiresAt, now),
+  );
+
   return db.transaction(async (tx) => {
     const lineItems: OrderLineItem[] = [];
+    const appliedDiscounts: { name: string; amountCents: number }[] = [];
     let subtotalCents = 0;
+    let automaticDiscountCents = 0;
 
     for (const item of input.items) {
       const productId = Number(item.productId);
@@ -88,6 +104,18 @@ export async function createOrder(input: CreateOrderInput) {
 
       const lineTotalCents = product.priceCents * item.quantity;
       subtotalCents += lineTotalCents;
+
+      let best: { discount: (typeof activeDiscounts)[number]; amountCents: number } | null = null;
+      for (const d of activeDiscounts) {
+        if (!matchesDiscount(d, { productType: product.productType, collectionName: product.collectionName, lineTotalCents })) continue;
+        const amountCents = discountAmountCents(d, lineTotalCents);
+        if (!best || amountCents > best.amountCents) best = { discount: d, amountCents };
+      }
+      if (best && best.amountCents > 0) {
+        automaticDiscountCents += best.amountCents;
+        appliedDiscounts.push({ name: best.discount.nameEn, amountCents: best.amountCents });
+      }
+
       lineItems.push({
         productId: String(product.id),
         productName: product.nameEn,
@@ -107,6 +135,33 @@ export async function createOrder(input: CreateOrderInput) {
     }
 
     const shippingCents = 0;
+    const netSubtotalCents = subtotalCents - automaticDiscountCents;
+
+    let promoDiscountCents = 0;
+    let appliedPromoCode: string | null = null;
+    if (input.promoCode) {
+      const [promo] = await tx
+        .select()
+        .from(promoCodes)
+        .where(eq(promoCodes.code, input.promoCode.trim().toUpperCase()))
+        .for("update");
+      if (!promo) throw new Error("PROMO_NOT_FOUND");
+      if (!promo.active) throw new Error("PROMO_INACTIVE");
+      if (!isWithinWindow(promo.startsAt, promo.expiresAt, now)) throw new Error("PROMO_EXPIRED");
+      if (promo.maxUses != null && promo.usesCount >= promo.maxUses) throw new Error("PROMO_MAX_USES");
+      if (promo.minOrderCents != null && netSubtotalCents < promo.minOrderCents) throw new Error("PROMO_MIN_ORDER");
+      promoDiscountCents = discountAmountCents(promo, netSubtotalCents);
+      appliedPromoCode = promo.code;
+      appliedDiscounts.push({ name: `Promo: ${promo.code}`, amountCents: promoDiscountCents });
+      await tx
+        .update(promoCodes)
+        .set({ usesCount: sql`${promoCodes.usesCount} + 1` })
+        .where(eq(promoCodes.id, promo.id));
+    }
+
+    const discountCents = automaticDiscountCents + promoDiscountCents;
+    const totalCents = Math.max(0, subtotalCents - discountCents) + shippingCents;
+
     const [{ id }] = await tx
       .insert(orders)
       .values({
@@ -122,7 +177,10 @@ export async function createOrder(input: CreateOrderInput) {
         items: lineItems,
         subtotalCents,
         shippingCents,
-        totalCents: subtotalCents + shippingCents,
+        discountCents,
+        promoCode: appliedPromoCode,
+        appliedDiscounts: appliedDiscounts.length ? appliedDiscounts : null,
+        totalCents,
         status: "order_received",
         internalStatus: "payment_pending",
         language: input.language,
@@ -135,7 +193,7 @@ export async function createOrder(input: CreateOrderInput) {
       action: "order.created",
       entity: "order",
       entityId: String(id),
-      detail: { itemCount: lineItems.length, totalCents: subtotalCents + shippingCents },
+      detail: { itemCount: lineItems.length, totalCents, discountCents },
     });
 
     const [row] = await tx.select().from(orders).where(eq(orders.id, id));

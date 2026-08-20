@@ -95,6 +95,110 @@ function TogglePills({ options, selected, onChange }) {
   );
 }
 
+/**
+ * Per-color garment photos: uploads are saved immediately against the real
+ * product id (color images are keyed by DB id, not the draft form state),
+ * separate from the main product Save button. Front/back thumbnails let a
+ * shopper preview the actual printed shirt in the color they picked.
+ */
+function ColorImagesSection({ productId, approvedColors, lang }) {
+  const [byColor, setByColor] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [uploadingColor, setUploadingColor] = useState(null);
+  const [savingColor, setSavingColor] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    base44.entities.ProductColorImages.list(productId)
+      .then((rows) => {
+        if (cancelled) return;
+        const map = {};
+        for (const r of rows || []) map[r.color_name] = r.images || [];
+        setByColor(map);
+      })
+      .catch(() => { if (!cancelled) setByColor({}); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [productId]);
+
+  const onUpload = async (colorName, e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploadingColor(colorName);
+    try {
+      const urls = [];
+      for (const file of files) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        urls.push(file_url);
+      }
+      setByColor((m) => ({ ...m, [colorName]: [...(m[colorName] || []), ...urls] }));
+    } finally { setUploadingColor(null); }
+  };
+
+  const removeImage = (colorName, idx) => {
+    setByColor((m) => ({ ...m, [colorName]: (m[colorName] || []).filter((_, i) => i !== idx) }));
+  };
+
+  const saveColor = async (colorName) => {
+    setSavingColor(colorName);
+    try {
+      const images = byColor[colorName] || [];
+      if (images.length) {
+        await base44.entities.ProductColorImages.upsert(productId, colorName, images);
+      } else {
+        await base44.entities.ProductColorImages.remove(productId, colorName);
+      }
+    } finally { setSavingColor(null); }
+  };
+
+  if (!approvedColors.length) {
+    return <p className="text-sm text-muted-foreground">{lang === 'ar' ? 'اختار الألوان المعتمدة فوق أولاً.' : 'Pick approved colors above first.'}</p>;
+  }
+  if (loading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+
+  return (
+    <div className="space-y-5">
+      {approvedColors.map((colorName) => (
+        <div key={colorName} className="border border-border rounded-md p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-sm font-medium">{colorName}</span>
+            <span className="text-[11px] text-muted-foreground">{lang === 'ar' ? '(الأولى = أمام، الثانية = خلف)' : '(1st = front, 2nd = back)'}</span>
+          </div>
+          <div className="flex flex-wrap gap-3 mb-3">
+            {(byColor[colorName] || []).map((url, i) => (
+              <div key={i} className="relative w-20 h-20 rounded-md overflow-hidden border border-border">
+                <img src={url} alt="" className="w-full h-full object-cover" />
+                <span className="absolute bottom-0.5 left-0.5 bg-black/70 text-white text-[10px] px-1 rounded">{i === 0 ? 'Front' : i === 1 ? 'Back' : i + 1}</span>
+                <button type="button" onClick={() => removeImage(colorName, i)} className="absolute top-0.5 right-0.5 bg-black/70 text-white text-xs w-5 h-5 rounded-full">×</button>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => onUpload(colorName, e)}
+              disabled={uploadingColor === colorName}
+              className="text-sm"
+            />
+            {uploadingColor === colorName && <span className="text-xs text-muted-foreground">Uploading…</span>}
+            <button
+              type="button"
+              onClick={() => saveColor(colorName)}
+              disabled={savingColor === colorName}
+              className="kh-btn-secondary !text-xs !py-1.5 !px-3 ml-auto"
+            >
+              {savingColor === colorName ? 'Saving…' : (lang === 'ar' ? 'حفظ لهاللون' : 'Save for this color')}
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminProducts() {
   const { lang } = useI18n();
   const colors = useColors();
@@ -276,6 +380,20 @@ export default function AdminProducts() {
             <input type="file" accept="image/*" multiple onChange={onImages} disabled={uploading} className="text-sm" />
             {uploading && <span className="text-xs text-muted-foreground ml-2">Uploading…</span>}
           </div>
+
+          {editingId !== 'new' && (
+            <div className="mt-8 border-t border-border pt-6">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-1">
+                {lang === 'ar' ? 'صور حسب اللون' : 'Photos by color'}
+              </span>
+              <p className="text-xs text-muted-foreground mb-4">
+                {lang === 'ar'
+                  ? 'حمّل صورة القميص الحقيقية لكل لون معتمد، ليشوف الزبون شكل التصميم عاللون يلي اختاره.'
+                  : 'Upload real garment photos per approved color, so shoppers see the actual printed design on the color they picked.'}
+              </p>
+              <ColorImagesSection productId={editingId} approvedColors={form.approved_colors} lang={lang} />
+            </div>
+          )}
 
           {error && <p className="text-sm mt-4" style={{ color: 'var(--brand-destructive)' }}>{error}</p>}
 

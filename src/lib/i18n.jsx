@@ -97,6 +97,7 @@ const dictionaries = {
       summary: 'Order summary',
       paymentNote: 'No card stored. Your preorder is reserved — we’ll confirm payment before production.',
       back: 'Back to cart',
+      autoDiscount: 'Discount applied',
     },
     confirm: {
       title: 'Order received',
@@ -263,6 +264,7 @@ const dictionaries = {
       summary: 'ملخّص الطلب',
       paymentNote: 'ما فينا منخزّن بطاقة. طلبك محجوز — منأكد الدفع قبل الإنتاج.',
       back: 'رجوع للسلة',
+      autoDiscount: 'خصم مطبّق',
     },
     confirm: {
       title: 'وصلنا الطلب',

@@ -13,6 +13,9 @@ import {
   updateGarmentColor,
   deleteGarmentColor,
   reorderGarmentColors,
+  listProductColorImages,
+  upsertProductColorImages,
+  deleteProductColorImages,
 } from "./queries/catalog";
 import { listAllOrders, updateOrderStatus } from "./queries/orders";
 import {
@@ -41,10 +44,66 @@ import {
   addOverheadExpense,
   deleteOverheadExpense,
   getFinancialSummary,
+  listProductMargins,
+  updateProductCost,
 } from "./queries/financials";
+import {
+  listPromoCodes,
+  createPromoCode,
+  updatePromoCode,
+  deletePromoCode,
+  listDiscounts,
+  createDiscount,
+  updateDiscount,
+  deleteDiscount,
+  listCampaigns,
+  createCampaign,
+  updateCampaign,
+  deleteCampaign,
+} from "./queries/promotions";
 
 const idParam = z.string().regex(/^\d+$/, "Invalid id");
 const productType = z.enum(["tee", "hoodie", "accessory"]);
+const discountValueType = z.enum(["percent", "fixed"]);
+
+const promoCodeFields = {
+  code: z.string().min(1).max(40),
+  type: discountValueType,
+  value: z.number().min(0).max(1_000_000),
+  min_order: z.number().min(0).max(1_000_000).nullable().optional(),
+  max_uses: z.number().int().min(1).max(1_000_000).nullable().optional(),
+  active: z.boolean().optional(),
+  starts_at: z.string().nullable().optional(),
+  expires_at: z.string().nullable().optional(),
+};
+
+const discountFields = {
+  name_en: z.string().min(1).max(160),
+  name_ar: z.string().max(160).nullable().optional(),
+  type: discountValueType,
+  value: z.number().min(0).max(1_000_000),
+  applies_to: z.enum(["all", "product_type", "collection"]).optional(),
+  applies_value: z.string().max(160).nullable().optional(),
+  active: z.boolean().optional(),
+  starts_at: z.string().nullable().optional(),
+  expires_at: z.string().nullable().optional(),
+};
+
+const campaignFields = {
+  title_en: z.string().min(1).max(200),
+  title_ar: z.string().max(200).nullable().optional(),
+  subtitle_en: z.string().max(300).nullable().optional(),
+  subtitle_ar: z.string().max(300).nullable().optional(),
+  cta_label_en: z.string().max(80).nullable().optional(),
+  cta_label_ar: z.string().max(80).nullable().optional(),
+  link_url: z.string().max(255).nullable().optional(),
+  promo_code_id: z.string().nullable().optional(),
+  discount_id: z.string().nullable().optional(),
+  active: z.boolean().optional(),
+  starts_at: z.string().nullable().optional(),
+  expires_at: z.string().nullable().optional(),
+  sort_order: z.number().int().optional(),
+};
 
 const productFields = {
   name_en: z.string().min(1).max(180),
@@ -174,6 +233,19 @@ export const adminRouter = createRouter({
     .input(z.object({ stockId: idParam.optional() }).optional())
     .query(({ input }) => listStockMovements(input?.stockId ? Number(input.stockId) : undefined)),
 
+  // ── Per-color product photos: staff manage from the product editor ──────
+  productColorImages: staffQuery
+    .input(z.object({ productId: idParam }))
+    .query(({ input }) => listProductColorImages(Number(input.productId))),
+
+  upsertProductColorImages: staffQuery
+    .input(z.object({ productId: idParam, colorName: z.string().min(1).max(80), images: z.array(z.string()) }))
+    .mutation(({ input }) => upsertProductColorImages(Number(input.productId), input.colorName, input.images)),
+
+  deleteProductColorImages: staffQuery
+    .input(z.object({ productId: idParam, colorName: z.string().min(1).max(80) }))
+    .mutation(({ input }) => deleteProductColorImages(Number(input.productId), input.colorName)),
+
   // ── Factory: staff can build print jobs / restock requests ────────────────
   factoryOrders: staffQuery.query(() => listFactoryOrders()),
 
@@ -234,6 +306,49 @@ export const adminRouter = createRouter({
     .input(z.object({ ids: z.array(idParam) }))
     .mutation(({ input }) => reorderGarmentColors(input.ids.map(Number))),
 
+  // ── Admin tier: discounts, promo codes, homepage campaigns ───────────────
+  promoCodes: adminQuery.query(() => listPromoCodes()),
+
+  createPromoCode: adminQuery
+    .input(z.object(promoCodeFields).required({ code: true, type: true, value: true }))
+    .mutation(({ ctx, input }) => createPromoCode(input, ctx.user.id)),
+
+  updatePromoCode: adminQuery
+    .input(z.object({ id: idParam, data: z.object(promoCodeFields).partial() }))
+    .mutation(({ input }) => updatePromoCode(Number(input.id), input.data)),
+
+  deletePromoCode: adminQuery
+    .input(z.object({ id: idParam }))
+    .mutation(({ input }) => deletePromoCode(Number(input.id))),
+
+  discounts: adminQuery.query(() => listDiscounts()),
+
+  createDiscount: adminQuery
+    .input(z.object(discountFields).required({ name_en: true, type: true, value: true }))
+    .mutation(({ input }) => createDiscount(input)),
+
+  updateDiscount: adminQuery
+    .input(z.object({ id: idParam, data: z.object(discountFields).partial() }))
+    .mutation(({ input }) => updateDiscount(Number(input.id), input.data)),
+
+  deleteDiscount: adminQuery
+    .input(z.object({ id: idParam }))
+    .mutation(({ input }) => deleteDiscount(Number(input.id))),
+
+  campaigns: adminQuery.query(() => listCampaigns()),
+
+  createCampaign: adminQuery
+    .input(z.object(campaignFields).required({ title_en: true }))
+    .mutation(({ input }) => createCampaign(input)),
+
+  updateCampaign: adminQuery
+    .input(z.object({ id: idParam, data: z.object(campaignFields).partial() }))
+    .mutation(({ input }) => updateCampaign(Number(input.id), input.data)),
+
+  deleteCampaign: adminQuery
+    .input(z.object({ id: idParam }))
+    .mutation(({ input }) => deleteCampaign(Number(input.id))),
+
   // ── Super admin tier: staff roles + financials ────────────────────────────
   staff: superAdminQuery.query(() => listStaff()),
 
@@ -285,4 +400,10 @@ export const adminRouter = createRouter({
   financialSummary: superAdminQuery
     .input(z.object({ from: z.string().max(10).optional(), to: z.string().max(10).optional() }).optional())
     .query(({ input }) => getFinancialSummary(input?.from, input?.to)),
+
+  productMargins: superAdminQuery.query(() => listProductMargins()),
+
+  updateProductCost: superAdminQuery
+    .input(z.object({ id: idParam, cost_price: z.number().min(0).max(1_000_000).nullable() }))
+    .mutation(({ input }) => updateProductCost(Number(input.id), input.cost_price)),
 });
