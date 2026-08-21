@@ -129,6 +129,26 @@ export async function repairMigration0002Gaps(
   const existingColumns = new Set(
     (columnRows[0] ?? []).map((r) => `${r.tbl}.${r.col}`),
   );
+  // TEMPORARY diagnostic: print exactly what this boot process sees, plus
+  // which database/host it's actually connected to, to rule out a stale
+  // connection or env var pointing at the wrong database instance.
+  try {
+    const dbNameRow = (await db.execute(
+      sql.raw("select database() as dbname, @@hostname as host, version() as v"),
+    )) as unknown as [{ dbname: string; host: string; v: string }[]];
+    console.log("[db][diag] connected to:", JSON.stringify(dbNameRow[0]?.[0]));
+    console.log(
+      "[db][diag] products.* columns seen:",
+      JSON.stringify([...existingColumns].filter((c) => c.startsWith("products."))),
+    );
+    console.log(
+      "[db][diag] orders.* columns seen:",
+      JSON.stringify([...existingColumns].filter((c) => c.startsWith("orders."))),
+    );
+    console.log("[db][diag] total column rows:", (columnRows[0] ?? []).length);
+  } catch (diagError) {
+    console.error("[db][diag] diagnostic query failed:", diagError);
+  }
 
   const columnPatches: { table: string; column: string; ddl: string }[] = [
     { table: "products", column: "costPriceCents", ddl: "ALTER TABLE `products` ADD `costPriceCents` int" },
@@ -138,9 +158,16 @@ export async function repairMigration0002Gaps(
   ];
 
   for (const patch of columnPatches) {
-    if (existingColumns.has(`${patch.table}.${patch.column}`)) continue;
-    await db.execute(sql.raw(patch.ddl));
-    console.log(`[db] repaired missing column ${patch.table}.${patch.column}`);
+    if (existingColumns.has(`${patch.table}.${patch.column}`)) {
+      console.log(`[db][diag] column already present, skipping: ${patch.table}.${patch.column}`);
+      continue;
+    }
+    try {
+      await db.execute(sql.raw(patch.ddl));
+      console.log(`[db] repaired missing column ${patch.table}.${patch.column}`);
+    } catch (patchError) {
+      console.error(`[db] FAILED to repair column ${patch.table}.${patch.column}:`, patchError);
+    }
   }
 
   const tableRows = (await db.execute(sql.raw("show tables"))) as unknown as [
@@ -168,11 +195,19 @@ export async function repairMigration0002Gaps(
       ddl: "CREATE TABLE `promo_codes` (\n\t`id` serial AUTO_INCREMENT NOT NULL,\n\t`code` varchar(40) NOT NULL,\n\t`type` enum('percent','fixed') NOT NULL,\n\t`value` int NOT NULL,\n\t`minOrderCents` int,\n\t`maxUses` int,\n\t`usesCount` int NOT NULL DEFAULT 0,\n\t`active` boolean NOT NULL DEFAULT true,\n\t`startsAt` timestamp,\n\t`expiresAt` timestamp,\n\t`createdByUserId` bigint unsigned,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `promo_codes_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `promo_codes_code_unique` UNIQUE(`code`)\n)",
     },
   ];
+  console.log("[db][diag] tables seen:", JSON.stringify([...existingTables]));
   for (const { table, ddl } of tableCreates) {
-    if (existingTables.has(table)) continue;
-    await db.execute(sql.raw(ddl));
-    existingTables.add(table);
-    console.log(`[db] repaired missing table ${table}`);
+    if (existingTables.has(table)) {
+      console.log(`[db][diag] table already present, skipping: ${table}`);
+      continue;
+    }
+    try {
+      await db.execute(sql.raw(ddl));
+      existingTables.add(table);
+      console.log(`[db] repaired missing table ${table}`);
+    } catch (tableError) {
+      console.error(`[db] FAILED to repair table ${table}:`, tableError);
+    }
   }
 
   // Best-effort: the FKs/index from 0002 that reference the tables above.
