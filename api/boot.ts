@@ -100,7 +100,18 @@ if (env.isProduction) {
   try {
     const { migrate } = await import("drizzle-orm/mysql2/migrator");
     const { getDb } = await import("./queries/connection");
-    const { seedAlreadyAppliedMigrations } = await import("./db-migrate");
+    const { seedAlreadyAppliedMigrations, repairMigration0002Gaps } = await import(
+      "./db-migrate"
+    );
+    // Runs first and unconditionally: this database previously ended up
+    // with migration 0002 marked "applied" while some of its statements
+    // (the `products.costPriceCents` / `orders.*` ALTER TABLEs) never
+    // actually ran, which made every full-table read on `products` throw
+    // and silently blanked the storefront and admin product list. This
+    // check-then-patch repair is idempotent — every statement inside it is
+    // gated on "does this column/table already exist?" — so it's safe to
+    // run on every boot, including on databases that never had the gap.
+    await repairMigration0002Gaps(getDb());
     await seedAlreadyAppliedMigrations(getDb(), "db/migrations");
     await migrate(getDb(), { migrationsFolder: "db/migrations" });
     console.log("[db] migrations applied.");

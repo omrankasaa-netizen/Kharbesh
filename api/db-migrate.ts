@@ -65,6 +65,33 @@ export async function seedAlreadyAppliedMigrations(
     const allTablesExist = createdTables.every((t) => existingTables.has(t));
     if (!allTablesExist) continue;
 
+    // A migration file can mix `CREATE TABLE` with `ALTER TABLE ... ADD` on
+    // tables that already existed (e.g. adding a column to `products`
+    // alongside creating a brand-new `campaigns` table in the same file).
+    // Checking only the created tables is not enough — if every new table
+    // already happens to exist (from an earlier partial/manual run), this
+    // function would mark the whole migration "applied" and permanently
+    // skip it, silently dropping its ALTER TABLE statements forever. Guard
+    // against that by also requiring every column an ALTER TABLE ... ADD
+    // statement targets to already be present.
+    const alteredColumns = [
+      ...content.matchAll(/ALTER TABLE `([^`]+)` ADD `([^`]+)`/gi),
+    ].map((m) => ({ table: m[1], column: m[2] }));
+    if (alteredColumns.length > 0) {
+      const columnRows = (await db.execute(
+        sql.raw(
+          "select table_name as tbl, column_name as col from information_schema.columns where table_schema = database()",
+        ),
+      )) as unknown as [{ tbl: string; col: string }[]];
+      const existingColumns = new Set(
+        (columnRows[0] ?? []).map((r) => `${r.tbl}.${r.col}`),
+      );
+      const allColumnsExist = alteredColumns.every(({ table, column }) =>
+        existingColumns.has(`${table}.${column}`),
+      );
+      if (!allColumnsExist) continue;
+    }
+
     await db.execute(
       sql.raw(
         `insert into \`${MIGRATIONS_TABLE}\` (\`hash\`, \`created_at\`) values ('${hash}', ${entry.when})`,
@@ -73,5 +100,113 @@ export async function seedAlreadyAppliedMigrations(
     console.log(
       `[db] backfilled migration record for already-applied ${entry.tag} (tables pre-existed: ${createdTables.join(", ")})`,
     );
+  }
+}
+
+/**
+ * One-time direct repair for a specific gap this file's own safety net used
+ * to miss (see the ALTER-TABLE-column check added above): if migration
+ * `0002_dear_wolverine`'s four new tables (`campaigns`, `discounts`,
+ * `promo_codes`, `product_color_images`) already existed in a database from
+ * an earlier partial run, the old, narrower check would have marked 0002 as
+ * fully applied and permanently skipped it — even though it never actually
+ * ran the `ALTER TABLE products ADD costPriceCents` / `ALTER TABLE orders
+ * ADD ...` statements in that same file. That false "applied" record is
+ * already committed in `__drizzle_migrations` on any database this happened
+ * to, so fixing the check above only prevents new occurrences — it can't
+ * retroactively re-run 0002 there. This directly checks for and adds
+ * exactly those specific columns (and, defensively, the four tables) if
+ * they're still missing, regardless of migration-tracking state.
+ */
+export async function repairMigration0002Gaps(
+  db: MySql2Database<Record<string, unknown>>,
+) {
+  const columnRows = (await db.execute(
+    sql.raw(
+      "select table_name as tbl, column_name as col from information_schema.columns where table_schema = database()",
+    ),
+  )) as unknown as [{ tbl: string; col: string }[]];
+  const existingColumns = new Set(
+    (columnRows[0] ?? []).map((r) => `${r.tbl}.${r.col}`),
+  );
+
+  const columnPatches: { table: string; column: string; ddl: string }[] = [
+    { table: "products", column: "costPriceCents", ddl: "ALTER TABLE `products` ADD `costPriceCents` int" },
+    { table: "orders", column: "discountCents", ddl: "ALTER TABLE `orders` ADD `discountCents` int DEFAULT 0 NOT NULL" },
+    { table: "orders", column: "promoCode", ddl: "ALTER TABLE `orders` ADD `promoCode` varchar(40)" },
+    { table: "orders", column: "appliedDiscounts", ddl: "ALTER TABLE `orders` ADD `appliedDiscounts` json" },
+  ];
+
+  for (const patch of columnPatches) {
+    if (existingColumns.has(`${patch.table}.${patch.column}`)) continue;
+    await db.execute(sql.raw(patch.ddl));
+    console.log(`[db] repaired missing column ${patch.table}.${patch.column}`);
+  }
+
+  const tableRows = (await db.execute(sql.raw("show tables"))) as unknown as [
+    Record<string, string>[],
+  ];
+  const existingTables = new Set(
+    (tableRows[0] ?? []).map((r) => Object.values(r)[0]),
+  );
+
+  const tableCreates: { table: string; ddl: string }[] = [
+    {
+      table: "campaigns",
+      ddl: "CREATE TABLE `campaigns` (\n\t`id` serial AUTO_INCREMENT NOT NULL,\n\t`titleEn` varchar(200) NOT NULL,\n\t`titleAr` varchar(200),\n\t`subtitleEn` varchar(300),\n\t`subtitleAr` varchar(300),\n\t`ctaLabelEn` varchar(80),\n\t`ctaLabelAr` varchar(80),\n\t`linkUrl` varchar(255),\n\t`promoCodeId` bigint unsigned,\n\t`discountId` bigint unsigned,\n\t`active` boolean NOT NULL DEFAULT true,\n\t`startsAt` timestamp,\n\t`expiresAt` timestamp,\n\t`sortOrder` int NOT NULL DEFAULT 0,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `campaigns_id` PRIMARY KEY(`id`)\n)",
+    },
+    {
+      table: "discounts",
+      ddl: "CREATE TABLE `discounts` (\n\t`id` serial AUTO_INCREMENT NOT NULL,\n\t`nameEn` varchar(160) NOT NULL,\n\t`nameAr` varchar(160),\n\t`type` enum('percent','fixed') NOT NULL,\n\t`value` int NOT NULL,\n\t`appliesTo` enum('all','product_type','collection') NOT NULL DEFAULT 'all',\n\t`appliesValue` varchar(160),\n\t`active` boolean NOT NULL DEFAULT true,\n\t`startsAt` timestamp,\n\t`expiresAt` timestamp,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `discounts_id` PRIMARY KEY(`id`)\n)",
+    },
+    {
+      table: "product_color_images",
+      ddl: "CREATE TABLE `product_color_images` (\n\t`id` serial AUTO_INCREMENT NOT NULL,\n\t`productId` bigint unsigned NOT NULL,\n\t`colorName` varchar(80) NOT NULL,\n\t`images` json NOT NULL,\n\t`sortOrder` int NOT NULL DEFAULT 0,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `product_color_images_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `product_color_images_variant_idx` UNIQUE(`productId`,`colorName`)\n)",
+    },
+    {
+      table: "promo_codes",
+      ddl: "CREATE TABLE `promo_codes` (\n\t`id` serial AUTO_INCREMENT NOT NULL,\n\t`code` varchar(40) NOT NULL,\n\t`type` enum('percent','fixed') NOT NULL,\n\t`value` int NOT NULL,\n\t`minOrderCents` int,\n\t`maxUses` int,\n\t`usesCount` int NOT NULL DEFAULT 0,\n\t`active` boolean NOT NULL DEFAULT true,\n\t`startsAt` timestamp,\n\t`expiresAt` timestamp,\n\t`createdByUserId` bigint unsigned,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `promo_codes_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `promo_codes_code_unique` UNIQUE(`code`)\n)",
+    },
+  ];
+  for (const { table, ddl } of tableCreates) {
+    if (existingTables.has(table)) continue;
+    await db.execute(sql.raw(ddl));
+    existingTables.add(table);
+    console.log(`[db] repaired missing table ${table}`);
+  }
+
+  // Best-effort: the FKs/index from 0002 that reference the tables above.
+  // Wrapped individually so a "duplicate" error on one (if it already
+  // exists) never blocks the other repairs in this function.
+  const bestEffort: { check: string; ddl: string }[] = [
+    {
+      check:
+        "select 1 from information_schema.table_constraints where table_schema = database() and table_name = 'campaigns' and constraint_name = 'campaigns_promoCodeId_promo_codes_id_fk'",
+      ddl: "ALTER TABLE `campaigns` ADD CONSTRAINT `campaigns_promoCodeId_promo_codes_id_fk` FOREIGN KEY (`promoCodeId`) REFERENCES `promo_codes`(`id`) ON DELETE set null ON UPDATE no action",
+    },
+    {
+      check:
+        "select 1 from information_schema.table_constraints where table_schema = database() and table_name = 'campaigns' and constraint_name = 'campaigns_discountId_discounts_id_fk'",
+      ddl: "ALTER TABLE `campaigns` ADD CONSTRAINT `campaigns_discountId_discounts_id_fk` FOREIGN KEY (`discountId`) REFERENCES `discounts`(`id`) ON DELETE set null ON UPDATE no action",
+    },
+    {
+      check:
+        "select 1 from information_schema.table_constraints where table_schema = database() and table_name = 'product_color_images' and constraint_name = 'product_color_images_productId_products_id_fk'",
+      ddl: "ALTER TABLE `product_color_images` ADD CONSTRAINT `product_color_images_productId_products_id_fk` FOREIGN KEY (`productId`) REFERENCES `products`(`id`) ON DELETE cascade ON UPDATE no action",
+    },
+    {
+      check:
+        "select 1 from information_schema.statistics where table_schema = database() and table_name = 'product_color_images' and index_name = 'product_color_images_product_idx'",
+      ddl: "CREATE INDEX `product_color_images_product_idx` ON `product_color_images` (`productId`)",
+    },
+  ];
+  for (const { check, ddl } of bestEffort) {
+    try {
+      const rows = (await db.execute(sql.raw(check))) as unknown as [unknown[]];
+      if ((rows[0] ?? []).length > 0) continue;
+      await db.execute(sql.raw(ddl));
+    } catch (error) {
+      console.error("[db] best-effort repair statement failed (non-fatal):", error);
+    }
   }
 }
