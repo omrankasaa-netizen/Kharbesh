@@ -77,7 +77,30 @@ export async function cachedMe(fresh = false) {
   return meCache;
 }
 
-/** Downscale an image file client-side and return a data URL. */
+/** True if the canvas actually has any non-opaque pixel (sampled for speed). */
+function canvasHasRealTransparency(ctx, width, height) {
+  try {
+    const { data } = ctx.getImageData(0, 0, width, height);
+    // Sample every ~13th pixel's alpha byte — plenty to catch real
+    // transparency without scanning every byte of a large image.
+    for (let i = 3; i < data.length; i += 4 * 13) {
+      if (data[i] < 255) return true;
+    }
+    return false;
+  } catch {
+    // Canvas read blocked (shouldn't happen for a local file) — assume no
+    // real transparency so we still get the smaller JPEG output.
+    return false;
+  }
+}
+
+/**
+ * Downscale an image file client-side and return a data URL, re-encoding as
+ * JPEG whenever possible. PNG/WEBP sources only keep PNG output when they
+ * contain real transparency — a PNG re-encode of an opaque photo can be
+ * several times larger than a JPEG at the same dimensions, which is what
+ * was pushing single-image uploads past the server's body-size limit.
+ */
 async function fileToDataUrl(file, maxDim = 1400, quality = 0.85) {
   const readAs = (f) =>
     new Promise((resolve, reject) => {
@@ -93,13 +116,25 @@ async function fileToDataUrl(file, maxDim = 1400, quality = 0.85) {
   }
   try {
     const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const hasAlpha = file.type === 'image/png' || file.type === 'image/webp';
-    return canvas.toDataURL(hasAlpha ? 'image/png' : 'image/jpeg', quality);
+    let scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    let dataUrl;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+      const mightHaveAlpha = file.type === 'image/png' || file.type === 'image/webp';
+      const usePng = mightHaveAlpha && canvasHasRealTransparency(ctx, canvas.width, canvas.height);
+      dataUrl = canvas.toDataURL(usePng ? 'image/png' : 'image/jpeg', quality);
+
+      // Comfortably under the server's request-size limit even after
+      // multiple images batch together in one request.
+      if (dataUrl.length < 1_500_000 || !usePng) break;
+      scale *= 0.7; // still oversized (large transparent PNG) — shrink and retry
+    }
+    return dataUrl;
   } catch {
     if (file.size > 1_400_000) throw new Error('File too large (max ~1MB).');
     return readAs(file);

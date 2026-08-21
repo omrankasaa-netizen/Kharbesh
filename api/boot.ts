@@ -69,7 +69,13 @@ if (env.isProduction) {
   });
 }
 
-app.use(bodyLimit({ maxSize: 2 * 1024 * 1024 }));
+app.use(
+  bodyLimit({
+    maxSize: 10 * 1024 * 1024,
+    onError: (c) =>
+      c.json({ error: "Image too large. Please use a smaller photo." }, 413),
+  }),
+);
 app.get(Paths.oauthCallback, createOAuthCallbackHandler());
 app.get(Paths.googleOauthCallback, createGoogleOAuthCallbackHandler());
 app.use("/api/trpc/*", async (c) => {
