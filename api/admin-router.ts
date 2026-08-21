@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createRouter, staffQuery, adminQuery, superAdminQuery } from "./middleware";
+import { uploadDataUrlToR2 } from "./lib/r2";
 import {
   listUsers,
   updateProduct,
@@ -157,6 +158,18 @@ export const adminRouter = createRouter({
   deleteProduct: staffQuery
     .input(z.object({ id: idParam }))
     .mutation(({ ctx, input }) => deleteProduct(Number(input.id), ctx.user.id)),
+
+  /**
+   * Uploads a product photo (sent as a base64 data URL) to R2 and returns
+   * its public CDN URL. If R2 isn't configured, or the upload fails for any
+   * reason, returns the original data URL unchanged so callers never break.
+   */
+  uploadImage: staffQuery
+    .input(z.object({ dataUrl: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      const url = await uploadDataUrlToR2(input.dataUrl);
+      return { url: url ?? input.dataUrl };
+    }),
 
   orders: staffQuery.query(() => listAllOrders()),
 

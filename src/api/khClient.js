@@ -320,8 +320,21 @@ export const kh = {
 
   integrations: {
     Core: {
-      /** Reference uploads are stored as downscaled data URLs. */
-      UploadFile: async ({ file }) => ({ file_url: await fileToDataUrl(file) }),
+      /**
+       * Downscales the file client-side, then hands the data URL to the
+       * backend to store on R2 and return a short CDN URL. If R2 isn't
+       * configured (or the request fails), the original data URL is kept
+       * so uploads keep working exactly as before.
+       */
+      UploadFile: async ({ file }) => {
+        const dataUrl = await fileToDataUrl(file);
+        try {
+          const { url } = await client.admin.uploadImage.mutate({ dataUrl });
+          return { file_url: url };
+        } catch {
+          return { file_url: dataUrl };
+        }
+      },
     },
   },
 };
