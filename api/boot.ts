@@ -84,13 +84,14 @@ app.use("/api/trpc/*", async (c) => {
     req: c.req.raw,
     router: appRouter,
     createContext,
-    // TEMPORARY diagnostic: log the real underlying error server-side.
     // tRPC's default error formatter strips driver-level detail before it
-    // reaches the client, so failures were invisible in both the API
-    // response and (since nothing else logged them) the deploy logs.
+    // reaches the client, so log the real underlying error (and its
+    // .cause, where drizzle attaches the raw MySQL driver error) here.
+    // Otherwise failures are invisible in both the API response and the
+    // deploy logs, which made a prior production bug nearly undiagnosable.
     onError: ({ path, error }) => {
-      console.error(`[trpc][diag] ${path ?? "<no-path>"} failed:`, error);
-      if (error.cause) console.error("[trpc][diag] cause:", error.cause);
+      console.error(`[trpc] ${path ?? "<no-path>"} failed:`, error);
+      if (error.cause) console.error("[trpc] cause:", error.cause);
     },
   });
 });
