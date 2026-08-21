@@ -84,6 +84,14 @@ app.use("/api/trpc/*", async (c) => {
     req: c.req.raw,
     router: appRouter,
     createContext,
+    // TEMPORARY diagnostic: log the real underlying error server-side.
+    // tRPC's default error formatter strips driver-level detail before it
+    // reaches the client, so failures were invisible in both the API
+    // response and (since nothing else logged them) the deploy logs.
+    onError: ({ path, error }) => {
+      console.error(`[trpc][diag] ${path ?? "<no-path>"} failed:`, error);
+      if (error.cause) console.error("[trpc][diag] cause:", error.cause);
+    },
   });
 });
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
