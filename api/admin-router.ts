@@ -6,6 +6,7 @@ import {
   updateProduct,
   createProduct,
   deleteProduct,
+  hardDeleteProduct,
   listAuditLogs,
 } from "./queries/admin";
 import {
@@ -21,7 +22,7 @@ import {
   upsertProductColorImages,
   deleteProductColorImages,
 } from "./queries/catalog";
-import { listAllOrders, updateOrderStatus } from "./queries/orders";
+import { listAllOrders, updateOrderStatus, hardDeleteOrder } from "./queries/orders";
 import {
   listAllCustomRequests,
   updateCustomRequestStatus,
@@ -159,6 +160,11 @@ export const adminRouter = createRouter({
     .input(z.object({ id: idParam }))
     .mutation(({ ctx, input }) => deleteProduct(Number(input.id), ctx.user.id)),
 
+  /** Permanent delete — super_admin only. Staff use `deleteProduct` (archive). */
+  hardDeleteProduct: superAdminQuery
+    .input(z.object({ id: idParam }))
+    .mutation(({ ctx, input }) => hardDeleteProduct(Number(input.id), ctx.user.id)),
+
   /**
    * Uploads a product photo (sent as a base64 data URL) to R2 and returns
    * its public CDN URL. If R2 isn't configured, or the upload fails for any
@@ -190,6 +196,11 @@ export const adminRouter = createRouter({
       }),
     )
     .mutation(({ ctx, input }) => updateOrderStatus(Number(input.id), input.status, ctx.user.id)),
+
+  /** Permanent delete — super_admin only. There is no soft-delete for orders. */
+  hardDeleteOrder: superAdminQuery
+    .input(z.object({ id: idParam }))
+    .mutation(({ ctx, input }) => hardDeleteOrder(Number(input.id), ctx.user.id)),
 
   customRequests: staffQuery.query(() => listAllCustomRequests()),
 

@@ -162,6 +162,8 @@ export const kh = {
       update: (id, data) =>
         client.admin.updateProduct.mutate({ id: String(id), data }),
       delete: (id) => client.admin.deleteProduct.mutate({ id: String(id) }),
+      /** Permanent delete — server enforces super_admin. */
+      hardDelete: (id) => client.admin.hardDeleteProduct.mutate({ id: String(id) }),
     },
 
     Order: {
@@ -208,6 +210,8 @@ export const kh = {
 
       update: (id, data) =>
         client.admin.updateOrderStatus.mutate({ id: String(id), status: data.status }),
+      /** Permanent delete — server enforces super_admin. */
+      hardDelete: (id) => client.admin.hardDeleteOrder.mutate({ id: String(id) }),
     },
 
     Collection: {

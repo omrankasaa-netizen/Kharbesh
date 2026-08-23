@@ -250,3 +250,24 @@ export async function updateOrderStatus(
   const row = await db.query.orders.findFirst({ where: eq(orders.id, id) });
   return row ? toUiOrder(row) : null;
 }
+
+/**
+ * Permanently removes an order row (super_admin only — gated in the
+ * router, not here). Orders have no hard FK dependents — line items live
+ * inline as JSON and `factory_order_items.sourceOrderId` is a plain
+ * historical reference column, not a constrained FK — so this is a plain
+ * delete. Meant for pre-launch test-data cleanup.
+ */
+export async function hardDeleteOrder(id: number, actorUserId: number) {
+  const db = getDb();
+  const row = await db.query.orders.findFirst({ where: eq(orders.id, id) });
+  await db.delete(orders).where(eq(orders.id, id));
+  await db.insert(auditLogs).values({
+    actorUserId,
+    action: "order.hard_deleted",
+    entity: "order",
+    entityId: String(id),
+    detail: row ? { order_number: row.orderNumber } : null,
+  });
+  return { success: true };
+}

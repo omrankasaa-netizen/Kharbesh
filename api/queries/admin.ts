@@ -166,6 +166,27 @@ export async function deleteProduct(id: number, actorUserId: number) {
   return { success: true };
 }
 
+/**
+ * Permanently removes a product row (super_admin only — gated in the
+ * router, not here). `product_color_images` cascade-deletes at the DB
+ * level via its FK. Meant for pre-launch test-data cleanup, not routine
+ * catalog management — staff should keep using `deleteProduct` (archive)
+ * day to day.
+ */
+export async function hardDeleteProduct(id: number, actorUserId: number) {
+  const db = getDb();
+  const row = await db.query.products.findFirst({ where: eq(products.id, id) });
+  await db.delete(products).where(eq(products.id, id));
+  await db.insert(auditLogs).values({
+    actorUserId,
+    action: "product.hard_deleted",
+    entity: "product",
+    entityId: String(id),
+    detail: row ? { name_en: row.nameEn } : null,
+  });
+  return { success: true };
+}
+
 export async function listAuditLogs(limit = 100) {
   return getDb().select().from(auditLogs).orderBy(desc(auditLogs.id)).limit(limit);
 }

@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { base44 } from '@/api/khClient';
+import { base44, hasRole } from '@/api/khClient';
+import { useAuth } from '@/lib/AuthContext';
 import { useColors, useGarmentStyles, useCatalogRefresh } from '@/lib/useCatalog.jsx';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
 import { STANDARD_FRONT_BY_COLOR, DEFAULT_COVER_FRONT } from '@/lib/standardPhotos';
+import QuickAddProduct from './QuickAddProduct.jsx';
 
 const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
 const STATUSES = ['active', 'draft', 'archived'];
@@ -361,6 +363,8 @@ function GarmentStyleField({ value, onChange, styles, lang }) {
 
 export default function AdminProducts() {
   const { lang } = useI18n();
+  const { user } = useAuth();
+  const isSuperAdmin = hasRole(user, 'super_admin');
   const colors = useColors();
   const styles = useGarmentStyles();
   const [products, setProducts] = useState([]);
@@ -371,6 +375,7 @@ export default function AdminProducts() {
   const [uploadingSlot, setUploadingSlot] = useState(null);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const priceTouched = useRef(false);
 
   const load = async () => {
@@ -458,6 +463,24 @@ export default function AdminProducts() {
     if (!window.confirm(lang === 'ar' ? 'أرشفة هالمنتج؟' : `Archive "${p.name_en}"?`)) return;
     await base44.entities.Product.delete(p.id);
     setProducts((ps) => ps.map((x) => (x.id === p.id ? { ...x, status: 'archived' } : x)));
+  };
+
+  // Super_admin-only permanent delete (test-data cleanup pre-launch). Requires
+  // typing the product's exact name back — there's no undo once this hits
+  // the server, unlike Archive above.
+  const hardDelete = async (p) => {
+    const typed = window.prompt(
+      lang === 'ar'
+        ? `حذف نهائي! ما في تراجع. اكتب اسم المنتج تماماً للتأكيد:\n"${p.name_en}"`
+        : `Permanent delete — this cannot be undone. Type the product name exactly to confirm:\n"${p.name_en}"`,
+    );
+    if (typed !== p.name_en) return;
+    try {
+      await base44.entities.Product.hardDelete(p.id);
+      setProducts((ps) => ps.filter((x) => x.id !== p.id));
+    } catch (err) {
+      window.alert(err?.message || (lang === 'ar' ? 'ما قدرنا نحذف.' : 'Could not delete.'));
+    }
   };
 
   const quickStatus = async (p, status) => {
@@ -637,8 +660,25 @@ export default function AdminProducts() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button onClick={startCreate} className="kh-btn-primary">{lang === 'ar' ? 'منتج جديد +' : '+ New product'}</button>
+            <div className="flex gap-3">
+              <button onClick={() => setQuickAddOpen((v) => !v)} className="kh-btn-secondary">
+                {quickAddOpen
+                  ? (lang === 'ar' ? 'إقفال الإضافة السريعة' : 'Close quick add')
+                  : (lang === 'ar' ? 'إضافة سريعة بالصور +' : '+ Quick add by photos')}
+              </button>
+              <button onClick={startCreate} className="kh-btn-primary">{lang === 'ar' ? 'منتج جديد +' : '+ New product'}</button>
+            </div>
           </div>
+
+          {quickAddOpen && (
+            <div className="mt-6">
+              <QuickAddProduct
+                lang={lang}
+                colors={colors}
+                onCreated={(created) => { setProducts((ps) => [created, ...ps]); }}
+              />
+            </div>
+          )}
 
           {loading ? (
             <div className="text-muted-foreground mt-8">Loading…</div>
@@ -675,6 +715,11 @@ export default function AdminProducts() {
                         {p.status !== 'archived' && (
                           <button onClick={() => archive(p)} className="kh-btn-text text-xs ml-3" style={{ color: 'var(--brand-destructive)' }}>
                             {lang === 'ar' ? 'أرشفة' : 'Archive'}
+                          </button>
+                        )}
+                        {isSuperAdmin && (
+                          <button onClick={() => hardDelete(p)} className="kh-btn-text text-xs ml-3" style={{ color: 'var(--brand-destructive)', fontWeight: 600 }}>
+                            {lang === 'ar' ? 'حذف نهائي' : 'Delete'}
                           </button>
                         )}
                       </td>
