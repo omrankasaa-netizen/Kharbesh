@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
+    "build": "vite build && esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire as __createRequire } from 'module';const require = __createRequire(import.meta.url);\"",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "NODE_ENV=production node dist/boot.js",
@@ -74,6 +74,7 @@
     "react-resizable-panels": "^4.2.2",
     "react-router": "^7.6.1",
     "recharts": "^2.15.4",
+    "sharp": "^0.35.3",
     "sonner": "^2.0.7",
     "superjson": "^2.2.6",
     "tailwind-merge": "^3.4.0",

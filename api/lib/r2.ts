@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import sharp from "sharp";
 import { env } from "./env";
 
 /**
@@ -43,6 +44,38 @@ function extensionForMime(mime: string): string {
   return "jpg";
 }
 
+/**
+ * Re-encodes a raster image buffer as WebP for a smaller payload over the
+ * wire (typically 25-35% smaller than an equivalent JPEG/PNG at the same
+ * visual quality) — this is the format actually served to shoppers, which
+ * matters most on slow mobile connections. Animated GIFs are left untouched
+ * so we never risk flattening an animation to a single frame; everything
+ * else (JPEG, PNG, single-frame GIF, already-WebP re-saves) is converted.
+ * Alpha transparency is preserved automatically by sharp's WebP encoder.
+ * Fails soft: on any error, returns the original buffer/mime so the upload
+ * still succeeds with the source format instead of failing outright.
+ */
+async function toWebpIfPossible(
+  buffer: Buffer,
+  mime: string,
+): Promise<{ buffer: Buffer; mime: string }> {
+  try {
+    const image = sharp(buffer, { animated: mime === "image/gif" });
+    const metadata = await image.metadata();
+    if (mime === "image/gif" && (metadata.pages ?? 1) > 1) {
+      // Animated GIF — converting would collapse it to a still frame.
+      return { buffer, mime };
+    }
+    const webpBuffer = await image
+      .webp({ quality: 82, effort: 4 })
+      .toBuffer();
+    return { buffer: webpBuffer, mime: "image/webp" };
+  } catch (err) {
+    console.error("[r2] WebP conversion failed, uploading original", err);
+    return { buffer, mime };
+  }
+}
+
 export function isR2Configured(): boolean {
   return r2Configured;
 }
@@ -61,13 +94,15 @@ export async function uploadDataUrlToR2(
   const match = DATA_URL_RE.exec(dataUrl);
   if (!match) return null;
 
-  const [, mime, base64] = match;
-  let buffer: Buffer;
+  const [, sourceMime, base64] = match;
+  let sourceBuffer: Buffer;
   try {
-    buffer = Buffer.from(base64, "base64");
+    sourceBuffer = Buffer.from(base64, "base64");
   } catch {
     return null;
   }
+
+  const { buffer, mime } = await toWebpIfPossible(sourceBuffer, sourceMime);
 
   const hash = createHash("sha256").update(buffer).digest("hex").slice(0, 32);
   const key = `${keyPrefix}/${hash}.${extensionForMime(mime)}`;
