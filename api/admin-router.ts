@@ -5,6 +5,7 @@ import {
   listUsers,
   updateProduct,
   createProduct,
+  bulkCreateProducts,
   deleteProduct,
   hardDeleteProduct,
   listAuditLogs,
@@ -151,6 +152,23 @@ export const adminRouter = createRouter({
   createProduct: staffQuery
     .input(productPatchSchema.required({ name_en: true, product_type: true }))
     .mutation(({ ctx, input }) => createProduct(input, ctx.user.id)),
+
+  /** Bulk Import page: creates many products (each with its own color photos) in one call. */
+  bulkCreateProducts: staffQuery
+    .input(
+      z.object({
+        items: z
+          .array(
+            z.object({
+              product: productPatchSchema.required({ name_en: true, product_type: true }),
+              colorImages: z.record(z.string(), z.array(z.string())).optional(),
+            }),
+          )
+          .min(1)
+          .max(200),
+      }),
+    )
+    .mutation(({ ctx, input }) => bulkCreateProducts(input.items, ctx.user.id)),
 
   updateProduct: staffQuery
     .input(z.object({ id: idParam, data: productPatchSchema }))

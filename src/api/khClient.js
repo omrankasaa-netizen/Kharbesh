@@ -164,6 +164,8 @@ export const kh = {
       delete: (id) => client.admin.deleteProduct.mutate({ id: String(id) }),
       /** Permanent delete — server enforces super_admin. */
       hardDelete: (id) => client.admin.hardDeleteProduct.mutate({ id: String(id) }),
+      /** Bulk Import page: creates many products (each with its own color photos) in one call. */
+      bulkCreate: (items) => client.admin.bulkCreateProducts.mutate({ items }),
     },
 
     Order: {

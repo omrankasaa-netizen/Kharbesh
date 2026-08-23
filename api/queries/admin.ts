@@ -1,7 +1,7 @@
 import { getDb } from "./connection";
 import { auditLogs, products, users } from "@db/schema";
 import { desc, eq } from "drizzle-orm";
-import { toUiProduct } from "./catalog";
+import { toUiProduct, upsertProductColorImages } from "./catalog";
 
 export async function listUsers() {
   const rows = await getDb().select().from(users);
@@ -151,6 +151,52 @@ export async function createProduct(
 
   const row = await db.query.products.findFirst({ where: eq(products.id, id) });
   return row ? toUiProduct(row) : null;
+}
+
+/**
+ * Creates many products in one request — the "Bulk Import" admin page's
+ * server-side counterpart. Each item is created and its color photos are
+ * attached independently, with per-item try/catch: one bad row (e.g. a
+ * duplicate name check added later, or a transient error) doesn't roll
+ * back the other 29. Callers should surface `results` to show exactly
+ * which rows succeeded so nothing silently disappears.
+ */
+export async function bulkCreateProducts(
+  items: Array<{
+    product: ProductWritableFields & { name_en: string; product_type: "tee" | "hoodie" | "accessory" };
+    colorImages?: Record<string, string[]>;
+  }>,
+  actorUserId: number,
+) {
+  const results: Array<{ success: boolean; id?: string; name_en: string; error?: string }> = [];
+
+  for (const item of items) {
+    try {
+      const created = await createProduct(item.product, actorUserId);
+      if (created && item.colorImages) {
+        for (const [colorName, images] of Object.entries(item.colorImages)) {
+          if (images?.length) await upsertProductColorImages(Number(created.id), colorName, images);
+        }
+      }
+      results.push({ success: true, id: created?.id, name_en: item.product.name_en });
+    } catch (err) {
+      results.push({
+        success: false,
+        name_en: item.product.name_en,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  await getDb().insert(auditLogs).values({
+    actorUserId,
+    action: "product.bulk_created",
+    entity: "product",
+    entityId: null,
+    detail: { total: items.length, succeeded: results.filter((r) => r.success).length },
+  });
+
+  return results;
 }
 
 export async function deleteProduct(id: number, actorUserId: number) {

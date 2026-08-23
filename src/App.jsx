@@ -33,6 +33,7 @@ const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
 const AdminOrders = lazy(() => import('@/pages/admin/AdminOrders'));
 const AdminInventory = lazy(() => import('@/pages/admin/AdminInventory'));
 const AdminProducts = lazy(() => import('@/pages/admin/AdminProducts'));
+const AdminBulkImport = lazy(() => import('@/pages/admin/AdminBulkImport'));
 const AdminFactory = lazy(() => import('@/pages/admin/AdminFactory'));
 const AdminFinancials = lazy(() => import('@/pages/admin/AdminFinancials'));
 const AdminPromotions = lazy(() => import('@/pages/admin/AdminPromotions'));
@@ -88,6 +89,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/dashboard" element={<AdminGuard minRole="staff"><AdminDashboard /></AdminGuard>} />
           <Route path="/admin/orders" element={<AdminGuard minRole="staff"><AdminOrders /></AdminGuard>} />
           <Route path="/admin/products" element={<AdminGuard minRole="staff"><AdminProducts /></AdminGuard>} />
+          <Route path="/admin/bulk-import" element={<AdminGuard minRole="staff"><AdminBulkImport /></AdminGuard>} />
           <Route path="/admin/inventory" element={<AdminGuard minRole="staff"><AdminInventory /></AdminGuard>} />
           <Route path="/admin/factory" element={<AdminGuard minRole="staff"><AdminFactory /></AdminGuard>} />
           <Route path="/admin/customers" element={<AdminGuard minRole="admin"><CustomerCRM /></AdminGuard>} />

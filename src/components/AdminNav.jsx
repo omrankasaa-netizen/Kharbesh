@@ -8,6 +8,7 @@ const LINKS = [
   { to: '/admin/dashboard', label_en: 'Dashboard', label_ar: 'لوحة التحكم', minRole: 'staff' },
   { to: '/admin/orders', label_en: 'Orders', label_ar: 'الطلبات', minRole: 'staff' },
   { to: '/admin/products', label_en: 'Products', label_ar: 'المنتجات', minRole: 'staff' },
+  { to: '/admin/bulk-import', label_en: 'Bulk Import', label_ar: 'استيراد بالجملة', minRole: 'staff' },
   { to: '/admin/inventory', label_en: 'Inventory', label_ar: 'المخزون', minRole: 'staff' },
   { to: '/admin/factory', label_en: 'Factory', label_ar: 'المصنع', minRole: 'staff' },
   { to: '/admin/customers', label_en: 'Customers', label_ar: 'الزبائن', minRole: 'admin' },
