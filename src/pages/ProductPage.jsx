@@ -111,7 +111,9 @@ export default function ProductPage() {
                 src={activePhoto}
                 alt={`${name} — ${selectedColor?.name_en}`}
                 className="w-full h-full object-cover"
-                loading="lazy"
+                loading="eager"
+                fetchpriority="high"
+                decoding="async"
               />
             ) : (
               <GarmentMockup

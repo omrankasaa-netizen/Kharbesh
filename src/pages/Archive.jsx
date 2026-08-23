@@ -42,7 +42,7 @@ export default function Archive() {
             <div key={p.id} className="kh-d-card opacity-70">
               <div className="kh-d-media">
                 <span className="kh-d-tag" style={{ background: 'var(--brand-brick)', color: '#fff' }}>SOLD OUT</span>
-                {(p.images?.[1] ?? p.images?.[0]) ? <img src={p.images[1] ?? p.images[0]} alt={p.name_en} /> : <div className="flex items-center justify-center h-full text-muted-foreground p-4 text-center">{p.name_en}</div>}
+                {(p.images?.[1] ?? p.images?.[0]) ? <img src={p.images[1] ?? p.images[0]} alt={p.name_en} loading="lazy" decoding="async" /> : <div className="flex items-center justify-center h-full text-muted-foreground p-4 text-center">{p.name_en}</div>}
               </div>
               <div className="kh-d-body"><span className="kh-d-title">{p.name_en}</span><span className="kh-d-cta">${p.price}</span></div>
             </div>

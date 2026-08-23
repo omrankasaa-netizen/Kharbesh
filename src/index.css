@@ -1,24 +1,28 @@
 @font-face {
   font-family: 'Anton';
-  src: url('/assets/fonts/Anton.ttf') format('truetype');
+  src: url('/assets/fonts/Anton.woff2') format('woff2'),
+       url('/assets/fonts/Anton.ttf') format('truetype');
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: 'IBM Plex Sans Arabic';
-  src: url('/assets/fonts/IBMPlexSansArabic-Regular.ttf') format('truetype');
+  src: url('/assets/fonts/IBMPlexSansArabic-Regular.woff2') format('woff2'),
+       url('/assets/fonts/IBMPlexSansArabic-Regular.ttf') format('truetype');
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: 'IBM Plex Sans Arabic';
-  src: url('/assets/fonts/IBMPlexSansArabic-SemiBold.ttf') format('truetype');
+  src: url('/assets/fonts/IBMPlexSansArabic-SemiBold.woff2') format('woff2'),
+       url('/assets/fonts/IBMPlexSansArabic-SemiBold.ttf') format('truetype');
   font-weight: 500 900;
   font-display: swap;
 }
 @font-face {
   font-family: 'Rakkas';
-  src: url('/assets/fonts/Rakkas-Regular.ttf') format('truetype');
+  src: url('/assets/fonts/Rakkas-Regular.woff2') format('woff2'),
+       url('/assets/fonts/Rakkas-Regular.ttf') format('truetype');
   font-weight: 400;
   font-display: swap;
 }
