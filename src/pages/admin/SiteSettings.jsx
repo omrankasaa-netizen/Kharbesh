@@ -1,34 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
+import { base44 } from '@/api/khClient';
+import { useSiteSettings } from '@/lib/useCatalog.jsx';
 import ColorManager from '@/components/ColorManager';
 import StyleManager from '@/components/StyleManager';
 
-/* In-memory settings — sandboxed preview iframes block localStorage,
-   so admin edits persist for the session only (not across reloads). */
-let memorySettings = null;
-
-const DEFAULTS = {
-  storeName: 'Kharbesh',
-  tagline_en: 'Tees with the things people say every day.',
-  tagline_ar: 'تيشيرتات عليها الكلام يلي بيتقال كل يوم.',
-  banner_en: '',
-  banner_ar: '',
-  bannerEnabled: false,
-  preordersEnabled: true,
-  customRequestsEnabled: true,
-  guestCheckoutEnabled: true,
-  maintenance: false,
-};
-
 export default function SiteSettings() {
   const { lang } = useI18n();
-  const [s, setS] = useState(DEFAULTS);
+  // Shared context already fetched settings once for the whole app (banner,
+  // maintenance gate, checkout). Reuse that instead of a second fetch, and
+  // call its `refreshSettings` after saving so every other open tab/page
+  // picks up the change without a full reload.
+  const { settings, loading: initialLoading, refreshSettings } = useSiteSettings();
+  const [s, setS] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (memorySettings) setS({ ...DEFAULTS, ...memorySettings });
-  }, []);
+    if (settings && !s) setS(settings);
+  }, [settings, s]);
 
   const set = (k) => (e) => {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -36,10 +28,30 @@ export default function SiteSettings() {
     setSaved(false);
   };
 
-  const save = (e) => {
+  const setPayment = (k) => (e) => {
+    const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setS((p) => ({ ...p, payment: { ...p.payment, [k]: val } }));
+    setSaved(false);
+  };
+
+  const noPaymentMethodSelected = !!s && !s.payment.codEnabled && !s.payment.whishEnabled;
+  const whishMissingHandle = !!s && s.payment.whishEnabled && !s.payment.whishHandle.trim();
+
+  const save = async (e) => {
     e.preventDefault();
-    memorySettings = s;
-    setSaved(true);
+    if (noPaymentMethodSelected) { setError(lang === 'ar' ? 'خلّي طريقة دفع واحدة مفعّلة على الأقل.' : 'Keep at least one payment method enabled.'); return; }
+    if (whishMissingHandle) { setError(lang === 'ar' ? 'ضيف رقم Whish قبل تفعيله.' : 'Add a Whish number before enabling it.'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      await base44.entities.Settings.update(s);
+      await refreshSettings();
+      setSaved(true);
+    } catch (err) {
+      setError(err?.message || (lang === 'ar' ? 'ما قدرنا نحفظ. جرّب كمان مرة.' : 'Could not save. Try again.'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggles = [
@@ -50,6 +62,15 @@ export default function SiteSettings() {
     { key: 'maintenance', label_en: 'Maintenance mode', label_ar: 'صيانة' },
   ];
 
+  if (initialLoading || !s) {
+    return (
+      <div className="max-w-[900px] mx-auto px-4 sm:px-6 py-12">
+        <PageHeader eyebrow="Admin" title={lang === 'ar' ? 'إعدادات المتجر' : 'Site settings'} />
+        <p className="text-muted-foreground mt-8">{lang === 'ar' ? 'جاري التحميل…' : 'Loading…'}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-[900px] mx-auto px-4 sm:px-6 py-12">
       <PageHeader eyebrow="Admin" title={lang === 'ar' ? 'إعدادات المتجر' : 'Site settings'} />
@@ -57,14 +78,58 @@ export default function SiteSettings() {
         <section className="bg-card border border-border rounded-md p-6 space-y-4">
           <h2 className="font-heading text-xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'معلومات المتجر' : 'Store info'}</h2>
           <label className="block"><span className="kh-eyebrow block mb-1">Store name</span><input value={s.storeName} onChange={set('storeName')} className="kh-input" /></label>
-          <label className="block"><span className="kh-eyebrow block mb-1">Tagline (EN)</span><input value={s.tagline_en} onChange={set('tagline_en')} className="kh-input" /></label>
-          <label className="block"><span className="kh-eyebrow block mb-1">Tagline (AR)</span><input value={s.tagline_ar} onChange={set('tagline_ar')} className="kh-input" dir="rtl" /></label>
+          <label className="block"><span className="kh-eyebrow block mb-1">Tagline (EN)</span><input value={s.taglineEn} onChange={set('taglineEn')} className="kh-input" /></label>
+          <label className="block"><span className="kh-eyebrow block mb-1">Tagline (AR)</span><input value={s.taglineAr} onChange={set('taglineAr')} className="kh-input" dir="rtl" /></label>
         </section>
 
         <section className="bg-card border border-border rounded-md p-6 space-y-4">
           <h2 className="font-heading text-xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'شريط الإعلان' : 'Announcement banner'}</h2>
-          <label className="block"><span className="kh-eyebrow block mb-1">Banner text (EN)</span><input value={s.banner_en} onChange={set('banner_en')} className="kh-input" placeholder="New drop live — 3A ZAW2AK" /></label>
-          <label className="block"><span className="kh-eyebrow block mb-1">Banner text (AR)</span><input value={s.banner_ar} onChange={set('banner_ar')} className="kh-input" dir="rtl" placeholder="دروب جديد — على ذوقك" /></label>
+          <label className="block"><span className="kh-eyebrow block mb-1">Banner text (EN)</span><input value={s.bannerEn} onChange={set('bannerEn')} className="kh-input" placeholder="New drop live — 3A ZAW2AK" /></label>
+          <label className="block"><span className="kh-eyebrow block mb-1">Banner text (AR)</span><input value={s.bannerAr} onChange={set('bannerAr')} className="kh-input" dir="rtl" placeholder="دروب جديد — على ذوقك" /></label>
+        </section>
+
+        <section className="bg-card border border-border rounded-md p-6">
+          <h2 className="font-heading text-xl uppercase mb-1" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'طرق الدفع' : 'Payment methods'}</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            {lang === 'ar' ? 'حدّد شو بتقدر تدفع عبره على الموقع. لازم طريقة واحدة مفعّلة على الأقل.' : 'Control what customers can pay with at checkout. At least one method must stay enabled.'}
+          </p>
+          <div className="space-y-4">
+            <label className="flex items-center justify-between gap-4 cursor-pointer py-2 border-b border-border">
+              <span>{lang === 'ar' ? 'الدفع عند التسليم' : 'Cash on delivery'}</span>
+              <input type="checkbox" checked={s.payment.codEnabled} onChange={setPayment('codEnabled')} className="w-5 h-5 accent-[--brand-accent]" />
+            </label>
+
+            <label className="flex items-center justify-between gap-4 cursor-pointer py-2 border-b border-border">
+              <span>Whish Money</span>
+              <input type="checkbox" checked={s.payment.whishEnabled} onChange={setPayment('whishEnabled')} className="w-5 h-5 accent-[--brand-accent]" />
+            </label>
+
+            {s.payment.whishEnabled && (
+              <div className="pl-1 space-y-4 border-l-2 pl-4" style={{ borderColor: 'var(--brand-accent)' }}>
+                <label className="block">
+                  <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'رقم Whish' : 'Whish number / handle'}</span>
+                  <input
+                    value={s.payment.whishHandle}
+                    onChange={setPayment('whishHandle')}
+                    className="kh-input"
+                    placeholder="+961 XX XXX XXX"
+                  />
+                </label>
+                <label className="block">
+                  <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'تعليمات Whish (EN)' : 'Whish instructions (EN)'}</span>
+                  <textarea value={s.payment.whishInstructionsEn} onChange={setPayment('whishInstructionsEn')} rows={3} className="kh-input" placeholder="Send the total to the number above, then place your order." />
+                </label>
+                <label className="block">
+                  <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'تعليمات Whish (AR)' : 'Whish instructions (AR)'}</span>
+                  <textarea value={s.payment.whishInstructionsAr} onChange={setPayment('whishInstructionsAr')} rows={3} className="kh-input" dir="rtl" placeholder="حوّل المجموع على الرقم فوق، وبعدين أكّد الطلب." />
+                </label>
+              </div>
+            )}
+
+            {noPaymentMethodSelected && (
+              <p className="text-destructive text-sm">{lang === 'ar' ? 'خلّي طريقة دفع واحدة مفعّلة على الأقل.' : 'Keep at least one payment method enabled.'}</p>
+            )}
+          </div>
         </section>
 
         <section className="bg-card border border-border rounded-md p-6">
@@ -77,11 +142,17 @@ export default function SiteSettings() {
               </label>
             ))}
           </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            {lang === 'ar'
+              ? 'ملاحظة: "الطلبات المسبقة" و"دفع كضيف" محفوظين هون بس مش مفعّلين تقنياً بعد بباقي الموقع.'
+              : 'Note: "Preorders" and "Guest checkout" are saved here but not yet enforced elsewhere on the site.'}
+          </p>
         </section>
 
         <div className="flex items-center gap-4">
-          <button type="submit" className="kh-btn-scribble">{lang === 'ar' ? 'حفظ' : 'Save settings'}</button>
-          {saved && <span className="text-sm text-[var(--brand-accent)]">{lang === 'ar' ? 'تم الحفظ ✓' : 'Saved ✓'}</span>}
+          <button type="submit" disabled={saving} className="kh-btn-scribble">{saving ? (lang === 'ar' ? 'جاري الحفظ…' : 'Saving…') : (lang === 'ar' ? 'حفظ' : 'Save settings')}</button>
+          {saved && <span className="text-sm" style={{ color: 'var(--brand-accent)' }}>{lang === 'ar' ? 'تم الحفظ ✓' : 'Saved ✓'}</span>}
+          {error && <span className="text-destructive text-sm">{error}</span>}
         </div>
       </form>
 

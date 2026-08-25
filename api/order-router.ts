@@ -12,6 +12,7 @@ export const createOrderSchema = z.object({
   country: z.string().min(1).max(120),
   notes: z.string().max(2000).optional(),
   language: z.enum(["en", "ar"]).default("en"),
+  paymentMethod: z.enum(["cash_on_delivery", "whish"]),
   items: z
     .array(
       z.object({
@@ -38,6 +39,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   PROMO_EXPIRED: "That promo code has expired.",
   PROMO_MAX_USES: "That promo code has reached its usage limit.",
   PROMO_MIN_ORDER: "Your order doesn't meet the minimum for that promo code.",
+  PAYMENT_METHOD_DISABLED: "That payment method isn't available right now. Please pick another.",
 };
 
 export const orderRouter = createRouter({

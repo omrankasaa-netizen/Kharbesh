@@ -2,6 +2,7 @@ import { getDb } from "./connection";
 import { auditLogs, discounts, orders, products, promoCodes, type Order, type OrderLineItem } from "@db/schema";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import { discountAmountCents, isWithinWindow, matchesDiscount } from "./promotions";
+import { getSettings, isPaymentMethodEnabled } from "./settings";
 
 export function toUiOrder(o: Order) {
   return {
@@ -21,6 +22,7 @@ export function toUiOrder(o: Order) {
     promo_code: o.promoCode,
     applied_discounts: o.appliedDiscounts ?? [],
     total: o.totalCents / 100,
+    payment_method: o.paymentMethod,
     status: o.status,
     internal_status: o.internalStatus,
     language: o.language,
@@ -46,6 +48,7 @@ export type CreateOrderInput = {
   notes?: string;
   language: "en" | "ar";
   userId?: number;
+  paymentMethod: "cash_on_delivery" | "whish";
   items: { productId: string; color: string; size: string; quantity: number }[];
   promoCode?: string;
 };
@@ -57,6 +60,14 @@ export type CreateOrderInput = {
  */
 export async function createOrder(input: CreateOrderInput) {
   const db = getDb();
+
+  // Re-validated server-side on every order, never trusted from the
+  // client: an admin disabling Whish (or COD) mid-session must actually
+  // block that method, not just hide it in the checkout UI.
+  const settings = await getSettings();
+  if (!isPaymentMethodEnabled(settings, input.paymentMethod)) {
+    throw new Error("PAYMENT_METHOD_DISABLED");
+  }
 
   // Loaded once per order, outside the transaction — a slightly stale read
   // of "active" automatic discounts is an acceptable trade-off (they're
@@ -183,6 +194,7 @@ export async function createOrder(input: CreateOrderInput) {
         totalCents,
         status: "order_received",
         internalStatus: "payment_pending",
+        paymentMethod: input.paymentMethod,
         language: input.language,
         isGuest: input.userId == null,
       })

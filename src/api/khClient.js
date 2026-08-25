@@ -201,6 +201,7 @@ export const kh = {
           country: data.country,
           notes: empty(data.notes),
           language: data.language === 'ar' ? 'ar' : 'en',
+          paymentMethod: data.payment_method === 'whish' ? 'whish' : 'cash_on_delivery',
           items: (data.items ?? []).map((i) => ({
             productId: String(i.productId),
             color: i.color,
@@ -214,6 +215,14 @@ export const kh = {
         client.admin.updateOrderStatus.mutate({ id: String(id), status: data.status }),
       /** Permanent delete — server enforces super_admin. */
       hardDelete: (id) => client.admin.hardDeleteOrder.mutate({ id: String(id) }),
+    },
+
+    /** Store config: banner, feature toggles, and payment-method control
+     * (cash on delivery / Whish). `get` is public — the storefront reads it
+     * for checkout options and Whish instructions. `update` is admin-only. */
+    Settings: {
+      get: () => client.settings.get.query(),
+      update: (patch) => client.settings.update.mutate(patch),
     },
 
     Collection: {

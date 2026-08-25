@@ -3,6 +3,7 @@ import { authRouter } from "./auth-router";
 import { catalogRouter } from "./catalog-router";
 import { customRequestRouter } from "./custom-request-router";
 import { orderRouter } from "./order-router";
+import { settingsRouter } from "./settings-router";
 import { createRouter, publicQuery } from "./middleware";
 
 export const appRouter = createRouter({
@@ -11,6 +12,7 @@ export const appRouter = createRouter({
   catalog: catalogRouter,
   orders: orderRouter,
   customRequests: customRequestRouter,
+  settings: settingsRouter,
   admin: adminRouter,
 });
 

@@ -3,10 +3,12 @@ import { useParams, Link } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { base44 } from '@/api/khClient';
 import { Scribble } from '@/components/Brand';
+import { useSiteSettings } from '@/lib/useCatalog.jsx';
 
 export default function OrderConfirmation() {
   const { id } = useParams();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const { settings } = useSiteSettings();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -48,6 +50,23 @@ export default function OrderConfirmation() {
           <span>{t.cart.total}</span><span>${order.total}</span>
         </div>
       </div>
+
+      {order.payment_method === 'whish' && (
+        <div className="mt-8 rounded-md p-6" style={{ border: '1px solid var(--brand-accent)' }}>
+          <h2 className="font-heading text-xl uppercase mb-2" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.confirm.whishTitle}</h2>
+          <p className="text-sm text-muted-foreground mb-4">{t.confirm.whishBody}</p>
+          {settings?.payment.whishHandle && (
+            <div>
+              <span className="kh-eyebrow block mb-1">{t.checkout.whishHandleLabel}</span>
+              <span className="font-heading text-2xl" style={{ fontFamily: 'var(--brand-font-heading)' }}>{settings.payment.whishHandle}</span>
+            </div>
+          )}
+          <p className="text-sm text-muted-foreground mt-3">
+            {settings?.payment[lang === 'ar' ? 'whishInstructionsAr' : 'whishInstructionsEn'] || t.checkout.whishInstructionsFallback}
+          </p>
+        </div>
+      )}
+
       <div className="mt-10">
         <h2 className="font-heading text-2xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.confirm.whatNext}</h2>
         <ol className="space-y-3">

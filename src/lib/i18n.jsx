@@ -107,6 +107,13 @@ const dictionaries = {
       paymentNote: 'No card stored. Your preorder is reserved — we’ll confirm payment before production.',
       back: 'Back to cart',
       autoDiscount: 'Discount applied',
+      paymentMethodCod: 'Cash on delivery',
+      paymentMethodCodDesc: 'Pay cash when your order arrives.',
+      paymentMethodWhish: 'Whish Money',
+      paymentMethodWhishDesc: 'Send the total to our Whish number, then place the order.',
+      whishHandleLabel: 'Send to this Whish number',
+      whishInstructionsFallback: 'Send the order total to the number above, then place your order — we confirm payment before production starts.',
+      paymentUnavailable: 'Checkout is temporarily unavailable. Please contact us to place your order.',
     },
     confirm: {
       title: 'Order received',
@@ -118,6 +125,8 @@ const dictionaries = {
       step3: 'You get tracking as soon as your parcel ships.',
       track: 'Track this order',
       continue: 'Keep shopping',
+      whishTitle: 'Complete your Whish payment',
+      whishBody: 'Send the total to the number below, then we confirm and move your order into production.',
     },
     custom: {
       title: 'Kharbesh 3a Zaw2ak',
@@ -178,7 +187,7 @@ const dictionaries = {
       sent: 'Thanks — we’ll reply within 2 business days.',
     },
     footer: { tagline: 'Labsak byehki 3annak — Kharbesh it your way.', rights: 'Kel el ha22 mahfouz.', madeIn: 'Mfakkar fiha, m3amle, w matbou3a fi Lebnan.' },
-    common: { loading: 'Loading…', from: 'From', currency: '$' },
+    common: { loading: 'Loading…', from: 'From', currency: '$', maintenanceTitle: 'Back soon', maintenanceBody: 'We’re doing some kharbesh behind the scenes. Check back shortly.' },
   },
   ar: {
     dir: 'rtl',
@@ -282,6 +291,13 @@ const dictionaries = {
       guest: 'دفع كضيف',
       summary: 'ملخّص الطلب',
       paymentNote: 'ما فينا منخزّن بطاقة. طلبك محجوز — منأكد الدفع قبل الإنتاج.',
+      paymentMethodCod: 'الدفع عند التسليم',
+      paymentMethodCodDesc: 'بتدفع كاش لما يوصلك الطلب.',
+      paymentMethodWhish: 'ويش ماني (Whish)',
+      paymentMethodWhishDesc: 'حوّل المجموع عبر ويش، وبعدين أكّد الطلب.',
+      whishHandleLabel: 'حوّل على هذا الرقم عبر ويش',
+      whishInstructionsFallback: 'حوّل مجموع الطلب على الرقم فوق، وبعدين أكّد الطلب — بنأكد الدفع قبل ما نبدأ الإنتاج.',
+      paymentUnavailable: 'الدفع مش متوفر حالياً. تواصل معنا لتأكيد طلبك.',
       back: 'رجوع للسلة',
       autoDiscount: 'خصم مطبّق',
     },
@@ -295,6 +311,8 @@ const dictionaries = {
       step3: 'بتوصلك معلومات التتبع أول ما تشحن القطعة.',
       track: 'تتبع الطلب',
       continue: 'متابعة التسوّق',
+      whishTitle: 'كمّل الدفع عبر ويش',
+      whishBody: 'حوّل المجموع على الرقم تحت، وبعدين منأكد ونحوّل طلبك للإنتاج.',
     },
     custom: {
       title: 'خربش على ذوقك',
@@ -355,7 +373,7 @@ const dictionaries = {
       sent: 'شكراً — منرد خلال يومين عمل.',
     },
     footer: { tagline: 'لبسك بيحكي عنك — Kharbesh it your way.', rights: 'كل الحقوق محفوظة.', madeIn: 'مفكَّر فيه، مصنوع ومطبوع في لبنان.' },
-    common: { loading: 'جاري التحميل…', from: 'من', currency: '$' },
+    common: { loading: 'جاري التحميل…', from: 'من', currency: '$', maintenanceTitle: 'رجعانين قريباً', maintenanceBody: 'عم نرتب شوي من الخلف. رجّع تفقّدنا بعد شوي.' },
   },
 };
 

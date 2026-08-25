@@ -67,7 +67,7 @@ export default function AdminOrders() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-muted-foreground border-b border-border">
-                <th className="py-3 pr-3">Order</th><th className="py-3 pr-3">Customer</th><th className="py-3 pr-3">Total</th><th className="py-3 pr-3">Status</th><th className="py-3 pr-3"></th>
+                <th className="py-3 pr-3">Order</th><th className="py-3 pr-3">Customer</th><th className="py-3 pr-3">Total</th><th className="py-3 pr-3">Payment</th><th className="py-3 pr-3">Status</th><th className="py-3 pr-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -76,6 +76,16 @@ export default function AdminOrders() {
                   <td className="py-3 pr-3 font-heading" style={{ fontFamily: 'var(--brand-font-heading)' }}>{o.order_number}</td>
                   <td className="py-3 pr-3">{o.full_name}<div className="text-muted-foreground text-xs">{o.email}</div></td>
                   <td className="py-3 pr-3">${o.total}</td>
+                  <td className="py-3 pr-3">
+                    <span
+                      className="inline-block px-2 py-0.5 rounded text-xs font-medium border"
+                      style={o.payment_method === 'whish'
+                        ? { background: 'var(--brand-accent)', color: 'var(--on-lime)', borderColor: 'var(--brand-accent)' }
+                        : { background: 'transparent', color: 'var(--muted)', borderColor: 'var(--border)' }}
+                    >
+                      {o.payment_method === 'whish' ? 'Whish' : 'COD'}
+                    </span>
+                  </td>
                   <td className="py-3 pr-3">
                     <select value={o.status} onChange={(e)=>updateStatus(o.id, e.target.value)} className="kh-input !h-9 !py-1 max-w-[180px]">
                       {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
@@ -90,7 +100,7 @@ export default function AdminOrders() {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={5} className="py-8 text-muted-foreground">No orders.</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={6} className="py-8 text-muted-foreground">No orders.</td></tr>}
             </tbody>
           </table>
         </div>

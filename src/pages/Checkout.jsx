@@ -3,13 +3,16 @@ import { Link, useNavigate } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { useCart } from '@/lib/cart';
 import { base44 } from '@/api/khClient';
+import { useSiteSettings } from '@/lib/useCatalog.jsx';
 
 export default function Checkout() {
   const { t, lang } = useI18n();
   const { items, subtotal, clear } = useCart();
   const navigate = useNavigate();
+  const { settings, loading: settingsLoading } = useSiteSettings();
   const [form, setForm] = useState({ email: '', phone: '', full_name: '', address: '', city: '', country: 'Lebanon', notes: '' });
   const [ack, setAck] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [promoInput, setPromoInput] = useState('');
@@ -57,6 +60,20 @@ export default function Checkout() {
 
   const removePromo = () => { setPromo(null); setPromoInput(''); setPromoError(''); };
 
+  const codEnabled = !settings || settings.payment.codEnabled;
+  const whishEnabled = !!settings?.payment.whishEnabled;
+  const noPaymentMethodAvailable = !settingsLoading && !codEnabled && !whishEnabled;
+
+  useEffect(() => {
+    // Once settings resolve, make sure the selected method is actually one
+    // that's enabled — e.g. if COD got disabled after this page first
+    // rendered with its default selection.
+    if (settingsLoading) return;
+    if (paymentMethod === 'cash_on_delivery' && !codEnabled && whishEnabled) setPaymentMethod('whish');
+    else if (paymentMethod === 'whish' && !whishEnabled && codEnabled) setPaymentMethod('cash_on_delivery');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsLoading, codEnabled, whishEnabled]);
+
   if (items.length === 0 && !loading) {
     return (
       <div className="max-w-[1400px] mx-auto px-6 py-20 text-center">
@@ -89,6 +106,7 @@ export default function Checkout() {
         promo_code: promo?.code,
         status: 'order_received',
         internal_status: 'payment_pending',
+        payment_method: paymentMethod,
         language: lang,
         is_guest: true,
       });
@@ -128,6 +146,42 @@ export default function Checkout() {
           <section>
             <h2 className="font-heading text-xl uppercase mb-2" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.checkout.payment}</h2>
             <p className="text-sm text-muted-foreground mb-4">{t.checkout.paymentNote}</p>
+
+            {noPaymentMethodAvailable ? (
+              <p className="text-destructive text-sm mb-4">{t.checkout.paymentUnavailable}</p>
+            ) : (
+              <div className="space-y-3 mb-4">
+                {codEnabled && (
+                  <PaymentOption
+                    id="pm-cod"
+                    checked={paymentMethod === 'cash_on_delivery'}
+                    onSelect={() => setPaymentMethod('cash_on_delivery')}
+                    title={t.checkout.paymentMethodCod}
+                    desc={t.checkout.paymentMethodCodDesc}
+                  />
+                )}
+                {whishEnabled && (
+                  <PaymentOption
+                    id="pm-whish"
+                    checked={paymentMethod === 'whish'}
+                    onSelect={() => setPaymentMethod('whish')}
+                    title={t.checkout.paymentMethodWhish}
+                    desc={t.checkout.paymentMethodWhishDesc}
+                  >
+                    {paymentMethod === 'whish' && settings?.payment.whishHandle && (
+                      <div className="mt-3 rounded-md border border-border bg-background px-4 py-3">
+                        <span className="kh-eyebrow block mb-1">{t.checkout.whishHandleLabel}</span>
+                        <span className="font-heading text-lg" style={{ fontFamily: 'var(--brand-font-heading)' }}>{settings.payment.whishHandle}</span>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {settings.payment[lang === 'ar' ? 'whishInstructionsAr' : 'whishInstructionsEn'] || t.checkout.whishInstructionsFallback}
+                        </p>
+                      </div>
+                    )}
+                  </PaymentOption>
+                )}
+              </div>
+            )}
+
             <label className="flex items-start gap-3 text-sm cursor-pointer">
               <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="mt-1 w-5 h-5 accent-[--brand-accent]" />
               <span>{t.checkout.preorderAck}</span>
@@ -180,7 +234,7 @@ export default function Checkout() {
 
           <div className="flex justify-between py-3 border-t border-border mt-2 font-heading text-lg" style={{ fontFamily: 'var(--brand-font-heading)' }}><span>{t.cart.total}</span><span>${total.toFixed(2)}</span></div>
           {error && <p className="text-destructive text-sm mt-3">{error}</p>}
-          <button type="submit" disabled={loading || !ack} className="kh-btn-scribble w-full mt-4 !justify-center">
+          <button type="submit" disabled={loading || !ack || noPaymentMethodAvailable} className="kh-btn-scribble w-full mt-4 !justify-center">
             {loading ? t.common.loading : t.checkout.placeOrder}
           </button>
         </aside>
@@ -194,4 +248,21 @@ const Field = ({ label, required, children }) => (
     <span className="kh-eyebrow block mb-1">{label}{required && ' *'}</span>
     {children}
   </label>
+);
+
+const PaymentOption = ({ id, checked, onSelect, title, desc, children }) => (
+  <div
+    className="rounded-md border p-4 cursor-pointer transition-colors"
+    style={{ borderColor: checked ? 'var(--brand-accent)' : 'var(--border)' }}
+    onClick={onSelect}
+  >
+    <label htmlFor={id} className="flex items-start gap-3 cursor-pointer">
+      <input id={id} type="radio" checked={checked} onChange={onSelect} className="mt-1 w-4 h-4 accent-[--brand-accent]" />
+      <span>
+        <span className="block font-medium">{title}</span>
+        <span className="block text-sm text-muted-foreground">{desc}</span>
+      </span>
+    </label>
+    {children}
+  </div>
 );

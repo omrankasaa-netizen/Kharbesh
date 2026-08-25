@@ -200,6 +200,7 @@ export const orders = mysqlTable(
       "needs_attention",
     ]).default("order_received").notNull(),
     internalStatus: varchar("internalStatus", { length: 60 }).default("payment_pending").notNull(),
+    paymentMethod: mysqlEnum("paymentMethod", ["cash_on_delivery", "whish"]).default("cash_on_delivery").notNull(),
     language: mysqlEnum("language", ["en", "ar"]).default("en").notNull(),
     isGuest: boolean("isGuest").default(true).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),

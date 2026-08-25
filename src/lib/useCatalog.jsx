@@ -1,11 +1,19 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { base44 } from '@/api/khClient';
 
-const CatalogContext = createContext({ colors: [], styles: [], refreshStyles: async () => {}, refreshColors: async () => {} });
+const CatalogContext = createContext({ colors: [], styles: [], settings: null, settingsLoading: true, refreshStyles: async () => {}, refreshColors: async () => {}, refreshSettings: async () => {} });
 
 export const CatalogProvider = ({ children }) => {
   const [colors, setColors] = useState([]);
   const [styles, setStyles] = useState([]);
+  const [settings, setSettings] = useState(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+
+  const refreshSettings = async () => {
+    try { setSettings(await base44.entities.Settings.get()); }
+    catch { /* keep previous settings on failure — storefront falls back to safe defaults below */ }
+    finally { setSettingsLoading(false); }
+  };
 
   const refreshColors = async () => {
     try { setColors((await base44.entities.GarmentColor.list('sort_order', 50)) || []); }
@@ -29,8 +37,10 @@ export const CatalogProvider = ({ children }) => {
         setColors([]); setStyles([]);
       }
     })();
+    refreshSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return <CatalogContext.Provider value={{ colors, styles, refreshColors, refreshStyles }}>{children}</CatalogContext.Provider>;
+  return <CatalogContext.Provider value={{ colors, styles, settings, settingsLoading, refreshColors, refreshStyles, refreshSettings }}>{children}</CatalogContext.Provider>;
 };
 
 export const useColors = () => useContext(CatalogContext).colors;
@@ -38,6 +48,15 @@ export const useGarmentStyles = () => useContext(CatalogContext).styles;
 export const useCatalogRefresh = () => {
   const { refreshColors, refreshStyles } = useContext(CatalogContext);
   return { refreshColors, refreshStyles };
+};
+
+/** Store config (banner, feature toggles, payment methods). `settings` is
+ * `null` until the first fetch resolves — callers should treat that as
+ * "unknown yet", not "disabled", to avoid a loading flash that hides
+ * checkout options that are actually enabled. */
+export const useSiteSettings = () => {
+  const { settings, settingsLoading, refreshSettings } = useContext(CatalogContext);
+  return { settings, loading: settingsLoading, refreshSettings };
 };
 
 export const resolveColor = (name, colors) => colors.find((c) => c.name_en === name);
