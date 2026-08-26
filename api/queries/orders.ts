@@ -3,6 +3,8 @@ import { auditLogs, discounts, orders, products, promoCodes, type Order, type Or
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import { discountAmountCents, isWithinWindow, matchesDiscount } from "./promotions";
 import { computeShippingCents, getSettings, isPaymentMethodEnabled } from "./settings";
+import { sendEmail } from "../lib/email";
+import { followUpEmail } from "../lib/emailTemplates";
 
 export function toUiOrder(o: Order) {
   return {
@@ -281,5 +283,21 @@ export async function hardDeleteOrder(id: number, actorUserId: number) {
     entityId: String(id),
     detail: row ? { order_number: row.orderNumber } : null,
   });
+  return { success: true };
+}
+
+/**
+ * Staff-triggered follow-up email (manual button in the admin panel — no
+ * automatic delivery timer, per the founder's call). Fetches the raw order
+ * row (not the UI-mapped shape) since the email template reads Drizzle
+ * field names directly.
+ */
+export async function sendOrderFollowupEmail(orderId: number) {
+  const [row] = await getDb().select().from(orders).where(eq(orders.id, orderId)).limit(1);
+  if (!row) throw new Error("ORDER_NOT_FOUND");
+
+  const { subject, html, text } = followUpEmail(row);
+  const result = await sendEmail({ to: row.email, subject, html, text });
+  if (!result.ok) throw new Error("EMAIL_SEND_FAILED");
   return { success: true };
 }

@@ -1,7 +1,25 @@
+import { eq } from "drizzle-orm";
 import { z } from "zod";
+import * as schema from "@db/schema";
 import { createRouter, publicQuery, authedQuery } from "./middleware";
 import { createOrder, getOrderById, listOrdersForUser, trackOrder } from "./queries/orders";
 import { previewPromoCode, previewCartDiscounts, listActiveCampaigns } from "./queries/promotions";
+import { getDb } from "./queries/connection";
+import { sendEmail } from "./lib/email";
+import { orderConfirmationEmail } from "./lib/emailTemplates";
+
+/** Fire-and-forget confirmation email — never lets an email failure fail
+ *  the checkout response the customer is waiting on. */
+async function notifyOrderConfirmed(orderId: number) {
+  try {
+    const [row] = await getDb().select().from(schema.orders).where(eq(schema.orders.id, orderId)).limit(1);
+    if (!row) return;
+    const { subject, html, text } = orderConfirmationEmail(row);
+    await sendEmail({ to: row.email, subject, html, text });
+  } catch (err) {
+    console.error("[order] confirmation email failed", err);
+  }
+}
 
 export const createOrderSchema = z.object({
   email: z.string().email().max(320),
@@ -45,7 +63,9 @@ const ERROR_MESSAGES: Record<string, string> = {
 export const orderRouter = createRouter({
   create: publicQuery.input(createOrderSchema).mutation(async ({ ctx, input }) => {
     try {
-      return await createOrder({ ...input, userId: ctx.user?.id });
+      const order = await createOrder({ ...input, userId: ctx.user?.id });
+      void notifyOrderConfirmed(Number(order.id));
+      return order;
     } catch (err) {
       const code = err instanceof Error ? err.message : "";
       throw new Error(ERROR_MESSAGES[code] ?? "Could not place the order. Try again.");

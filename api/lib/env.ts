@@ -31,4 +31,9 @@ export const env = {
   r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? "",
   r2BucketName: process.env.R2_BUCKET_NAME ?? "",
   r2PublicBaseUrl: process.env.R2_PUBLIC_BASE_URL ?? "",
+  // Resend (transactional email). Optional — when unset, email sends are
+  // skipped (logged, not thrown) so local dev and checkout keep working
+  // without a key. EMAIL_FROM must use the domain verified in Resend.
+  resendApiKey: process.env.RESEND_API_KEY ?? "",
+  emailFrom: process.env.EMAIL_FROM ?? "Kharbesh <kharboush-al-aslee@kharbesh961.com>",
 };

@@ -23,7 +23,7 @@ import {
   upsertProductColorImages,
   deleteProductColorImages,
 } from "./queries/catalog";
-import { listAllOrders, updateOrderStatus, hardDeleteOrder } from "./queries/orders";
+import { listAllOrders, updateOrderStatus, hardDeleteOrder, sendOrderFollowupEmail } from "./queries/orders";
 import {
   listAllCustomRequests,
   updateCustomRequestStatus,
@@ -220,6 +220,11 @@ export const adminRouter = createRouter({
   hardDeleteOrder: superAdminQuery
     .input(z.object({ id: idParam }))
     .mutation(({ ctx, input }) => hardDeleteOrder(Number(input.id), ctx.user.id)),
+
+  /** Manual "Send follow-up" button on an order row — no automatic timer. */
+  sendOrderFollowupEmail: staffQuery
+    .input(z.object({ id: idParam }))
+    .mutation(({ input }) => sendOrderFollowupEmail(Number(input.id))),
 
   customRequests: staffQuery.query(() => listAllCustomRequests()),
 

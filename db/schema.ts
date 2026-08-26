@@ -34,6 +34,26 @@ export const users = mysqlTable("users", {
   lastSignInAt: timestamp("lastSignInAt").defaultNow().notNull(),
 });
 
+// Email sign-in codes ("OTP"): a customer types their email, we mail a
+// 6-digit code, they type it back in to sign in. `codeHash` stores a salted
+// hash, never the plaintext code. One row per code sent; old rows are just
+// left to expire (no cleanup job needed at this volume).
+export const emailOtps = mysqlTable(
+  "email_otps",
+  {
+    id: serial("id").primaryKey(),
+    email: varchar("email", { length: 320 }).notNull(),
+    codeHash: varchar("codeHash", { length: 128 }).notNull(),
+    attempts: int("attempts").default(0).notNull(),
+    consumedAt: timestamp("consumedAt"),
+    expiresAt: timestamp("expiresAt").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => ({
+    emailIdx: index("email_otps_email_idx").on(t.email),
+  }),
+);
+
 // Staff directory: who can access the admin panel and at what role. Managed
 // entirely from the Staff Management screen (super_admin only). Rows here
 // are synced into `users.role` the next time that email signs in.

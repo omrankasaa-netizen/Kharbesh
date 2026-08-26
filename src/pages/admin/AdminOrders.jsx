@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
 import { whatsappLink } from '@/lib/whatsapp';
-import { IconWhatsApp } from '@/components/Brand';
+import { IconWhatsApp, IconMail } from '@/components/Brand';
 
 const STATUSES = ['order_received','preorder_confirmed','in_production','being_printed','preparing_shipment','on_the_way','delivered','needs_attention'];
 
@@ -16,6 +16,7 @@ export default function AdminOrders() {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
+  const [followupState, setFollowupState] = useState({}); // { [orderId]: 'sending' | 'sent' | 'error' }
 
   useEffect(() => {
     (async () => {
@@ -35,6 +36,16 @@ export default function AdminOrders() {
 
   const updateStatus = async (id, newStatus) => {
     try { await base44.entities.Order.update(id, { status: newStatus }); setOrders((os) => os.map((o) => o.id === id ? { ...o, status: newStatus } : o)); } catch {}
+  };
+
+  const sendFollowup = async (id) => {
+    setFollowupState((s) => ({ ...s, [id]: 'sending' }));
+    try {
+      await base44.entities.Order.sendFollowupEmail(id);
+      setFollowupState((s) => ({ ...s, [id]: 'sent' }));
+    } catch {
+      setFollowupState((s) => ({ ...s, [id]: 'error' }));
+    }
   };
 
   // Super_admin-only permanent delete (test-data cleanup pre-launch). Requires
@@ -90,6 +101,23 @@ export default function AdminOrders() {
                         <IconWhatsApp size={13} /> {o.phone}
                       </a>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => sendFollowup(o.id)}
+                      disabled={followupState[o.id] === 'sending'}
+                      className="inline-flex items-center gap-1 text-xs mt-1 hover:opacity-80 disabled:opacity-50"
+                      style={{ color: 'var(--muted)' }}
+                      title={lang === 'ar' ? 'بعت إيميل محالفة' : 'Send follow-up email'}
+                    >
+                      <IconMail size={13} />
+                      {followupState[o.id] === 'sending'
+                        ? (lang === 'ar' ? 'عم يبعت…' : 'Sending…')
+                        : followupState[o.id] === 'sent'
+                        ? (lang === 'ar' ? 'انبعت ✓' : 'Sent ✓')
+                        : followupState[o.id] === 'error'
+                        ? (lang === 'ar' ? 'فشل — جرّب كمان' : 'Failed — retry')
+                        : (lang === 'ar' ? 'إيميل محالفة' : 'Follow-up email')}
+                    </button>
                   </td>
                   <td className="py-3 pr-3">${o.total}</td>
                   <td className="py-3 pr-3">

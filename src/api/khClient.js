@@ -215,6 +215,8 @@ export const kh = {
         client.admin.updateOrderStatus.mutate({ id: String(id), status: data.status }),
       /** Permanent delete — server enforces super_admin. */
       hardDelete: (id) => client.admin.hardDeleteOrder.mutate({ id: String(id) }),
+      /** Manual "Send follow-up" button in the admin panel. */
+      sendFollowupEmail: (id) => client.admin.sendOrderFollowupEmail.mutate({ id: String(id) }),
     },
 
     /** Store config: banner, feature toggles, and payment-method control
@@ -364,6 +366,13 @@ export const kh = {
 
   auth: {
     me: () => cachedMe(true),
+    /** Email sign-in step 1: mail a 6-digit code. */
+    requestEmailOtp: (email, language) => client.auth.requestEmailOtp.mutate({ email, language }),
+    /** Email sign-in step 2: verify the code, which sets the session cookie server-side. */
+    async verifyEmailOtp(email, code) {
+      await client.auth.verifyEmailOtp.mutate({ email, code });
+      return cachedMe(true);
+    },
     async logout() {
       try {
         await client.auth.logout.mutate();

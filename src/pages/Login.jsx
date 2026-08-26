@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useI18n } from '@/lib/i18n';
-import { cachedMe } from '@/api/khClient';
+import { cachedMe, base44 } from '@/api/khClient';
 import { Scribble } from '@/components/Brand';
+
+const RESEND_COOLDOWN_S = 60;
 
 /** Same-origin return targets only — never bounce to an external URL. */
 function safeReturnTo(raw) {
@@ -38,6 +40,15 @@ export default function Login() {
   const [checking, setChecking] = useState(true);
   const returnTo = safeReturnTo(params.get('returnTo'));
 
+  // Email sign-in: 'email' -> enter address, 'code' -> enter the mailed code.
+  const [otpStep, setOtpStep] = useState('email');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownRef = useRef(null);
+
   useEffect(() => {
     (async () => {
       const me = await cachedMe();
@@ -45,6 +56,47 @@ export default function Login() {
       else setChecking(false);
     })();
   }, [returnTo]);
+
+  useEffect(() => () => clearInterval(cooldownRef.current), []);
+
+  const startCooldown = () => {
+    setCooldown(RESEND_COOLDOWN_S);
+    clearInterval(cooldownRef.current);
+    cooldownRef.current = setInterval(() => {
+      setCooldown((s) => {
+        if (s <= 1) { clearInterval(cooldownRef.current); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+  };
+
+  const sendCode = async (e) => {
+    e.preventDefault();
+    setOtpError('');
+    setOtpBusy(true);
+    try {
+      await base44.auth.requestEmailOtp(email.trim(), lang);
+      setOtpStep('code');
+      startCooldown();
+    } catch (err) {
+      setOtpError(err?.message || (lang === 'ar' ? 'ما قدرنا نبعت الرمز.' : "Couldn't send the code."));
+    } finally {
+      setOtpBusy(false);
+    }
+  };
+
+  const verifyCode = async (e) => {
+    e.preventDefault();
+    setOtpError('');
+    setOtpBusy(true);
+    try {
+      await base44.auth.verifyEmailOtp(email.trim(), code.trim());
+      window.location.replace(returnTo);
+    } catch (err) {
+      setOtpError(err?.message || (lang === 'ar' ? 'الرمز مش صحيح.' : "That code isn't right."));
+      setOtpBusy(false);
+    }
+  };
 
   return (
     <div className="max-w-[600px] mx-auto px-4 sm:px-6 py-20 text-center">
@@ -75,6 +127,65 @@ export default function Login() {
       <p className="mt-6 text-xs text-muted-foreground">
         {lang === 'ar' ? 'ما عندك حساب؟ بتسجّل أول مرة ومنكمّل.' : 'No account? One is created on your first sign-in.'}
       </p>
+
+      <div className="flex items-center gap-3 mt-10">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-[11px] text-muted-foreground uppercase tracking-wide">{lang === 'ar' ? 'أو' : 'or'}</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      {otpStep === 'email' ? (
+        <form onSubmit={sendCode} className="mt-6 flex flex-col gap-3 max-w-sm mx-auto">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={lang === 'ar' ? 'إيميلك' : 'Your email'}
+            className="kh-input"
+          />
+          <button type="submit" disabled={otpBusy} className="kh-btn-outline !justify-center">
+            {otpBusy ? t.common.loading : lang === 'ar' ? 'بعتلي رمز' : 'Email me a code'}
+          </button>
+          {otpError && <p className="text-xs" style={{ color: 'var(--brand-destructive)' }}>{otpError}</p>}
+        </form>
+      ) : (
+        <form onSubmit={verifyCode} className="mt-6 flex flex-col gap-3 max-w-sm mx-auto">
+          <p className="text-xs text-muted-foreground -mb-1">
+            {lang === 'ar' ? `بعتنا رمز عَ ${email}` : `We sent a code to ${email}`}
+          </p>
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            required
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            placeholder="______"
+            className="kh-input text-center tracking-[0.4em] font-heading text-lg"
+          />
+          <button type="submit" disabled={otpBusy || code.length !== 6} className="kh-btn-scribble !justify-center">
+            {otpBusy ? t.common.loading : lang === 'ar' ? 'دخول' : 'Verify & sign in'}
+          </button>
+          {otpError && <p className="text-xs" style={{ color: 'var(--brand-destructive)' }}>{otpError}</p>}
+          <div className="flex items-center justify-between text-xs mt-1">
+            <button type="button" onClick={() => { setOtpStep('email'); setOtpError(''); setCode(''); }} className="kh-btn-text !text-[12px]">
+              {lang === 'ar' ? 'غيّر الإيميل' : 'Change email'}
+            </button>
+            <button
+              type="button"
+              disabled={cooldown > 0 || otpBusy}
+              onClick={sendCode}
+              className="kh-btn-text !text-[12px] disabled:opacity-50"
+            >
+              {cooldown > 0
+                ? (lang === 'ar' ? `أعد الإرسال (${cooldown})` : `Resend (${cooldown}s)`)
+                : (lang === 'ar' ? 'أعد الإرسال' : 'Resend code')}
+            </button>
+          </div>
+        </form>
+      )}
+
       <Link to="/" className="kh-btn-text mt-8 !text-[12px]">← {lang === 'ar' ? 'رجوع' : 'Back to shop'}</Link>
     </div>
   );
