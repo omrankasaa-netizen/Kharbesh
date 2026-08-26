@@ -6,18 +6,31 @@ import { createOrder, getOrderById, listOrdersForUser, trackOrder } from "./quer
 import { previewPromoCode, previewCartDiscounts, listActiveCampaigns } from "./queries/promotions";
 import { getDb } from "./queries/connection";
 import { sendEmail } from "./lib/email";
-import { orderConfirmationEmail } from "./lib/emailTemplates";
+import { orderConfirmationEmail, adminNewOrderEmail } from "./lib/emailTemplates";
+import { env } from "./lib/env";
 
-/** Fire-and-forget confirmation email — never lets an email failure fail
- *  the checkout response the customer is waiting on. */
+/** Fire-and-forget confirmation + staff-notification emails — never lets
+ *  an email failure fail the checkout response the customer is waiting on.
+ *  The two sends are independent: a customer-email typo (rare, but
+ *  possible) shouldn't stop the founder from finding out a new order came
+ *  in, and vice versa. */
 async function notifyOrderConfirmed(orderId: number) {
+  let row: typeof schema.orders.$inferSelect | undefined;
   try {
-    const [row] = await getDb().select().from(schema.orders).where(eq(schema.orders.id, orderId)).limit(1);
+    [row] = await getDb().select().from(schema.orders).where(eq(schema.orders.id, orderId)).limit(1);
     if (!row) return;
     const { subject, html, text } = orderConfirmationEmail(row);
     await sendEmail({ to: row.email, subject, html, text });
   } catch (err) {
     console.error("[order] confirmation email failed", err);
+  }
+
+  try {
+    if (!row) return;
+    const { subject, html, text } = adminNewOrderEmail(row);
+    await sendEmail({ to: env.adminNotificationEmail, subject, html, text });
+  } catch (err) {
+    console.error("[order] admin notification email failed", err);
   }
 }
 

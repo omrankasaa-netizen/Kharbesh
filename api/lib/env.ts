@@ -36,4 +36,8 @@ export const env = {
   // without a key. EMAIL_FROM must use the domain verified in Resend.
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "Kharbesh <kharboush-al-aslee@kharbesh961.com>",
+  // Staff inbox that gets a copy of every new order — founder's standing
+  // instruction (2026-08-26) is to use kharbesh961@gmail.com for all
+  // Kharbesh-side notifications. Overridable via env if that ever changes.
+  adminNotificationEmail: process.env.ADMIN_NOTIFICATION_EMAIL ?? "kharbesh961@gmail.com",
 };

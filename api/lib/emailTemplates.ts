@@ -207,6 +207,50 @@ export function followUpEmail(order: Order): { subject: string; html: string; te
   return { subject, html, text };
 }
 
+/** Internal staff notification fired to the ops inbox on every new order.
+ * Always English — this is an operational tool for whoever is packing/
+ * shipping, not a customer-facing message, so it skips the bilingual
+ * treatment used elsewhere and leads with what staff need to act: who,
+ * what, where, and a direct link into the admin order list. */
+export function adminNewOrderEmail(order: Order): { subject: string; html: string; text: string } {
+  const lang: "en" | "ar" = "en";
+  const items = order.items as OrderLineItem[];
+  const adminUrl = "https://kharbesh961.com/admin/orders";
+  const wa = whatsappLink(order.phone, `Hi ${order.fullName.split(" ")[0]}, this is Kharbesh regarding your order ${order.orderNumber}.`);
+
+  const bodyHtml = `
+    <p style="margin:0 0 4px;color:${MUTED};font-size:12px;letter-spacing:0.08em;text-transform:uppercase;">New order</p>
+    <h1 style="margin:0 0 16px;color:${CREAM};font-size:24px;font-weight:800;">${esc(order.orderNumber)}</h1>
+    ${itemsTable(items, lang)}
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-top:16px;">
+      ${totalsRow("Subtotal", money(order.subtotalCents), lang)}
+      ${order.discountCents > 0 ? totalsRow("Discount", `−${money(order.discountCents)}`, lang) : ""}
+      ${totalsRow("Shipping", order.shippingCents === 0 ? "Free" : money(order.shippingCents), lang)}
+      ${totalsRow("Total", money(order.totalCents), lang, true)}
+    </table>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid ${BORDER};">
+      <p style="margin:0 0 4px;color:${MUTED};font-size:12px;">Customer</p>
+      <p style="margin:0;color:${CREAM};font-size:14px;line-height:1.5;">${esc(order.fullName)}<br/>${esc(order.phone)} · ${esc(order.email)}<br/>${esc(order.shippingAddress)}, ${esc(order.city)}</p>
+      <p style="margin:12px 0 0;color:${MUTED};font-size:12px;">Payment: ${PAYMENT_LABEL[order.paymentMethod]?.en ?? order.paymentMethod}</p>
+      ${order.notes ? `<p style="margin:12px 0 0;color:${MUTED};font-size:12px;">Note: ${esc(order.notes)}</p>` : ""}
+    </div>
+    <table cellpadding="0" cellspacing="0" role="presentation" style="margin-top:20px;"><tr>
+      <td><a href="${adminUrl}" style="display:inline-block;background:${LIME};color:#15130D;font-weight:700;font-size:13px;padding:12px 20px;border-radius:8px;text-decoration:none;">Open in admin</a></td>
+      <td style="width:10px;"></td>
+      <td><a href="${wa}" style="display:inline-block;background:transparent;border:1px solid ${BORDER};color:${CREAM};font-weight:700;font-size:13px;padding:11px 20px;border-radius:8px;text-decoration:none;">Message customer</a></td>
+    </tr></table>
+  `;
+
+  const subject = `New order ${order.orderNumber} — ${money(order.totalCents)}`;
+  const html = layout({
+    lang,
+    preheader: `${esc(order.fullName)} just ordered · ${money(order.totalCents)}`,
+    bodyHtml,
+  });
+  const text = `New order ${order.orderNumber} from ${order.fullName} (${order.phone}). Total: ${money(order.totalCents)}. Ship to: ${order.shippingAddress}, ${order.city}. Admin: ${adminUrl}`;
+  return { subject, html, text };
+}
+
 export function otpEmail(code: string, lang: "en" | "ar"): { subject: string; html: string; text: string } {
   const digits = code.split("");
   const chips = digits
