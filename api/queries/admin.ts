@@ -102,47 +102,51 @@ export async function updateProduct(id: number, data: ProductWritableFields, act
   return row ? toUiProduct(row) : null;
 }
 
+/** Maps UI (snake_case) product fields to a full insert row with defaults. */
+function buildProductInsertValues(
+  data: ProductWritableFields & { name_en: string; product_type: "tee" | "hoodie" | "accessory" },
+): typeof products.$inferInsert {
+  return {
+    nameEn: data.name_en,
+    nameAr: data.name_ar ?? null,
+    phraseEn: data.phrase_en ?? null,
+    phraseAr: data.phrase_ar ?? null,
+    payoffEn: data.payoff_en ?? null,
+    descriptionEn: data.description_en ?? null,
+    descriptionAr: data.description_ar ?? null,
+    collectionName: data.collection_name ?? null,
+    mood: data.mood ?? null,
+    productType: data.product_type,
+    garmentStyle: data.garment_style ?? null,
+    fitEn: data.fit_en ?? null,
+    careEn: data.care_en ?? null,
+    careAr: data.care_ar ?? null,
+    measurementsEn: data.measurements_en ?? null,
+    approvedColors: data.approved_colors ?? [],
+    sizes: data.sizes ?? [],
+    placement: data.placement ?? null,
+    priceCents: Math.round((data.price ?? 0) * 100),
+    compareAtPriceCents: data.compare_at_price != null ? Math.round(data.compare_at_price * 100) : null,
+    images: data.images ?? [],
+    printFileUrl: data.print_file_url ?? null,
+    status: data.status ?? "draft",
+    preorderType: data.preorder_type ?? "always_on",
+    preorderCloseDate: data.preorder_close_date ?? null,
+    preorderCapacity: data.preorder_capacity ?? null,
+    estimatedProductionDays: data.estimated_production_days ?? 10,
+    estimatedDispatchWindow: data.estimated_dispatch_window ?? null,
+    dropName: data.drop_name ?? null,
+    sortOrder: data.sort_order ?? 0,
+  };
+}
+
 /** Creates a new product from the Product Manager form. */
 export async function createProduct(
   data: ProductWritableFields & { name_en: string; product_type: "tee" | "hoodie" | "accessory" },
   actorUserId: number,
 ) {
   const db = getDb();
-  const [{ id }] = await db
-    .insert(products)
-    .values({
-      nameEn: data.name_en,
-      nameAr: data.name_ar ?? null,
-      phraseEn: data.phrase_en ?? null,
-      phraseAr: data.phrase_ar ?? null,
-      payoffEn: data.payoff_en ?? null,
-      descriptionEn: data.description_en ?? null,
-      descriptionAr: data.description_ar ?? null,
-      collectionName: data.collection_name ?? null,
-      mood: data.mood ?? null,
-      productType: data.product_type,
-      garmentStyle: data.garment_style ?? null,
-      fitEn: data.fit_en ?? null,
-      careEn: data.care_en ?? null,
-      careAr: data.care_ar ?? null,
-      measurementsEn: data.measurements_en ?? null,
-      approvedColors: data.approved_colors ?? [],
-      sizes: data.sizes ?? [],
-      placement: data.placement ?? null,
-      priceCents: Math.round((data.price ?? 0) * 100),
-      compareAtPriceCents: data.compare_at_price != null ? Math.round(data.compare_at_price * 100) : null,
-      images: data.images ?? [],
-      printFileUrl: data.print_file_url ?? null,
-      status: data.status ?? "draft",
-      preorderType: data.preorder_type ?? "always_on",
-      preorderCloseDate: data.preorder_close_date ?? null,
-      preorderCapacity: data.preorder_capacity ?? null,
-      estimatedProductionDays: data.estimated_production_days ?? 10,
-      estimatedDispatchWindow: data.estimated_dispatch_window ?? null,
-      dropName: data.drop_name ?? null,
-      sortOrder: data.sort_order ?? 0,
-    })
-    .$returningId();
+  const [{ id }] = await db.insert(products).values(buildProductInsertValues(data)).$returningId();
 
   await db.insert(auditLogs).values({
     actorUserId,
@@ -158,11 +162,12 @@ export async function createProduct(
 
 /**
  * Creates many products in one request — the "Bulk Import" admin page's
- * server-side counterpart. Each item is created and its color photos are
- * attached independently, with per-item try/catch: one bad row (e.g. a
- * duplicate name check added later, or a transient error) doesn't roll
- * back the other 29. Callers should surface `results` to show exactly
- * which rows succeeded so nothing silently disappears.
+ * server-side counterpart. Each item is inserted directly (no per-item
+ * re-select or audit row — one summary audit entry covers the batch) and
+ * its color photos are attached independently, with per-item try/catch:
+ * one bad row doesn't roll back the other 29. Callers should surface
+ * `results` to show exactly which rows succeeded so nothing silently
+ * disappears.
  */
 export async function bulkCreateProducts(
   items: Array<{
@@ -171,17 +176,18 @@ export async function bulkCreateProducts(
   }>,
   actorUserId: number,
 ) {
+  const db = getDb();
   const results: Array<{ success: boolean; id?: string; name_en: string; error?: string }> = [];
 
   for (const item of items) {
     try {
-      const created = await createProduct(item.product, actorUserId);
-      if (created && item.colorImages) {
+      const [{ id }] = await db.insert(products).values(buildProductInsertValues(item.product)).$returningId();
+      if (item.colorImages) {
         for (const [colorName, images] of Object.entries(item.colorImages)) {
-          if (images?.length) await upsertProductColorImages(Number(created.id), colorName, images);
+          if (images?.length) await upsertProductColorImages(id, colorName, images);
         }
       }
-      results.push({ success: true, id: created?.id, name_en: item.product.name_en });
+      results.push({ success: true, id: String(id), name_en: item.product.name_en });
     } catch (err) {
       results.push({
         success: false,
@@ -191,7 +197,7 @@ export async function bulkCreateProducts(
     }
   }
 
-  await getDb().insert(auditLogs).values({
+  await db.insert(auditLogs).values({
     actorUserId,
     action: "product.bulk_created",
     entity: "product",

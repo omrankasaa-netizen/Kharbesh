@@ -87,10 +87,18 @@ export const orderRouter = createRouter({
     }
   }),
 
-  // Used by the confirmation page right after checkout.
+  // Used by the confirmation page right after checkout. Access-gated:
+  // staff, the owning session, or a matching email/phone (passed as
+  // `contact`, stashed in sessionStorage by checkout) — never a bare id.
   get: publicQuery
-    .input(z.object({ id: z.string().regex(/^\d+$/) }))
-    .query(({ input }) => getOrderById(Number(input.id))),
+    .input(z.object({ id: z.string().regex(/^\d+$/), contact: z.string().max(320).optional() }))
+    .query(({ ctx, input }) =>
+      getOrderById(Number(input.id), {
+        userEmail: ctx.user?.email,
+        isStaff: ["staff", "admin", "super_admin"].includes(ctx.user?.role ?? ""),
+        contact: input.contact,
+      }),
+    ),
 
   // Guest tracking: order number + email or phone must both match.
   track: publicQuery

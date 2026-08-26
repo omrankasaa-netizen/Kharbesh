@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { getDb } from "./connection";
 import {
   auditLogs,
@@ -63,12 +63,38 @@ export async function listFactoryOrders() {
   return Promise.all(rows.map((o) => toUiFactoryOrder(o, itemsByOrder.get(o.id) ?? [])));
 }
 
-/** Builds a print-job draft from selected customer orders' line items, one factory item per line item. */
+/**
+ * Builds a print-job draft from selected customer orders' line items, one
+ * factory item per line item.
+ *
+ * Guards against double-printing: an order already inside a non-cancelled
+ * print job is skipped (and reported back via `skipped_order_numbers`)
+ * instead of being queued twice. Orders that enter production have their
+ * customer-visible status moved to `in_production` in the same transaction
+ * so the two systems never disagree.
+ */
 export async function generatePrintJobFromOrders(orderIds: number[], actorUserId: number) {
   const db = getDb();
   return db.transaction(async (tx) => {
-    const sourceOrders = await tx.select().from(orders).where(inArray(orders.id, orderIds));
+    const sourceOrders = await tx.select().from(orders).where(inArray(orders.id, orderIds)).for("update");
     if (sourceOrders.length === 0) throw new Error("NO_ORDERS_FOUND");
+
+    // Orders already queued into a live (non-cancelled) print job.
+    const queuedRows = await tx
+      .select({ sourceOrderId: factoryOrderItems.sourceOrderId })
+      .from(factoryOrderItems)
+      .innerJoin(factoryOrders, eq(factoryOrderItems.factoryOrderId, factoryOrders.id))
+      .where(
+        and(
+          eq(factoryOrders.type, "print_job"),
+          ne(factoryOrders.status, "cancelled"),
+          inArray(factoryOrderItems.sourceOrderId, orderIds),
+        ),
+      );
+    const queuedOrderIds = new Set(queuedRows.map((r) => r.sourceOrderId));
+    const printableOrders = sourceOrders.filter((o) => !queuedOrderIds.has(o.id));
+    const skippedOrderNumbers = sourceOrders.filter((o) => queuedOrderIds.has(o.id)).map((o) => o.orderNumber);
+    if (printableOrders.length === 0) throw new Error("ALL_ORDERS_ALREADY_QUEUED");
 
     const [{ id: factoryOrderId }] = await tx
       .insert(factoryOrders)
@@ -79,7 +105,7 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
     // that product carries the file the factory should actually print.
     const productIds = [
       ...new Set(
-        sourceOrders.flatMap((o) => o.items.map((i) => Number(i.productId))).filter((id) => Number.isInteger(id)),
+        printableOrders.flatMap((o) => o.items.map((i) => Number(i.productId))).filter((id) => Number.isInteger(id)),
       ),
     ];
     const productRows = productIds.length
@@ -87,7 +113,7 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
       : [];
     const printFileByProductId = new Map(productRows.map((p) => [p.id, p.printFileUrl]));
 
-    for (const order of sourceOrders) {
+    for (const order of printableOrders) {
       for (const item of order.items) {
         const productId = Number.isInteger(Number(item.productId)) ? Number(item.productId) : null;
         await tx.insert(factoryOrderItems).values({
@@ -107,6 +133,15 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
           printFileUrl: productId != null ? printFileByProductId.get(productId) ?? null : null,
         });
       }
+
+      // The order is now with the factory — reflect that on the
+      // customer-facing status unless it's already further along.
+      if (order.status === "order_received" || order.status === "preorder_confirmed") {
+        await tx
+          .update(orders)
+          .set({ status: "in_production", updatedAt: new Date() })
+          .where(eq(orders.id, order.id));
+      }
     }
 
     await tx.insert(auditLogs).values({
@@ -114,11 +149,11 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
       action: "factory_order.created",
       entity: "factory_order",
       entityId: String(factoryOrderId),
-      detail: { type: "print_job", orderIds },
+      detail: { type: "print_job", orderIds: printableOrders.map((o) => o.id), skippedOrderNumbers },
     });
 
     const [row] = await tx.select().from(factoryOrders).where(eq(factoryOrders.id, factoryOrderId));
-    return toUiFactoryOrder(row);
+    return { ...(await toUiFactoryOrder(row)), skipped_order_numbers: skippedOrderNumbers };
   });
 }
 
