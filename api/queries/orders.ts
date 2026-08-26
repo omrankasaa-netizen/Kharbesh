@@ -2,7 +2,7 @@ import { getDb } from "./connection";
 import { auditLogs, discounts, orders, products, promoCodes, type Order, type OrderLineItem } from "@db/schema";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import { discountAmountCents, isWithinWindow, matchesDiscount } from "./promotions";
-import { getSettings, isPaymentMethodEnabled } from "./settings";
+import { computeShippingCents, getSettings, isPaymentMethodEnabled } from "./settings";
 
 export function toUiOrder(o: Order) {
   return {
@@ -145,7 +145,7 @@ export async function createOrder(input: CreateOrderInput) {
         .where(eq(products.id, product.id));
     }
 
-    const shippingCents = 0;
+    const shippingCents = computeShippingCents(settings, subtotalCents);
     const netSubtotalCents = subtotalCents - automaticDiscountCents;
 
     let promoDiscountCents = 0;

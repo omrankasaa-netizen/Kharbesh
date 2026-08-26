@@ -12,6 +12,9 @@ const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 function exportToExcel(factoryOrder) {
   const rows = factoryOrder.items.map((it) => ({
     'Order #': it.source_order_number || '—',
+    'Customer Name': it.customer_name || '—',
+    'Phone': it.customer_phone || '—',
+    'Address': it.customer_address || '—',
     'Design': it.design_name_en || '—',
     'Phrase': it.phrase_en || '',
     'Product type': it.product_type,
@@ -19,10 +22,11 @@ function exportToExcel(factoryOrder) {
     'Size': it.size,
     'Quantity': it.quantity,
     'Placement': it.placement || '',
+    'Print File': it.print_file_url || '—',
     'Notes': it.notes || '',
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{ wch: 12 }, { wch: 24 }, { wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 16 }, { wch: 20 }];
+  ws['!cols'] = [{ wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 30 }, { wch: 24 }, { wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 16 }, { wch: 40 }, { wch: 20 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Factory Order');
   const label = factoryOrder.type === 'restock' ? 'restock' : 'print-job';

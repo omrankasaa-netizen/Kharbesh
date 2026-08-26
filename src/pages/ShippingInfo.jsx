@@ -1,9 +1,16 @@
 import React from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
+import { useSiteSettings } from '@/lib/useCatalog.jsx';
 
 export default function ShippingInfo() {
   const { lang } = useI18n();
+  const { settings } = useSiteSettings();
+  const feeDollars = ((settings?.shippingFeeCents ?? 400) / 100).toFixed(0);
+  const thresholdDollars = ((settings?.freeShippingThresholdCents ?? 10000) / 100).toFixed(0);
+  const feeNote = lang === 'ar'
+    ? `الشحن ثابت ${feeDollars}$ لكل لبنان، ومجاني فوق ${thresholdDollars}$.`
+    : `Shipping is a flat $${feeDollars} anywhere in Lebanon, free on orders over $${thresholdDollars}.`;
   const zones = lang === 'ar' ? [
     { z: 'بيروت', t: '1–2 يوم عمل' },
     { z: 'جبل لبنان', t: '2–3 أيام عمل' },
@@ -26,6 +33,7 @@ export default function ShippingInfo() {
     'Preorders ship after production finishes — see the Production timeline page.',
     'Shipping outside Lebanon isn’t available yet. Lebanon first, the world later.',
   ];
+  notes.unshift(feeNote);
   return (
     <div className="max-w-[900px] mx-auto px-4 sm:px-6 py-12">
       <PageHeader eyebrow="Shipping" title={lang === 'ar' ? 'معلومات الشحن' : 'Shipping info'} sub={lang === 'ar' ? 'وين نوصل، ويمتى.' : 'Where we deliver, and when.'} />

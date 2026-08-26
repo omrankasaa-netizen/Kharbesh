@@ -34,6 +34,18 @@ export default function SiteSettings() {
     setSaved(false);
   };
 
+  const setContact = (k) => (e) => {
+    setS((p) => ({ ...p, contact: { ...p.contact, [k]: e.target.value } }));
+    setSaved(false);
+  };
+
+  // Shipping fields are stored in cents server-side but edited in dollars here.
+  const setShippingDollars = (k) => (e) => {
+    const dollars = parseFloat(e.target.value);
+    setS((p) => ({ ...p, [k]: Number.isFinite(dollars) ? Math.round(dollars * 100) : 0 }));
+    setSaved(false);
+  };
+
   const noPaymentMethodSelected = !!s && !s.payment.codEnabled && !s.payment.whishEnabled;
   const whishMissingHandle = !!s && s.payment.whishEnabled && !s.payment.whishHandle.trim();
 
@@ -147,6 +159,48 @@ export default function SiteSettings() {
               ? 'ملاحظة: "الطلبات المسبقة" و"دفع كضيف" محفوظين هون بس مش مفعّلين تقنياً بعد بباقي الموقع.'
               : 'Note: "Preorders" and "Guest checkout" are saved here but not yet enforced elsewhere on the site.'}
           </p>
+        </section>
+
+        <section className="bg-card border border-border rounded-md p-6 space-y-4">
+          <h2 className="font-heading text-xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'الشحن' : 'Shipping'}</h2>
+          <p className="text-sm text-muted-foreground">
+            {lang === 'ar' ? 'رسم شحن ثابت لكل لبنان، مع خيار شحن مجاني فوق حد معين.' : 'A flat fee applied Lebanon-wide, waived automatically above a free-shipping threshold.'}
+          </p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'رسم الشحن ($)' : 'Shipping fee ($)'}</span>
+              <input type="number" min="0" step="0.5" value={(s.shippingFeeCents / 100).toFixed(2)} onChange={setShippingDollars('shippingFeeCents')} className="kh-input" />
+            </label>
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'الشحن المجاني فوق ($)' : 'Free shipping above ($)'}</span>
+              <input type="number" min="0" step="1" value={(s.freeShippingThresholdCents / 100).toFixed(2)} onChange={setShippingDollars('freeShippingThresholdCents')} className="kh-input" />
+            </label>
+          </div>
+        </section>
+
+        <section className="bg-card border border-border rounded-md p-6 space-y-4">
+          <h2 className="font-heading text-xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'التواصل والمواقع الاجتماعية' : 'Contact & Social'}</h2>
+          <p className="text-sm text-muted-foreground">
+            {lang === 'ar' ? 'هالمعلومات بتطلع بالفوتر، زر واتساب الطافي، وصفحة التواصل.' : 'Used in the footer, the floating WhatsApp button, and the Contact page.'}
+          </p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">WhatsApp number</span>
+              <input value={s.contact?.whatsappNumber || ''} onChange={setContact('whatsappNumber')} className="kh-input" placeholder="96176465367" />
+            </label>
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">Instagram handle</span>
+              <input value={s.contact?.instagramHandle || ''} onChange={setContact('instagramHandle')} className="kh-input" placeholder="kharbeshh" />
+            </label>
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">Facebook handle</span>
+              <input value={s.contact?.facebookHandle || ''} onChange={setContact('facebookHandle')} className="kh-input" placeholder="Kharbeshh" />
+            </label>
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'البريد' : 'Email'}</span>
+              <input type="email" value={s.contact?.email || ''} onChange={setContact('email')} className="kh-input" placeholder="hello@kharbesh961.com" />
+            </label>
+          </div>
         </section>
 
         <div className="flex items-center gap-4">

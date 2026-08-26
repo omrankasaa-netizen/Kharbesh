@@ -36,6 +36,7 @@ export type ProductWritableFields = {
   price?: number;
   compare_at_price?: number | null;
   images?: string[];
+  print_file_url?: string | null;
   status?: "active" | "draft" | "archived";
   preorder_type?: "open_until" | "quantity_target" | "limited_quantity" | "always_on";
   preorder_close_date?: string | null;
@@ -71,6 +72,7 @@ function mapProductPatch(data: ProductWritableFields): Partial<typeof products.$
   if (data.compare_at_price !== undefined)
     patch.compareAtPriceCents = data.compare_at_price != null ? Math.round(data.compare_at_price * 100) : null;
   if (data.images !== undefined) patch.images = data.images;
+  if (data.print_file_url !== undefined) patch.printFileUrl = data.print_file_url;
   if (data.status !== undefined) patch.status = data.status;
   if (data.preorder_type !== undefined) patch.preorderType = data.preorder_type;
   if (data.preorder_close_date !== undefined) patch.preorderCloseDate = data.preorder_close_date;
@@ -130,6 +132,7 @@ export async function createProduct(
       priceCents: Math.round((data.price ?? 0) * 100),
       compareAtPriceCents: data.compare_at_price != null ? Math.round(data.compare_at_price * 100) : null,
       images: data.images ?? [],
+      printFileUrl: data.print_file_url ?? null,
       status: data.status ?? "draft",
       preorderType: data.preorder_type ?? "always_on",
       preorderCloseDate: data.preorder_close_date ?? null,

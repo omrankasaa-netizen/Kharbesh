@@ -4,6 +4,7 @@ import { useI18n } from '@/lib/i18n';
 import { useCart } from '@/lib/cart';
 import { base44 } from '@/api/khClient';
 import { useSiteSettings } from '@/lib/useCatalog.jsx';
+import { trackPurchase } from '@/lib/analytics';
 
 export default function Checkout() {
   const { t, lang } = useI18n();
@@ -41,7 +42,13 @@ export default function Checkout() {
   const netSubtotal = autoDiscount ? autoDiscount.net_subtotal : subtotal;
   const autoDiscountAmount = autoDiscount?.automatic_discount || 0;
   const discountAmount = promo?.discount || 0;
-  const total = Math.max(0, subtotal - autoDiscountAmount - discountAmount);
+  // Mirrors computeShippingCents() on the server: shipping is a flat fee on
+  // the raw (pre-discount) subtotal, waived above the free-shipping
+  // threshold, then added on top of the discounted subtotal.
+  const shippingFeeCents = settings?.shippingFeeCents ?? 400;
+  const freeShippingThresholdCents = settings?.freeShippingThresholdCents ?? 10000;
+  const shipping = Math.round(subtotal * 100) >= freeShippingThresholdCents ? 0 : shippingFeeCents / 100;
+  const total = Math.max(0, subtotal - autoDiscountAmount - discountAmount) + shipping;
 
   const applyPromo = async () => {
     if (!promoInput.trim()) return;
@@ -101,7 +108,7 @@ export default function Checkout() {
         notes: form.notes,
         items: items.map((i) => ({ productId: i.productId, productName: i.productName, phrase: i.phrase, productType: i.productType, color: i.color, size: i.size, quantity: i.quantity, unitPrice: i.unitPrice, lineTotal: i.unitPrice * i.quantity })),
         subtotal,
-        shipping: 0,
+        shipping,
         total,
         promo_code: promo?.code,
         status: 'order_received',
@@ -110,6 +117,7 @@ export default function Checkout() {
         language: lang,
         is_guest: true,
       });
+      trackPurchase({ orderId: order.id, value: total, currency: 'USD', items });
       clear();
       navigate(`/order/${order.id}`);
     } catch (err) {
@@ -232,6 +240,10 @@ export default function Checkout() {
             {promoError && <p className="text-destructive text-xs mt-2">{promoError}</p>}
           </div>
 
+          <div className="flex justify-between text-sm py-3 border-t border-border mt-2">
+            <span className="text-muted-foreground">{t.cart.shipping}</span>
+            <span>{shipping === 0 ? t.cart.shippingFree : `$${shipping.toFixed(2)}`}</span>
+          </div>
           <div className="flex justify-between py-3 border-t border-border mt-2 font-heading text-lg" style={{ fontFamily: 'var(--brand-font-heading)' }}><span>{t.cart.total}</span><span>${total.toFixed(2)}</span></div>
           {error && <p className="text-destructive text-sm mt-3">{error}</p>}
           <button type="submit" disabled={loading || !ack || noPaymentMethodAvailable} className="kh-btn-scribble w-full mt-4 !justify-center">

@@ -3,6 +3,8 @@ import { base44, hasRole } from '@/api/khClient';
 import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
+import { whatsappLink } from '@/lib/whatsapp';
+import { IconWhatsApp } from '@/components/Brand';
 
 const STATUSES = ['order_received','preorder_confirmed','in_production','being_printed','preparing_shipment','on_the_way','delivered','needs_attention'];
 
@@ -74,7 +76,21 @@ export default function AdminOrders() {
               {filtered.map((o) => (
                 <tr key={o.id} className="border-b border-border">
                   <td className="py-3 pr-3 font-heading" style={{ fontFamily: 'var(--brand-font-heading)' }}>{o.order_number}</td>
-                  <td className="py-3 pr-3">{o.full_name}<div className="text-muted-foreground text-xs">{o.email}</div></td>
+                  <td className="py-3 pr-3">
+                    {o.full_name}
+                    <div className="text-muted-foreground text-xs">{o.email}</div>
+                    {o.phone && (
+                      <a
+                        href={whatsappLink(o.phone, `${lang === 'ar' ? 'هاي' : 'Hi'} ${o.full_name}, ${lang === 'ar' ? 'معك من خربش بخصوص طلبية' : 'this is Kharbesh regarding your order'} ${o.order_number}...`)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs mt-1 hover:opacity-80"
+                        style={{ color: '#25D366' }}
+                      >
+                        <IconWhatsApp size={13} /> {o.phone}
+                      </a>
+                    )}
+                  </td>
                   <td className="py-3 pr-3">${o.total}</td>
                   <td className="py-3 pr-3">
                     <span

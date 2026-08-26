@@ -12,6 +12,15 @@ const paymentPatchSchema = z
   })
   .partial();
 
+const contactPatchSchema = z
+  .object({
+    whatsappNumber: z.string().max(40),
+    instagramHandle: z.string().max(60),
+    facebookHandle: z.string().max(60),
+    email: z.string().max(320),
+  })
+  .partial();
+
 const settingsPatchSchema = z
   .object({
     storeName: z.string().min(1).max(120),
@@ -25,6 +34,9 @@ const settingsPatchSchema = z
     guestCheckoutEnabled: z.boolean(),
     maintenance: z.boolean(),
     payment: paymentPatchSchema,
+    shippingFeeCents: z.number().int().min(0),
+    freeShippingThresholdCents: z.number().int().min(0),
+    contact: contactPatchSchema,
   })
   .partial();
 

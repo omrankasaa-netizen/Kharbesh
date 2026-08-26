@@ -23,6 +23,17 @@ export type SiteSettingsValue = {
     whishInstructionsEn: string;
     whishInstructionsAr: string;
   };
+  /** Flat shipping fee applied to every Lebanon order, in cents. */
+  shippingFeeCents: number;
+  /** Order subtotal (cents) at or above which shipping becomes free. */
+  freeShippingThresholdCents: number;
+  contact: {
+    /** Digits only, country code included, e.g. "96176465367". */
+    whatsappNumber: string;
+    instagramHandle: string;
+    facebookHandle: string;
+    email: string;
+  };
 };
 
 export const DEFAULT_SETTINGS: SiteSettingsValue = {
@@ -43,17 +54,29 @@ export const DEFAULT_SETTINGS: SiteSettingsValue = {
     whishInstructionsEn: "",
     whishInstructionsAr: "",
   },
+  shippingFeeCents: 400,
+  freeShippingThresholdCents: 10000,
+  contact: {
+    whatsappNumber: "96176465367",
+    instagramHandle: "kharbeshh",
+    facebookHandle: "Kharbeshh",
+    email: "",
+  },
 };
 
 /** Deep-merges persisted JSON on top of defaults so newly added fields (e.g.
  * a settings key shipped after a store was first configured) always have a
  * safe fallback instead of being `undefined` at runtime. */
 function withDefaults(value: unknown): SiteSettingsValue {
-  const v = (value ?? {}) as Partial<SiteSettingsValue> & { payment?: Partial<SiteSettingsValue["payment"]> };
+  const v = (value ?? {}) as Partial<SiteSettingsValue> & {
+    payment?: Partial<SiteSettingsValue["payment"]>;
+    contact?: Partial<SiteSettingsValue["contact"]>;
+  };
   return {
     ...DEFAULT_SETTINGS,
     ...v,
     payment: { ...DEFAULT_SETTINGS.payment, ...(v.payment ?? {}) },
+    contact: { ...DEFAULT_SETTINGS.contact, ...(v.contact ?? {}) },
   };
 }
 
@@ -71,9 +94,18 @@ export function isPaymentMethodEnabled(
   return method === "whish" ? settings.payment.whishEnabled : settings.payment.codEnabled;
 }
 
-export type SettingsPatch = Partial<Omit<SiteSettingsValue, "payment">> & {
+export type SettingsPatch = Partial<Omit<SiteSettingsValue, "payment" | "contact">> & {
   payment?: Partial<SiteSettingsValue["payment"]>;
+  contact?: Partial<SiteSettingsValue["contact"]>;
 };
+
+/** Shipping fee (cents) for a given subtotal, per current settings — free
+ * above the configured threshold, flat fee otherwise. Used both at order
+ * creation (server truth) and for client-side display. */
+export function computeShippingCents(settings: SiteSettingsValue, subtotalCents: number): number {
+  if (subtotalCents >= settings.freeShippingThresholdCents) return 0;
+  return settings.shippingFeeCents;
+}
 
 /**
  * Merges `patch` on top of the currently persisted settings and writes the
@@ -88,6 +120,7 @@ export async function updateSettings(patch: SettingsPatch, actorUserId: number):
     ...current,
     ...patch,
     payment: { ...current.payment, ...(patch.payment ?? {}) },
+    contact: { ...current.contact, ...(patch.contact ?? {}) },
   };
 
   if (!next.payment.codEnabled && !next.payment.whishEnabled) {

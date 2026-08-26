@@ -133,6 +133,7 @@ const productFields = {
   price: z.number().min(0).max(1_000_000),
   compare_at_price: z.number().min(0).max(1_000_000).nullable(),
   images: z.array(z.string()),
+  print_file_url: z.string().max(500).nullable(),
   status: z.enum(["active", "draft", "archived"]),
   preorder_type: z.enum(["open_until", "quantity_target", "limited_quantity", "always_on"]),
   preorder_close_date: z.string().max(10).nullable(),

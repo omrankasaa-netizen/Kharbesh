@@ -6,6 +6,7 @@ import {
   factoryOrderItems,
   factoryOrders,
   orders,
+  products,
   stockMovements,
   type FactoryOrder,
   type FactoryOrderItem,
@@ -26,6 +27,10 @@ function toUiItem(i: FactoryOrderItem) {
     quantity: i.quantity,
     placement: i.placement,
     notes: i.notes,
+    customer_name: i.customerName,
+    customer_phone: i.customerPhone,
+    customer_address: i.customerAddress,
+    print_file_url: i.printFileUrl,
   };
 }
 
@@ -70,19 +75,36 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
       .values({ type: "print_job", status: "draft", createdByUserId: actorUserId })
       .$returningId();
 
+    // Look up print-ready artwork per product once so every line item for
+    // that product carries the file the factory should actually print.
+    const productIds = [
+      ...new Set(
+        sourceOrders.flatMap((o) => o.items.map((i) => Number(i.productId))).filter((id) => Number.isInteger(id)),
+      ),
+    ];
+    const productRows = productIds.length
+      ? await tx.select({ id: products.id, printFileUrl: products.printFileUrl }).from(products).where(inArray(products.id, productIds))
+      : [];
+    const printFileByProductId = new Map(productRows.map((p) => [p.id, p.printFileUrl]));
+
     for (const order of sourceOrders) {
       for (const item of order.items) {
+        const productId = Number.isInteger(Number(item.productId)) ? Number(item.productId) : null;
         await tx.insert(factoryOrderItems).values({
           factoryOrderId,
           sourceOrderId: order.id,
           sourceOrderNumber: order.orderNumber,
-          productId: Number.isInteger(Number(item.productId)) ? Number(item.productId) : null,
+          productId,
           designNameEn: item.productName,
           phraseEn: item.phrase ?? null,
           productType: (item.productType as "tee" | "hoodie" | "accessory") ?? "tee",
           color: item.color,
           size: item.size,
           quantity: item.quantity,
+          customerName: order.fullName,
+          customerPhone: order.phone,
+          customerAddress: order.shippingAddress,
+          printFileUrl: productId != null ? printFileByProductId.get(productId) ?? null : null,
         });
       }
     }

@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet, useLocation } from 'react-router';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import WhatsAppButton from '@/components/WhatsAppButton';
 import { CatalogProvider, useSiteSettings } from '@/lib/useCatalog.jsx';
 import { useI18n } from '@/lib/i18n';
 import { Scribble } from '@/components/Brand';
@@ -51,6 +52,7 @@ export default function Layout() {
             <Outlet />
           </main>
           <Footer />
+          <WhatsAppButton />
         </div>
       </MaintenanceGate>
     </CatalogProvider>

@@ -11,6 +11,7 @@ const LINKS = [
   { to: '/admin/bulk-import', label_en: 'Bulk Import', label_ar: 'استيراد بالجملة', minRole: 'staff' },
   { to: '/admin/inventory', label_en: 'Inventory', label_ar: 'المخزون', minRole: 'staff' },
   { to: '/admin/factory', label_en: 'Factory', label_ar: 'المصنع', minRole: 'staff' },
+  { to: '/admin/messages', label_en: 'Messages', label_ar: 'الرسائل', minRole: 'staff' },
   { to: '/admin/customers', label_en: 'Customers', label_ar: 'الزبائن', minRole: 'admin' },
   { to: '/admin/analytics', label_en: 'Analytics', label_ar: 'التحليلات', minRole: 'admin' },
   { to: '/admin/settings', label_en: 'Settings', label_ar: 'الإعدادات', minRole: 'admin' },

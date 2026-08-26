@@ -2,13 +2,16 @@ import React from 'react';
 import { Link } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { useCart } from '@/lib/cart';
-import { useColors, resolveColor } from '@/lib/useCatalog.jsx';
+import { useColors, resolveColor, useSiteSettings } from '@/lib/useCatalog.jsx';
 import GarmentMockup, { contrastInk } from '@/components/GarmentMockup';
+import { whatsappLink } from '@/lib/whatsapp';
+import { IconWhatsApp } from '@/components/Brand';
 
 export default function Cart() {
   const { t, lang } = useI18n();
   const { items, updateQty, removeItem, subtotal, count } = useCart();
   const colors = useColors();
+  const { settings } = useSiteSettings();
 
   if (items.length === 0) {
     return (
@@ -19,6 +22,19 @@ export default function Cart() {
       </div>
     );
   }
+
+  // Mirrors the server's computeShippingCents() so the cart shows the real
+  // fee (flat $4 Lebanon-wide, free above the threshold) instead of a
+  // placeholder "calculated at checkout" note.
+  const shippingFeeCents = settings?.shippingFeeCents ?? 400;
+  const freeShippingThresholdCents = settings?.freeShippingThresholdCents ?? 10000;
+  const subtotalCents = Math.round(subtotal * 100);
+  const shippingCents = subtotalCents >= freeShippingThresholdCents ? 0 : shippingFeeCents;
+  const shipping = shippingCents / 100;
+  const total = subtotal + shipping;
+
+  const orderLines = items.map((item) => `${item.quantity}x ${item.productName} (${item.color}, ${item.size})`).join('\n');
+  const whatsappOrderText = `${lang === 'ar' ? 'هاي، بدي اطلب هالليستة' : "Hi! I'd like to order"}:\n${orderLines}\n\n${lang === 'ar' ? 'المجموع' : 'Total'}: $${total.toFixed(2)}`;
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-12">
@@ -59,9 +75,18 @@ export default function Cart() {
         <aside className="bg-card border border-border rounded-md p-6 h-fit sticky top-24">
           <h2 className="font-heading text-xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.cart.title}</h2>
           <div className="flex justify-between py-2 text-sm"><span className="text-muted-foreground">{t.cart.subtotal} ({count} {count === 1 ? t.cart.item : t.cart.items})</span><span>${subtotal}</span></div>
-          <div className="flex justify-between py-2 text-sm"><span className="text-muted-foreground">{t.cart.shipping}</span><span className="text-muted-foreground">{t.cart.shippingNote}</span></div>
-          <div className="flex justify-between py-3 border-t border-border mt-2 font-heading text-lg" style={{ fontFamily: 'var(--brand-font-heading)' }}><span>{t.cart.total}</span><span>${subtotal}</span></div>
+          <div className="flex justify-between py-2 text-sm"><span className="text-muted-foreground">{t.cart.shipping}</span><span>{shippingCents === 0 ? t.cart.shippingFree : `$${shipping.toFixed(2)}`}</span></div>
+          <div className="flex justify-between py-3 border-t border-border mt-2 font-heading text-lg" style={{ fontFamily: 'var(--brand-font-heading)' }}><span>{t.cart.total}</span><span>${total.toFixed(2)}</span></div>
           <Link to="/checkout" className="kh-btn-scribble w-full mt-4 !justify-center">{t.cart.checkout}</Link>
+          <a
+            href={whatsappLink(settings?.contact?.whatsappNumber, whatsappOrderText)}
+            target="_blank"
+            rel="noreferrer"
+            className="kh-btn-outline w-full mt-3 !justify-center flex items-center gap-2"
+          >
+            <IconWhatsApp size={18} />
+            {t.cart.orderWhatsapp}
+          </a>
           <Link to="/shop" className="kh-btn-text w-full mt-3 !justify-center">{t.cart.continue}</Link>
         </aside>
       </div>

@@ -37,6 +37,7 @@ export function toUiProduct(p: Product) {
     price: p.priceCents / 100,
     compare_at_price: p.compareAtPriceCents != null ? p.compareAtPriceCents / 100 : null,
     images: p.images,
+    print_file_url: p.printFileUrl,
     status: p.status,
     preorder_type: p.preorderType,
     preorder_close_date: p.preorderCloseDate,

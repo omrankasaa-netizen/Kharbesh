@@ -260,6 +260,19 @@ export const kh = {
         }),
     },
 
+    ContactMessages: {
+      /** Admin/staff-only list. */
+      list: () => client.contactMessages.list.query(),
+      create: (data) =>
+        client.contactMessages.submit.mutate({
+          name: data.name,
+          email: data.email,
+          phone: empty(data.phone),
+          message: data.message,
+        }),
+      updateStatus: (id, status) => client.contactMessages.updateStatus.mutate({ id, status }),
+    },
+
     User: { list: () => client.admin.users.query() },
 
     Staff: {

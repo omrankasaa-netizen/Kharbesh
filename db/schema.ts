@@ -107,6 +107,10 @@ export const products = mysqlTable(
     // compute per-product profit margin alongside the unit cost settings.
     costPriceCents: int("costPriceCents"),
     images: json("images").$type<string[]>().notNull(),
+    // Flat print-ready artwork the factory prints from, distinct from
+    // marketing photos in `images` — resolved onto each factory order item
+    // at handoff time so the factory always gets the exact file to print.
+    printFileUrl: varchar("printFileUrl", { length: 500 }),
     status: mysqlEnum("status", ["active", "draft", "archived"]).default("draft").notNull(),
     preorderType: mysqlEnum("preorderType", [
       "open_until",
@@ -254,6 +258,18 @@ export const customRequests = mysqlTable("custom_requests", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
+// ── Contact messages (public Contact page + WhatsApp follow-up) ─────────────
+export const contactMessages = mysqlTable("contact_messages", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 160 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  phone: varchar("phone", { length: 40 }),
+  message: text("message").notNull(),
+  status: mysqlEnum("status", ["new", "read", "archived"]).default("new").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 // ── Site settings + audit ────────────────────────────────────────────────────
 export const siteSettings = mysqlTable("site_settings", {
   id: serial("id").primaryKey(),
@@ -346,6 +362,13 @@ export const factoryOrderItems = mysqlTable(
     quantity: int("quantity").notNull(),
     placement: varchar("placement", { length: 180 }),
     notes: varchar("notes", { length: 500 }),
+    // Denormalized at handoff time from the source order + product, so the
+    // factory export always has the customer to ship to and the exact
+    // print-ready file, even if the source order or product changes later.
+    customerName: varchar("customerName", { length: 160 }),
+    customerPhone: varchar("customerPhone", { length: 40 }),
+    customerAddress: varchar("customerAddress", { length: 255 }),
+    printFileUrl: varchar("printFileUrl", { length: 500 }),
   },
   (t) => ({
     orderIdx: index("factory_order_items_order_idx").on(t.factoryOrderId),
@@ -451,6 +474,7 @@ export type GarmentStyle = typeof garmentStyles.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type CustomRequest = typeof customRequests.$inferSelect;
+export type ContactMessage = typeof contactMessages.$inferSelect;
 export type BlankStock = typeof blankStock.$inferSelect;
 export type StockMovement = typeof stockMovements.$inferSelect;
 export type FactoryOrder = typeof factoryOrders.$inferSelect;

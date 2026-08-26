@@ -7,6 +7,9 @@ import { base44 } from '@/api/khClient';
 import GarmentMockup, { contrastInk } from '@/components/GarmentMockup';
 import { Scribble, IconHeart, IconShare, IconCotton, IconNoSweat, IconNoWrinkle, IconFit, IconCash, IconTruck } from '@/components/Brand';
 import { STANDARD_FRONT_BY_COLOR } from '@/lib/standardPhotos';
+import { useSiteSettings } from '@/lib/useCatalog.jsx';
+import { whatsappLink } from '@/lib/whatsapp';
+import { IconWhatsApp } from '@/components/Brand';
 
 export default function ProductPage() {
   const { id } = useParams();
@@ -15,6 +18,7 @@ export default function ProductPage() {
   const colors = useColors();
   const { addItem } = useCart();
   const navigate = useNavigate();
+  const { settings } = useSiteSettings();
 
   const product = products.find((p) => p.id === id);
 
@@ -201,6 +205,21 @@ export default function ProductPage() {
             <button className="kh-btn-icon" aria-label="Share"><IconShare size={20} /></button>
           </div>
           {!canAdd && <p className="text-xs text-muted-foreground mt-3">{t.product.preorderNote}</p>}
+
+          <a
+            href={whatsappLink(
+              settings?.contact?.whatsappNumber,
+              (lang === 'ar'
+                ? `هاي، بدي هالتيشيرت: ${name}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`
+                : `Hi! I'd like to order: ${name}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`),
+            )}
+            target="_blank"
+            rel="noreferrer"
+            className="kh-btn-outline mt-3 !justify-center flex w-full items-center gap-2"
+          >
+            <IconWhatsApp size={18} />
+            {lang === 'ar' ? 'أطلب عبر واتساب' : 'Order via WhatsApp'}
+          </a>
 
           {/* Feature highlights */}
           <div className="mt-8 border-t border-border pt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">

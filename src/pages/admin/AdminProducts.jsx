@@ -20,7 +20,7 @@ const emptyForm = {
   description_en: '', description_ar: '', collection_name: '', mood: '',
   product_type: 'tee', garment_style: '', fit_en: '', care_en: '', care_ar: '',
   measurements_en: '', approved_colors: [], sizes: [], placement: '',
-  price: DEFAULT_PRICE_BY_TYPE.tee, compare_at_price: '', images: [DEFAULT_COVER_FRONT], status: 'draft',
+  price: DEFAULT_PRICE_BY_TYPE.tee, compare_at_price: '', images: [DEFAULT_COVER_FRONT], print_file_url: null, status: 'draft',
   preorder_type: 'always_on', preorder_close_date: '', preorder_capacity: '',
   units_sold: 0, estimated_production_days: 10, estimated_dispatch_window: '',
   drop_name: '', sort_order: 0,
@@ -419,6 +419,18 @@ export default function AdminProducts() {
     });
   };
 
+  const [uploadingPrintFile, setUploadingPrintFile] = useState(false);
+  const onPrintFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPrintFile(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setForm((f) => ({ ...f, print_file_url: file_url }));
+    } finally { setUploadingPrintFile(false); }
+  };
+  const removePrintFile = () => setForm((f) => ({ ...f, print_file_url: null }));
+
   const onCoverUpload = async (slotIdx, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -607,6 +619,34 @@ export default function AdminProducts() {
                 <ColorImagesSection productId={editingId} approvedColors={form.approved_colors} lang={lang} />
               </div>
             )}
+            <div className="mt-6 border-t border-border pt-6">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-1">
+                {lang === 'ar' ? 'ملف الطباعة (للمصنع)' : 'Print file (for factory)'}
+              </span>
+              <p className="text-xs text-muted-foreground mb-3">
+                {lang === 'ar'
+                  ? 'الملف الجاهز للطباعة يلي بيروح عالمصنع مع كل طلبية — منفصل عن صور الموقع.'
+                  : 'The print-ready artwork sent to the factory with every order for this design — separate from the storefront photos above.'}
+              </p>
+              {form.print_file_url ? (
+                <div className="flex items-center gap-3 text-sm">
+                  <a href={form.print_file_url} target="_blank" rel="noreferrer" className="underline" style={{ color: 'var(--brand-accent)' }}>
+                    {lang === 'ar' ? 'فتح الملف الحالي' : 'View current file'}
+                  </a>
+                  <button type="button" onClick={removePrintFile} className="kh-btn-text text-xs">{lang === 'ar' ? 'إزالة' : 'Remove'}</button>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground mb-2">{lang === 'ar' ? 'ما في ملف طباعة مرفوع بعد.' : 'No print file uploaded yet.'}</p>
+              )}
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={onPrintFileUpload}
+                disabled={uploadingPrintFile}
+                className="text-xs mt-2 w-full"
+              />
+              {uploadingPrintFile && <span className="text-[11px] text-muted-foreground">{lang === 'ar' ? 'عم يرفع…' : 'Uploading…'}</span>}
+            </div>
           </SectionCard>
 
           {/* 6. Advanced — collapsed by default, rarely touched fields */}

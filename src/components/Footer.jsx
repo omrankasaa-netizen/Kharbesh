@@ -3,9 +3,18 @@ import { Link } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { BRAND_ASSETS, INK_FILTER } from '@/lib/brandAssets';
 import { DotsMark } from '@/components/Brand';
+import { useSiteSettings } from '@/lib/useCatalog.jsx';
+import { whatsappLink } from '@/lib/whatsapp';
+
+// Hard fallbacks match the brand's real sticker/storefront contact details
+// (kharbesh961.com, +961 76 465367, IG/FB @kharbeshh) so the footer never
+// shows a broken link even before settings finish loading.
+const DEFAULT_CONTACT = { whatsappNumber: '96176465367', instagramHandle: 'kharbeshh', facebookHandle: 'Kharbeshh' };
 
 export default function Footer() {
   const { t, lang } = useI18n();
+  const { settings } = useSiteSettings();
+  const contact = { ...DEFAULT_CONTACT, ...(settings?.contact || {}) };
   const line = 'rgba(251,246,235,.16)';
   const muted = 'rgba(251,246,235,.6)';
   return (
@@ -43,9 +52,10 @@ export default function Footer() {
           <div>
             <h4 className="kh-eyebrow mb-5">Social</h4>
             <ul className="space-y-2 text-sm" style={{ color: muted }}>
-              <li><a href="https://instagram.com/kharbesh.lb" target="_blank" rel="noreferrer" className="hover:text-[#D4ED0B] transition-colors">Instagram</a></li>
+              <li><a href={`https://instagram.com/${contact.instagramHandle}`} target="_blank" rel="noreferrer" className="hover:text-[#D4ED0B] transition-colors">Instagram</a></li>
+              <li><a href={`https://facebook.com/${contact.facebookHandle}`} target="_blank" rel="noreferrer" className="hover:text-[#D4ED0B] transition-colors">Facebook</a></li>
               <li><a href="https://tiktok.com/@kharbesh.lb" target="_blank" rel="noreferrer" className="hover:text-[#D4ED0B] transition-colors">TikTok</a></li>
-              <li><a href="https://wa.me/9611234567" target="_blank" rel="noreferrer" className="hover:text-[#D4ED0B] transition-colors">WhatsApp</a></li>
+              <li><a href={whatsappLink(contact.whatsappNumber)} target="_blank" rel="noreferrer" className="hover:text-[#D4ED0B] transition-colors">WhatsApp</a></li>
             </ul>
           </div>
         </div>

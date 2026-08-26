@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import { TRPCProvider } from '@/providers/trpc'
+import { initAnalytics } from '@/lib/analytics'
 import './index.css'
 import App from './App.jsx'
 
@@ -17,6 +18,12 @@ import App from './App.jsx'
 const basename = window.location.pathname.endsWith('/index.html')
   ? window.location.pathname
   : ''
+
+// Defer pixel scripts until after the first paint so they never compete
+// with the initial render for bandwidth on slow connections (4G Lebanon).
+if (typeof window !== 'undefined') {
+  window.requestIdleCallback ? window.requestIdleCallback(initAnalytics) : window.setTimeout(initAnalytics, 1500)
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
