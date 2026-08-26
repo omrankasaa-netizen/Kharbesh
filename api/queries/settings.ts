@@ -34,6 +34,23 @@ export type SiteSettingsValue = {
     facebookHandle: string;
     email: string;
   };
+  /** Controllable loyalty tier program — thresholds, discounts, and
+   * free-shipping credit grants are all admin-editable from Settings so
+   * the whole ladder can be tuned without a code change. */
+  loyalty: {
+    enabled: boolean;
+    /** Lifetime spend (cents) at/above which a customer becomes Kharboush Khebra. */
+    khebraThresholdCents: number;
+    /** Lifetime spend (cents) at/above which a customer becomes Kharboush Aslee. */
+    asleeThresholdCents: number;
+    newKharboushDiscountPercent: number;
+    khebraDiscountPercent: number;
+    asleeDiscountPercent: number;
+    /** Free-shipping credits granted on entry / upgrade to this tier. Aslee
+     * ignores its credit count — it's always free, permanently. */
+    newKharboushFreeShippingCredits: number;
+    khebraFreeShippingCredits: number;
+  };
 };
 
 export const DEFAULT_SETTINGS: SiteSettingsValue = {
@@ -62,6 +79,16 @@ export const DEFAULT_SETTINGS: SiteSettingsValue = {
     facebookHandle: "Kharbeshh",
     email: "",
   },
+  loyalty: {
+    enabled: true,
+    khebraThresholdCents: 50000, // $500
+    asleeThresholdCents: 100000, // $1000
+    newKharboushDiscountPercent: 2,
+    khebraDiscountPercent: 4,
+    asleeDiscountPercent: 5,
+    newKharboushFreeShippingCredits: 1,
+    khebraFreeShippingCredits: 2,
+  },
 };
 
 /** Deep-merges persisted JSON on top of defaults so newly added fields (e.g.
@@ -71,12 +98,14 @@ function withDefaults(value: unknown): SiteSettingsValue {
   const v = (value ?? {}) as Partial<SiteSettingsValue> & {
     payment?: Partial<SiteSettingsValue["payment"]>;
     contact?: Partial<SiteSettingsValue["contact"]>;
+    loyalty?: Partial<SiteSettingsValue["loyalty"]>;
   };
   return {
     ...DEFAULT_SETTINGS,
     ...v,
     payment: { ...DEFAULT_SETTINGS.payment, ...(v.payment ?? {}) },
     contact: { ...DEFAULT_SETTINGS.contact, ...(v.contact ?? {}) },
+    loyalty: { ...DEFAULT_SETTINGS.loyalty, ...(v.loyalty ?? {}) },
   };
 }
 
@@ -94,9 +123,10 @@ export function isPaymentMethodEnabled(
   return method === "whish" ? settings.payment.whishEnabled : settings.payment.codEnabled;
 }
 
-export type SettingsPatch = Partial<Omit<SiteSettingsValue, "payment" | "contact">> & {
+export type SettingsPatch = Partial<Omit<SiteSettingsValue, "payment" | "contact" | "loyalty">> & {
   payment?: Partial<SiteSettingsValue["payment"]>;
   contact?: Partial<SiteSettingsValue["contact"]>;
+  loyalty?: Partial<SiteSettingsValue["loyalty"]>;
 };
 
 /** Shipping fee (cents) for a given subtotal, per current settings — free
@@ -121,6 +151,7 @@ export async function updateSettings(patch: SettingsPatch, actorUserId: number):
     ...patch,
     payment: { ...current.payment, ...(patch.payment ?? {}) },
     contact: { ...current.contact, ...(patch.contact ?? {}) },
+    loyalty: { ...current.loyalty, ...(patch.loyalty ?? {}) },
   };
 
   if (!next.payment.codEnabled && !next.payment.whishEnabled) {
@@ -128,6 +159,9 @@ export async function updateSettings(patch: SettingsPatch, actorUserId: number):
   }
   if (next.payment.whishEnabled && !next.payment.whishHandle.trim()) {
     throw new Error("WHISH_HANDLE_REQUIRED");
+  }
+  if (next.loyalty.asleeThresholdCents <= next.loyalty.khebraThresholdCents) {
+    throw new Error("ASLEE_THRESHOLD_TOO_LOW");
   }
 
   await db

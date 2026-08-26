@@ -212,6 +212,12 @@ export const orders = mysqlTable(
     discountCents: int("discountCents").default(0).notNull(),
     promoCode: varchar("promoCode", { length: 40 }),
     appliedDiscounts: json("appliedDiscounts").$type<{ name: string; amountCents: number }[]>(),
+    // Loyalty snapshot at the moment this order was placed — kept even if
+    // the account's tier later changes, so order history/admin/emails stay
+    // accurate to what actually happened on this order.
+    loyaltyTierAtOrder: mysqlEnum("loyaltyTierAtOrder", ["new_kharboush", "kharboush_khebra", "kharboush_aslee"]),
+    loyaltyDiscountCents: int("loyaltyDiscountCents").default(0).notNull(),
+    freeShippingFromLoyalty: boolean("freeShippingFromLoyalty").default(false).notNull(),
     totalCents: int("totalCents").notNull(),
     status: mysqlEnum("status", [
       "order_received",
@@ -485,6 +491,29 @@ export const campaigns = mysqlTable("campaigns", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
+// ── Loyalty tiers (New Kharboush / Kharboush Khebra / Kharboush Aslee) ──────
+// Email-keyed (lowercased, unique) rather than tied to `users.id` — a
+// customer earns and keeps tier progress whether they check out as a guest
+// or a signed-in account, and the two paths converge on the same row the
+// moment they use the same email. `freeShippingCredits` is a consumable
+// counter (New/Khebra); Aslee ignores it and is always free (permanent),
+// enforced in application code via the tier itself rather than a magic
+// credit value. `tierLockedByAdmin` freezes auto-recalculation so a manual
+// override (grant/revoke by support) survives the next order.
+export const loyaltyAccounts = mysqlTable("loyalty_accounts", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  tier: mysqlEnum("tier", ["new_kharboush", "kharboush_khebra", "kharboush_aslee"])
+    .default("new_kharboush")
+    .notNull(),
+  lifetimeSpentCents: int("lifetimeSpentCents").default(0).notNull(),
+  freeShippingCredits: int("freeShippingCredits").default(1).notNull(),
+  tierLockedByAdmin: boolean("tierLockedByAdmin").default(false).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type StaffRole = typeof staffRoles.$inferSelect;
@@ -505,3 +534,5 @@ export type ProductColorImages = typeof productColorImages.$inferSelect;
 export type PromoCode = typeof promoCodes.$inferSelect;
 export type Discount = typeof discounts.$inferSelect;
 export type Campaign = typeof campaigns.$inferSelect;
+export type LoyaltyAccount = typeof loyaltyAccounts.$inferSelect;
+export type LoyaltyTier = LoyaltyAccount["tier"];

@@ -5,6 +5,7 @@ import { contactMessagesRouter } from "./contact-router";
 import { customRequestRouter } from "./custom-request-router";
 import { orderRouter } from "./order-router";
 import { settingsRouter } from "./settings-router";
+import { loyaltyRouter } from "./loyalty-router";
 import { createRouter, publicQuery } from "./middleware";
 
 export const appRouter = createRouter({
@@ -16,6 +17,7 @@ export const appRouter = createRouter({
   contactMessages: contactMessagesRouter,
   settings: settingsRouter,
   admin: adminRouter,
+  loyalty: loyaltyRouter,
 });
 
 export type AppRouter = typeof appRouter;

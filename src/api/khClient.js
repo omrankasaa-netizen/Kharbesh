@@ -362,6 +362,17 @@ export const kh = {
       previewCartDiscounts: (items) => client.orders.previewCartDiscounts.query(items),
       activeCampaigns: () => client.orders.activeCampaigns.query(),
     },
+
+    Loyalty: {
+      /** Tier + perks for one email — used by the Profile page and the Checkout preview. */
+      myStatus: (email) => client.loyalty.myStatus.query({ email }),
+      /** Read-only: what THIS order's net subtotal (post automatic-discount, in dollars) would get under the current tier. No DB writes. */
+      preview: (email, netSubtotal) => client.orders.previewLoyalty.query({ email, netSubtotal }),
+      admin: {
+        list: (search) => client.admin.loyaltyAccounts.query(search ? { search } : undefined),
+        update: (email, patch) => client.admin.updateLoyaltyAccount.mutate({ email, patch }),
+      },
+    },
   },
 
   auth: {

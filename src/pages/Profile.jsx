@@ -5,11 +5,18 @@ import { base44 } from '@/api/khClient';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
 
+const TIER_LABEL = {
+  new_kharboush: { en: 'New Kharboush', ar: 'خربوش جديد' },
+  kharboush_khebra: { en: 'Kharboush Khebra', ar: 'خربوش خبرة' },
+  kharboush_aslee: { en: 'Kharboush Aslee', ar: 'خربوش أصلي' },
+};
+
 export default function Profile() {
   const { user } = useAuth();
   const { t, lang } = useI18n();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loyalty, setLoyalty] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -19,6 +26,15 @@ export default function Profile() {
         setOrders(list || []);
       } catch { setOrders([]); }
       finally { setLoading(false); }
+    })();
+  }, [user]);
+
+  useEffect(() => {
+    (async () => {
+      if (!user?.email) return;
+      try {
+        setLoyalty(await base44.entities.Loyalty.myStatus(user.email));
+      } catch { setLoyalty(null); }
     })();
   }, [user]);
 
@@ -43,6 +59,22 @@ export default function Profile() {
             <div><dt className="kh-eyebrow">Email</dt><dd className="mt-1">{user.email}</dd></div>
             <div><dt className="kh-eyebrow">Role</dt><dd className="mt-1">{user.role}</dd></div>
           </dl>
+          {loyalty && (
+            <div className="mt-5 pt-5 border-t border-border">
+              <h3 className="kh-eyebrow mb-2">{lang === 'ar' ? 'مستواك في خربش' : 'Your Kharbesh tier'}</h3>
+              <div className="font-heading text-lg uppercase" style={{ fontFamily: 'var(--brand-font-heading)', color: 'var(--brand-accent)' }}>
+                {lang === 'ar' ? TIER_LABEL[loyalty.tier]?.ar : TIER_LABEL[loyalty.tier]?.en}
+              </div>
+              <ul className="text-sm text-muted-foreground mt-2 space-y-1">
+                <li>{lang === 'ar' ? `حسم دائم ${loyalty.discountPercent}%` : `${loyalty.discountPercent}% off every order`}</li>
+                <li>
+                  {loyalty.alwaysFreeShipping
+                    ? (lang === 'ar' ? 'شحن مجاني دائم' : 'Always free shipping')
+                    : (lang === 'ar' ? `${loyalty.freeShippingCreditsRemaining} شحنة مجانية متبقية` : `${loyalty.freeShippingCreditsRemaining} free shipping credit${loyalty.freeShippingCreditsRemaining === 1 ? '' : 's'} left`)}
+                </li>
+              </ul>
+            </div>
+          )}
         </section>
         <section className="md:col-span-2">
           <h2 className="font-heading text-xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'طلباتي' : 'Order history'}</h2>

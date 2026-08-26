@@ -21,6 +21,19 @@ const contactPatchSchema = z
   })
   .partial();
 
+const loyaltyPatchSchema = z
+  .object({
+    enabled: z.boolean(),
+    khebraThresholdCents: z.number().int().min(0),
+    asleeThresholdCents: z.number().int().min(0),
+    newKharboushDiscountPercent: z.number().min(0).max(100),
+    khebraDiscountPercent: z.number().min(0).max(100),
+    asleeDiscountPercent: z.number().min(0).max(100),
+    newKharboushFreeShippingCredits: z.number().int().min(0).max(999),
+    khebraFreeShippingCredits: z.number().int().min(0).max(999),
+  })
+  .partial();
+
 const settingsPatchSchema = z
   .object({
     storeName: z.string().min(1).max(120),
@@ -37,12 +50,14 @@ const settingsPatchSchema = z
     shippingFeeCents: z.number().int().min(0),
     freeShippingThresholdCents: z.number().int().min(0),
     contact: contactPatchSchema,
+    loyalty: loyaltyPatchSchema,
   })
   .partial();
 
 const ERROR_MESSAGES: Record<string, string> = {
   NO_PAYMENT_METHOD: "At least one payment method must stay enabled.",
   WHISH_HANDLE_REQUIRED: "Add a Whish number/handle before enabling Whish.",
+  ASLEE_THRESHOLD_TOO_LOW: "Kharboush Aslee's threshold must be higher than Kharboush Khebra's.",
 };
 
 export const settingsRouter = createRouter({

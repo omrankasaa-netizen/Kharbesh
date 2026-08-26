@@ -3,6 +3,7 @@ import { auditLogs, discounts, orders, products, promoCodes, type Order, type Or
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import { discountAmountCents, isWithinWindow, matchesDiscount } from "./promotions";
 import { computeShippingCents, getSettings, isPaymentMethodEnabled } from "./settings";
+import { applyLoyaltyToOrder, tierLabel } from "./loyalty";
 import { sendEmail } from "../lib/email";
 import { followUpEmail } from "../lib/emailTemplates";
 
@@ -29,6 +30,9 @@ export function toUiOrder(o: Order) {
     internal_status: o.internalStatus,
     language: o.language,
     is_guest: o.isGuest,
+    loyalty_tier_at_order: o.loyaltyTierAtOrder,
+    loyalty_discount: o.loyaltyDiscountCents / 100,
+    free_shipping_from_loyalty: o.freeShippingFromLoyalty,
     created_by_id: o.userId != null ? String(o.userId) : null,
     created_date: o.createdAt.toISOString(),
   };
@@ -147,8 +151,22 @@ export async function createOrder(input: CreateOrderInput) {
         .where(eq(products.id, product.id));
     }
 
-    const shippingCents = computeShippingCents(settings, subtotalCents);
     const netSubtotalCents = subtotalCents - automaticDiscountCents;
+
+    // Loyalty discount applies on top of automatic per-item discounts, and
+    // (below) a promo code applies on top of the loyalty-discounted amount
+    // — each layer is itemized into `appliedDiscounts` for transparency.
+    // Lifetime spend counts the GROSS pre-discount subtotal.
+    const loyaltyResult = await applyLoyaltyToOrder(tx, input.email, netSubtotalCents, subtotalCents, settings);
+    if (loyaltyResult.discountCents > 0) {
+      appliedDiscounts.push({
+        name: `Loyalty: ${tierLabel(loyaltyResult.tierAtOrder)}`,
+        amountCents: loyaltyResult.discountCents,
+      });
+    }
+    const netAfterLoyaltyCents = netSubtotalCents - loyaltyResult.discountCents;
+
+    const shippingCents = loyaltyResult.freeShipping ? 0 : computeShippingCents(settings, subtotalCents);
 
     let promoDiscountCents = 0;
     let appliedPromoCode: string | null = null;
@@ -162,8 +180,8 @@ export async function createOrder(input: CreateOrderInput) {
       if (!promo.active) throw new Error("PROMO_INACTIVE");
       if (!isWithinWindow(promo.startsAt, promo.expiresAt, now)) throw new Error("PROMO_EXPIRED");
       if (promo.maxUses != null && promo.usesCount >= promo.maxUses) throw new Error("PROMO_MAX_USES");
-      if (promo.minOrderCents != null && netSubtotalCents < promo.minOrderCents) throw new Error("PROMO_MIN_ORDER");
-      promoDiscountCents = discountAmountCents(promo, netSubtotalCents);
+      if (promo.minOrderCents != null && netAfterLoyaltyCents < promo.minOrderCents) throw new Error("PROMO_MIN_ORDER");
+      promoDiscountCents = discountAmountCents(promo, netAfterLoyaltyCents);
       appliedPromoCode = promo.code;
       appliedDiscounts.push({ name: `Promo: ${promo.code}`, amountCents: promoDiscountCents });
       await tx
@@ -172,7 +190,7 @@ export async function createOrder(input: CreateOrderInput) {
         .where(eq(promoCodes.id, promo.id));
     }
 
-    const discountCents = automaticDiscountCents + promoDiscountCents;
+    const discountCents = automaticDiscountCents + loyaltyResult.discountCents + promoDiscountCents;
     const totalCents = Math.max(0, subtotalCents - discountCents) + shippingCents;
 
     const [{ id }] = await tx
@@ -193,6 +211,9 @@ export async function createOrder(input: CreateOrderInput) {
         discountCents,
         promoCode: appliedPromoCode,
         appliedDiscounts: appliedDiscounts.length ? appliedDiscounts : null,
+        loyaltyTierAtOrder: loyaltyResult.tierAtOrder,
+        loyaltyDiscountCents: loyaltyResult.discountCents,
+        freeShippingFromLoyalty: loyaltyResult.freeShipping,
         totalCents,
         status: "order_received",
         internalStatus: "payment_pending",

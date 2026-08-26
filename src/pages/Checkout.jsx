@@ -24,8 +24,15 @@ export default function Checkout() {
   // creation — fetched here so the total shown matches what actually gets
   // charged instead of only reflecting the promo code.
   const [autoDiscount, setAutoDiscount] = useState(null); // { automatic_discount, net_subtotal, applied_discounts }
+  const [loyaltyPreview, setLoyaltyPreview] = useState(null); // { discountCents, discountPercent, freeShippingAvailable, tier }
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const TIER_LABEL = {
+    new_kharboush: { en: 'New Kharboush', ar: 'خربوش جديد' },
+    kharboush_khebra: { en: 'Kharboush Khebra', ar: 'خربوش خبرة' },
+    kharboush_aslee: { en: 'Kharboush Aslee', ar: 'خربوش أصلي' },
+  };
 
   useEffect(() => {
     if (items.length === 0) { setAutoDiscount(null); return; }
@@ -41,14 +48,32 @@ export default function Checkout() {
 
   const netSubtotal = autoDiscount ? autoDiscount.net_subtotal : subtotal;
   const autoDiscountAmount = autoDiscount?.automatic_discount || 0;
+  const loyaltyDiscountAmount = (loyaltyPreview?.discountCents || 0) / 100;
+  const netAfterLoyalty = Math.max(0, netSubtotal - loyaltyDiscountAmount);
   const discountAmount = promo?.discount || 0;
+  const loyaltyFreeShipping = !!loyaltyPreview?.freeShippingAvailable;
   // Mirrors computeShippingCents() on the server: shipping is a flat fee on
   // the raw (pre-discount) subtotal, waived above the free-shipping
-  // threshold, then added on top of the discounted subtotal.
+  // threshold or by a loyalty perk, then added on top of the discounted subtotal.
   const shippingFeeCents = settings?.shippingFeeCents ?? 400;
   const freeShippingThresholdCents = settings?.freeShippingThresholdCents ?? 10000;
-  const shipping = Math.round(subtotal * 100) >= freeShippingThresholdCents ? 0 : shippingFeeCents / 100;
-  const total = Math.max(0, subtotal - autoDiscountAmount - discountAmount) + shipping;
+  const shipping = (loyaltyFreeShipping || Math.round(subtotal * 100) >= freeShippingThresholdCents) ? 0 : shippingFeeCents / 100;
+  const total = Math.max(0, netAfterLoyalty - discountAmount) + shipping;
+
+  // Debounced loyalty preview — refetches whenever the email or the
+  // post-automatic-discount subtotal changes. Read-only: no credits are
+  // consumed and no tier progression happens until the order is placed.
+  useEffect(() => {
+    const email = form.email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || netSubtotal <= 0) { setLoyaltyPreview(null); return; }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      base44.entities.Loyalty.preview(email, netSubtotal)
+        .then((result) => { if (!cancelled) setLoyaltyPreview(result); })
+        .catch(() => { if (!cancelled) setLoyaltyPreview(null); });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [form.email, netSubtotal]);
 
   const applyPromo = async () => {
     if (!promoInput.trim()) return;
@@ -57,7 +82,7 @@ export default function Checkout() {
     try {
       // Match server logic: promo codes apply on top of the already
       // automatic-discounted subtotal, not the raw cart subtotal.
-      const result = await base44.entities.Promotions.previewCode(promoInput.trim(), netSubtotal);
+      const result = await base44.entities.Promotions.previewCode(promoInput.trim(), netAfterLoyalty);
       setPromo(result);
     } catch (err) {
       setPromo(null);
@@ -212,6 +237,23 @@ export default function Checkout() {
             <div className="flex items-center justify-between text-sm py-3 border-t border-border mt-2">
               <span>{t.checkout.autoDiscount}</span>
               <span style={{ color: 'var(--brand-accent)' }}>-${autoDiscountAmount.toFixed(2)}</span>
+            </div>
+          )}
+
+          {loyaltyPreview && (loyaltyDiscountAmount > 0 || loyaltyFreeShipping) && (
+            <div className="py-3 border-t border-border mt-2 text-sm space-y-1">
+              <div className="kh-eyebrow" style={{ color: 'var(--brand-accent)' }}>
+                {lang === 'ar' ? TIER_LABEL[loyaltyPreview.tier]?.ar : TIER_LABEL[loyaltyPreview.tier]?.en}
+              </div>
+              {loyaltyDiscountAmount > 0 && (
+                <div className="flex items-center justify-between">
+                  <span>{lang === 'ar' ? `حسم الولاء ${loyaltyPreview.discountPercent}%` : `Loyalty discount (${loyaltyPreview.discountPercent}%)`}</span>
+                  <span style={{ color: 'var(--brand-accent)' }}>-${loyaltyDiscountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              {loyaltyFreeShipping && (
+                <div className="text-muted-foreground">{lang === 'ar' ? 'شحن مجاني من برنامج الولاء' : 'Free shipping from your loyalty tier'}</div>
+              )}
             </div>
           )}
 

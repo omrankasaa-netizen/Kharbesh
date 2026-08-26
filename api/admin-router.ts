@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { createRouter, staffQuery, adminQuery, superAdminQuery } from "./middleware";
 import { uploadDataUrlToR2 } from "./lib/r2";
+import { listLoyaltyAccounts, adminUpdateLoyaltyAccount } from "./queries/loyalty";
+import { getSettings } from "./queries/settings";
 import {
   listUsers,
   updateProduct,
@@ -422,6 +424,31 @@ export const adminRouter = createRouter({
   deleteCampaign: adminQuery
     .input(z.object({ id: idParam }))
     .mutation(({ input }) => deleteCampaign(Number(input.id))),
+
+  // ── Admin tier: loyalty tier program ──────────────────────────────────────
+  loyaltyAccounts: adminQuery
+    .input(z.object({ search: z.string().max(320).optional() }).optional())
+    .query(({ input }) => listLoyaltyAccounts(input?.search)),
+
+  updateLoyaltyAccount: adminQuery
+    .input(
+      z.object({
+        email: z.string().email(),
+        patch: z
+          .object({
+            tier: z.enum(["new_kharboush", "kharboush_khebra", "kharboush_aslee"]),
+            freeShippingCredits: z.number().int().min(0).max(999),
+            tierLockedByAdmin: z.boolean(),
+            lifetimeSpentCents: z.number().int().min(0),
+            notes: z.string().max(2000).nullable(),
+          })
+          .partial(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const settings = await getSettings();
+      return adminUpdateLoyaltyAccount(input.email, input.patch, settings.loyalty);
+    }),
 
   // ── Super admin tier: staff roles + financials ────────────────────────────
   staff: superAdminQuery.query(() => listStaff()),

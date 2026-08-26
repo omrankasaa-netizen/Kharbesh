@@ -4,6 +4,8 @@ import * as schema from "@db/schema";
 import { createRouter, publicQuery, authedQuery } from "./middleware";
 import { createOrder, getOrderById, listOrdersForUser, trackOrder } from "./queries/orders";
 import { previewPromoCode, previewCartDiscounts, listActiveCampaigns } from "./queries/promotions";
+import { previewLoyaltyForOrder } from "./queries/loyalty";
+import { getSettings } from "./queries/settings";
 import { getDb } from "./queries/connection";
 import { sendEmail } from "./lib/email";
 import { orderConfirmationEmail, adminNewOrderEmail } from "./lib/emailTemplates";
@@ -122,4 +124,15 @@ export const orderRouter = createRouter({
     .query(({ input }) => previewCartDiscounts(input)),
 
   activeCampaigns: publicQuery.query(() => listActiveCampaigns()),
+
+  // Read-only loyalty preview for the Checkout order-summary panel — no
+  // DB writes, no tier progression, no free-shipping credit consumption.
+  // `netSubtotal` should be the subtotal AFTER automatic per-item
+  // discounts (same base createOrder uses), in dollars.
+  previewLoyalty: publicQuery
+    .input(z.object({ email: z.string().email(), netSubtotal: z.number().min(0).max(1_000_000) }))
+    .query(async ({ input }) => {
+      const settings = await getSettings();
+      return previewLoyaltyForOrder(input.email, Math.round(input.netSubtotal * 100), settings);
+    }),
 });

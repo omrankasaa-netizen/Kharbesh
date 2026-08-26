@@ -38,6 +38,7 @@ const AdminFactory = lazy(() => import('@/pages/admin/AdminFactory'));
 const AdminMessages = lazy(() => import('@/pages/admin/AdminMessages'));
 const AdminFinancials = lazy(() => import('@/pages/admin/AdminFinancials'));
 const AdminPromotions = lazy(() => import('@/pages/admin/AdminPromotions'));
+const AdminLoyalty = lazy(() => import('@/pages/admin/AdminLoyalty'));
 const AdminStaff = lazy(() => import('@/pages/admin/AdminStaff'));
 const CustomerCRM = lazy(() => import('@/pages/admin/CustomerCRM'));
 const StoreAnalytics = lazy(() => import('@/pages/admin/StoreAnalytics'));
@@ -98,6 +99,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/analytics" element={<AdminGuard minRole="admin"><StoreAnalytics /></AdminGuard>} />
           <Route path="/admin/settings" element={<AdminGuard minRole="admin"><SiteSettings /></AdminGuard>} />
           <Route path="/admin/promotions" element={<AdminGuard minRole="admin"><AdminPromotions /></AdminGuard>} />
+          <Route path="/admin/loyalty" element={<AdminGuard minRole="admin"><AdminLoyalty /></AdminGuard>} />
           <Route path="/admin/financials" element={<AdminGuard minRole="super_admin"><AdminFinancials /></AdminGuard>} />
           <Route path="/admin/staff" element={<AdminGuard minRole="super_admin"><AdminStaff /></AdminGuard>} />
           <Route path="/profile" element={<Profile />} />

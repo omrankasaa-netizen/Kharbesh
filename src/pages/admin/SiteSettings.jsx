@@ -46,13 +46,34 @@ export default function SiteSettings() {
     setSaved(false);
   };
 
+  const setLoyalty = (k) => (e) => {
+    const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setS((p) => ({ ...p, loyalty: { ...p.loyalty, [k]: val } }));
+    setSaved(false);
+  };
+
+  // Loyalty thresholds are cents server-side, dollars here.
+  const setLoyaltyDollars = (k) => (e) => {
+    const dollars = parseFloat(e.target.value);
+    setS((p) => ({ ...p, loyalty: { ...p.loyalty, [k]: Number.isFinite(dollars) ? Math.round(dollars * 100) : 0 } }));
+    setSaved(false);
+  };
+
+  const setLoyaltyNumber = (k) => (e) => {
+    const n = parseFloat(e.target.value);
+    setS((p) => ({ ...p, loyalty: { ...p.loyalty, [k]: Number.isFinite(n) ? n : 0 } }));
+    setSaved(false);
+  };
+
   const noPaymentMethodSelected = !!s && !s.payment.codEnabled && !s.payment.whishEnabled;
   const whishMissingHandle = !!s && s.payment.whishEnabled && !s.payment.whishHandle.trim();
+  const asleeThresholdTooLow = !!s && s.loyalty && s.loyalty.asleeThresholdCents <= s.loyalty.khebraThresholdCents;
 
   const save = async (e) => {
     e.preventDefault();
     if (noPaymentMethodSelected) { setError(lang === 'ar' ? 'خلّي طريقة دفع واحدة مفعّلة على الأقل.' : 'Keep at least one payment method enabled.'); return; }
     if (whishMissingHandle) { setError(lang === 'ar' ? 'ضيف رقم Whish قبل تفعيله.' : 'Add a Whish number before enabling it.'); return; }
+    if (asleeThresholdTooLow) { setError(lang === 'ar' ? 'حد Kharboush Aslee لازم يكون أعلى من حد Kharboush Khebra.' : "Kharboush Aslee's threshold must be higher than Kharboush Khebra's."); return; }
     setSaving(true);
     setError('');
     try {
@@ -176,6 +197,59 @@ export default function SiteSettings() {
               <input type="number" min="0" step="1" value={(s.freeShippingThresholdCents / 100).toFixed(2)} onChange={setShippingDollars('freeShippingThresholdCents')} className="kh-input" />
             </label>
           </div>
+        </section>
+
+        <section className="bg-card border border-border rounded-md p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'برنامج الولاء' : 'Loyalty'}</h2>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={!!s.loyalty?.enabled} onChange={setLoyalty('enabled')} />
+              <span className="text-sm">{lang === 'ar' ? 'مفعّل' : 'Enabled'}</span>
+            </label>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {lang === 'ar'
+              ? 'New Kharboush يبلش عند التسجيل أو أول طلب. الترقية لـ Khebra وAslee بتصير أوتوماتيك حسب إجمالي الصرف — ما بترجع لورا.'
+              : 'New Kharboush starts at registration or first checkout. Upgrades to Khebra and Aslee happen automatically based on lifetime spend — tiers never downgrade.'}
+          </p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'New Kharboush — حسم %' : 'New Kharboush — discount %'}</span>
+              <input type="number" min="0" max="100" step="0.5" value={s.loyalty?.newKharboushDiscountPercent ?? 0} onChange={setLoyaltyNumber('newKharboushDiscountPercent')} className="kh-input" />
+            </label>
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'New Kharboush — عدد شحنات مجانية' : 'New Kharboush — free shipping credits'}</span>
+              <input type="number" min="0" step="1" value={s.loyalty?.newKharboushFreeShippingCredits ?? 0} onChange={setLoyaltyNumber('newKharboushFreeShippingCredits')} className="kh-input" />
+            </label>
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'حد Kharboush Khebra — إجمالي صرف ($)' : 'Kharboush Khebra threshold — lifetime spend ($)'}</span>
+              <input type="number" min="0" step="10" value={((s.loyalty?.khebraThresholdCents ?? 0) / 100).toFixed(2)} onChange={setLoyaltyDollars('khebraThresholdCents')} className="kh-input" />
+            </label>
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'Kharboush Khebra — حسم %' : 'Kharboush Khebra — discount %'}</span>
+              <input type="number" min="0" max="100" step="0.5" value={s.loyalty?.khebraDiscountPercent ?? 0} onChange={setLoyaltyNumber('khebraDiscountPercent')} className="kh-input" />
+            </label>
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'Kharboush Khebra — عدد شحنات مجانية' : 'Kharboush Khebra — free shipping credits'}</span>
+              <input type="number" min="0" step="1" value={s.loyalty?.khebraFreeShippingCredits ?? 0} onChange={setLoyaltyNumber('khebraFreeShippingCredits')} className="kh-input" />
+            </label>
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'حد Kharboush Aslee — إجمالي صرف ($)' : 'Kharboush Aslee threshold — lifetime spend ($)'}</span>
+              <input type="number" min="0" step="10" value={((s.loyalty?.asleeThresholdCents ?? 0) / 100).toFixed(2)} onChange={setLoyaltyDollars('asleeThresholdCents')} className="kh-input" />
+            </label>
+            <label className="block">
+              <span className="kh-eyebrow block mb-1">{lang === 'ar' ? 'Kharboush Aslee — حسم % (دائم)' : 'Kharboush Aslee — discount % (permanent)'}</span>
+              <input type="number" min="0" max="100" step="0.5" value={s.loyalty?.asleeDiscountPercent ?? 0} onChange={setLoyaltyNumber('asleeDiscountPercent')} className="kh-input" />
+            </label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {lang === 'ar' ? 'Kharboush Aslee دايماً شحن مجاني، ما بيصرف رصيد.' : 'Kharboush Aslee always ships free — it doesn’t consume a credit.'}
+          </p>
+          {asleeThresholdTooLow && (
+            <p className="text-sm" style={{ color: 'var(--brand-destructive)' }}>
+              {lang === 'ar' ? 'حد Aslee لازم يكون أعلى من حد Khebra.' : "Aslee's threshold must be higher than Khebra's."}
+            </p>
+          )}
         </section>
 
         <section className="bg-card border border-border rounded-md p-6 space-y-4">

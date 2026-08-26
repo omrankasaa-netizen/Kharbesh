@@ -3,6 +3,8 @@ import * as schema from "@db/schema";
 import type { InsertUser } from "@db/schema";
 import { getDb } from "./connection";
 import { env } from "../lib/env";
+import { ensureLoyaltyAccountForEmail } from "./loyalty";
+import { getSettings } from "./settings";
 
 export async function findUserByUnionId(unionId: string) {
   const rows = await getDb()
@@ -58,4 +60,14 @@ export async function upsertUser(data: InsertUser) {
     .insert(schema.users)
     .values(values)
     .onDuplicateKeyUpdate({ set: updateSet });
+
+  // Secondary/redundant loyalty seed — covers Google + email-OTP sign-in
+  // ("on registration"). Kimi-only logins don't pass an email so they're
+  // skipped here; the primary seed path for everyone else (including
+  // guest checkout) is `applyLoyaltyToOrder`'s own create-if-missing
+  // logic, which fires regardless of this hook.
+  if (values.email) {
+    const settings = await getSettings();
+    await ensureLoyaltyAccountForEmail(values.email, settings.loyalty);
+  }
 }

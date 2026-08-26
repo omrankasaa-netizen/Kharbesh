@@ -16,6 +16,7 @@ const LINKS = [
   { to: '/admin/analytics', label_en: 'Analytics', label_ar: 'التحليلات', minRole: 'admin' },
   { to: '/admin/settings', label_en: 'Settings', label_ar: 'الإعدادات', minRole: 'admin' },
   { to: '/admin/promotions', label_en: 'Promotions', label_ar: 'الحسومات', minRole: 'admin' },
+  { to: '/admin/loyalty', label_en: 'Loyalty', label_ar: 'برنامج الولاء', minRole: 'admin' },
   { to: '/admin/financials', label_en: 'Financials', label_ar: 'المالية', minRole: 'super_admin' },
   { to: '/admin/staff', label_en: 'Staff', label_ar: 'الفريق', minRole: 'super_admin' },
 ];
