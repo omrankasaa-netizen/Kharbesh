@@ -236,9 +236,31 @@ export async function createOrder(input: CreateOrderInput) {
   });
 }
 
-export async function getOrderById(id: number) {
+export type OrderAccessContext = {
+  userEmail?: string | null;
+  isStaff?: boolean;
+  contact?: string;
+};
+
+/**
+ * Order lookup is no longer an open read: an order row is full PII
+ * (name, phone, address), so the caller must either be staff, own the
+ * session the order was placed under, or know the email/phone attached
+ * to the order — the same bar as guest tracking. Returns null (not an
+ * error) when access fails so the two cases are indistinguishable.
+ */
+export async function getOrderById(id: number, access: OrderAccessContext = {}) {
   const row = await getDb().query.orders.findFirst({ where: eq(orders.id, id) });
-  return row ? toUiOrder(row) : null;
+  if (!row) return null;
+  if (access.isStaff) return toUiOrder(row);
+  if (access.userEmail && row.email.toLowerCase() === access.userEmail.toLowerCase()) {
+    return toUiOrder(row);
+  }
+  const contact = access.contact?.trim();
+  if (contact && (contact.toLowerCase() === row.email.toLowerCase() || contact === row.phone)) {
+    return toUiOrder(row);
+  }
+  return null;
 }
 
 /** Guest order tracking: requires order number AND matching email/phone. */
@@ -263,8 +285,13 @@ export async function listOrdersForUser(email: string) {
   return rows.map(toUiOrder);
 }
 
-export async function listAllOrders(limit = 200) {
-  const rows = await getDb().select().from(orders).orderBy(desc(orders.createdAt)).limit(limit);
+export async function listAllOrders(limit = 50, offset = 0) {
+  const rows = await getDb()
+    .select()
+    .from(orders)
+    .orderBy(desc(orders.createdAt))
+    .limit(limit)
+    .offset(offset);
   return rows.map(toUiOrder);
 }
 
@@ -274,16 +301,40 @@ export async function updateOrderStatus(
   actorUserId: number,
 ) {
   const db = getDb();
-  await db.update(orders).set({ status, updatedAt: new Date() }).where(eq(orders.id, id));
-  await db.insert(auditLogs).values({
-    actorUserId,
-    action: "order.status_updated",
-    entity: "order",
-    entityId: String(id),
-    detail: { status },
+  return db.transaction(async (tx) => {
+    const [prev] = await tx.select().from(orders).where(eq(orders.id, id)).for("update");
+    if (!prev) return null;
+
+    // Delivered/cancelled drive the internal bookkeeping flag the finance
+    // views read — update both columns in one transaction so they can
+    // never disagree.
+    const internalStatus =
+      status === "delivered" ? "paid" : status === "cancelled" ? "cancelled" : prev.internalStatus;
+    await tx.update(orders).set({ status, internalStatus, updatedAt: new Date() }).where(eq(orders.id, id));
+
+    // Cancelling hands the reserved units back to the pool so preorder
+    // capacity (limited_quantity products) frees up again.
+    if (status === "cancelled" && prev.status !== "cancelled") {
+      for (const item of prev.items ?? []) {
+        const productId = Number(item.productId);
+        if (!Number.isInteger(productId) || !(item.quantity > 0)) continue;
+        await tx
+          .update(products)
+          .set({ unitsSold: sql`greatest(0, ${products.unitsSold} - ${item.quantity})` })
+          .where(eq(products.id, productId));
+      }
+    }
+
+    await tx.insert(auditLogs).values({
+      actorUserId,
+      action: "order.status_updated",
+      entity: "order",
+      entityId: String(id),
+      detail: { status, previous_status: prev.status },
+    });
+    const [row] = await tx.select().from(orders).where(eq(orders.id, id));
+    return row ? toUiOrder(row) : null;
   });
-  const row = await db.query.orders.findFirst({ where: eq(orders.id, id) });
-  return row ? toUiOrder(row) : null;
 }
 
 /**
