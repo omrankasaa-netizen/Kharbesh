@@ -92,7 +92,7 @@
     "autoprefixer": "^10.4.23",
     "drizzle-kit": "^0.31.8",
     "esbuild": "^0.27.2",
-    "eslint": "^9.39.1",
+    "eslint": "^10.9.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
