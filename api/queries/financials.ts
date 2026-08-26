@@ -104,6 +104,9 @@ export async function getFinancialSummary(from?: string, to?: string) {
   const conditions = [];
   if (from) conditions.push(gte(orders.createdAt, new Date(from)));
   if (to) conditions.push(lte(orders.createdAt, new Date(to + "T23:59:59")));
+  // Cancelled orders never became revenue — exclude them from the summary
+  // (and from the units driving the COGS approximation).
+  conditions.push(ne(orders.status, "cancelled"));
   const orderRows = conditions.length
     ? await db.select().from(orders).where(and(...conditions))
     : await db.select().from(orders);

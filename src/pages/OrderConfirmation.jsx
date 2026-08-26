@@ -15,7 +15,14 @@ export default function OrderConfirmation() {
   useEffect(() => {
     (async () => {
       try {
-        const o = await base44.entities.Order.get(id);
+        // Checkout stashes the order's email here so the confirmation page
+        // can prove ownership — the server no longer serves order details
+        // to a bare id.
+        let contact;
+        try {
+          contact = sessionStorage.getItem(`kh_order_contact_${id}`) || undefined;
+        } catch { /* storage unavailable — server will fall back to session */ }
+        const o = await base44.entities.Order.get(id, contact);
         setOrder(o);
       } catch { setOrder(null); }
       finally { setLoading(false); }
@@ -23,7 +30,15 @@ export default function OrderConfirmation() {
   }, [id]);
 
   if (loading) return <div className="max-w-[800px] mx-auto px-6 py-20 text-muted-foreground">{t.common.loading}</div>;
-  if (!order) return <div className="max-w-[800px] mx-auto px-6 py-20"><p>Order not found.</p><Link to="/shop" className="kh-btn-text mt-4">{t.nav.shop}</Link></div>;
+  if (!order) {
+    return (
+      <div className="max-w-[800px] mx-auto px-6 py-20 text-center">
+        <p className="text-muted-foreground">We couldn't load this order's details here.</p>
+        <p className="text-sm text-muted-foreground mt-2">Use your order number and email to check its status.</p>
+        <Link to="/track" className="kh-btn-scribble mt-6 inline-block">{t.confirm.track}</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[800px] mx-auto px-4 sm:px-6 py-16">

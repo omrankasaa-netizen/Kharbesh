@@ -50,6 +50,13 @@
       "when": 1787764072257,
       "tag": "0006_add_loyalty_tiers",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1787773479847,
+      "tag": "0007_add_cancelled_order_status",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@ describe("commerce input validation", () => {
       city: "Beirut",
       country: "Lebanon",
       language: "en",
+      paymentMethod: "cash_on_delivery",
       items: [{ productId: "1", size: "M", color: "Black", quantity: 2 }],
     });
 

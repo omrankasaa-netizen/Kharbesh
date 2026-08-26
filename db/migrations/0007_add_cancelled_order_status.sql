@@ -1,0 +1,1 @@
+ALTER TABLE `orders` MODIFY `status` enum('order_received','preorder_confirmed','in_production','being_printed','preparing_shipment','on_the_way','delivered','needs_attention','cancelled') NOT NULL DEFAULT 'order_received';--> statement-breakpoint
