@@ -68,6 +68,7 @@ const dictionaries = {
       featDeliveryLebanon: 'Delivery all over Lebanon',
       featShipping: 'Flat $4 shipping',
       featShippingNote: 'Free above $100',
+      qualityBlurb: 'A true classic-cut tee in soft, premium-quality cotton — designed and made in Lebanon.',
     },
     cart: {
       title: 'Cart',
@@ -260,6 +261,7 @@ const dictionaries = {
       featDeliveryLebanon: 'توصيل لكل لبنان',
       featShipping: 'شحن بـ 4$ فقط',
       featShippingNote: 'مجاني فوق الـ 100$',
+      qualityBlurb: 'قصّة كلاسيك حقيقية، من قطن طري وبجودة بريميوم — تصميم وصنع في لبنان.',
     },
     cart: {
       title: 'السلة',

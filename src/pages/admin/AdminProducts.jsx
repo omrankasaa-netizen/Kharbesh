@@ -13,7 +13,7 @@ const PREORDER_TYPES = ['always_on', 'open_until', 'quantity_target', 'limited_q
 
 // Sensible starting price per garment type — staff can still override.
 // Tees default to $35 per the brand's current pricing (Aug 2026).
-const DEFAULT_PRICE_BY_TYPE = { tee: 35, hoodie: 55, accessory: 20 };
+const DEFAULT_PRICE_BY_TYPE = { tee: 35, hoodie: 35, accessory: 35 };
 
 const emptyForm = {
   name_en: '', name_ar: '', phrase_en: '', phrase_ar: '', payoff_en: '',
@@ -585,7 +585,7 @@ export default function AdminProducts() {
             </Field>
             <Field label={lang === 'ar' ? 'المقاسات' : 'Sizes'}>
               <TogglePills
-                options={['XS', 'S', 'M', 'L', 'XL', 'XXL']}
+                options={['S', 'M', 'L', 'XL', 'XXL']}
                 selected={form.sizes}
                 onChange={(v) => setForm((f) => ({ ...f, sizes: v }))}
               />

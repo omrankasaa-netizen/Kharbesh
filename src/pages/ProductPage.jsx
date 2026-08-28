@@ -290,6 +290,7 @@ export default function ProductPage() {
         </section>
         <section style={{ background: 'var(--paper)' }} className="p-6 sm:p-8">
           <span className="kh-eyebrow">{lang === 'ar' ? 'القطعة' : 'The piece'}</span>
+          <p className="mt-4 text-sm leading-relaxed" style={{ color: 'var(--ink)' }}>{t.product.qualityBlurb}</p>
           <ul className="mt-4 space-y-2 text-sm" style={{ color: 'var(--muted)' }}>
             {product.fit_en && <li><strong style={{ color: 'var(--ink)' }}>{t.product.fit}:</strong> {product.fit_en}</li>}
             {product.placement && <li><strong style={{ color: 'var(--ink)' }}>{t.product.print}:</strong> {product.placement}</li>}

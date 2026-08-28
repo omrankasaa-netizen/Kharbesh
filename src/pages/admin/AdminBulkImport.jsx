@@ -6,13 +6,13 @@ import { useI18n } from '@/lib/i18n';
 
 const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
 const STATUSES = ['draft', 'active'];
-const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-const DEFAULT_PRICE_BY_TYPE = { tee: 35, hoodie: 55, accessory: 20 };
+const SIZE_OPTIONS = ['S', 'M', 'L', 'XL', 'XXL'];
+const DEFAULT_PRICE_BY_TYPE = { tee: 35, hoodie: 35, accessory: 35 };
 
 const TEMPLATE_HEADER = ['name_en', 'name_ar', 'phrase_en', 'description_en', 'product_type', 'price', 'sizes', 'status'];
 const TEMPLATE_ROWS = [
-  ['Bala 7ob Bala Batikh', '', '3andi 7ob willa batikh? khayyer.', '', 'tee', '35', 'XS;S;M;L;XL;XXL', 'draft'],
-  ['Sha3eb Byeshrab Ahweh Ktir', '', '', '', 'tee', '35', 'XS;S;M;L;XL;XXL', 'draft'],
+  ['Bala 7ob Bala Batikh', '', '3andi 7ob willa batikh? khayyer.', '', 'tee', '35', 'S;M;L;XL;XXL', 'draft'],
+  ['Sha3eb Byeshrab Ahweh Ktir', '', '', '', 'tee', '35', 'S;M;L;XL;XXL', 'draft'],
 ];
 
 let rowSeq = 0;

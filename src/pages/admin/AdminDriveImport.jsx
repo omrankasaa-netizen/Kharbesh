@@ -7,8 +7,8 @@ import { useI18n } from '@/lib/i18n';
 
 const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
 const STATUSES = ['draft', 'active'];
-const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-const DEFAULT_PRICE_BY_TYPE = { tee: 35, hoodie: 55, accessory: 20 };
+const SIZE_OPTIONS = ['S', 'M', 'L', 'XL', 'XXL'];
+const DEFAULT_PRICE_BY_TYPE = { tee: 35, hoodie: 35, accessory: 35 };
 
 const CONNECT_ERROR_COPY = {
   access_denied: { en: 'Drive connection was cancelled.', ar: 'تم إلغاء ربط Drive.' },

@@ -7,7 +7,7 @@ import { useI18n } from '@/lib/i18n';
 
 const PENDING_STATUSES = ['order_received', 'preorder_confirmed', 'in_production'];
 const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
-const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 
 function exportToExcel(factoryOrder) {
   const rows = factoryOrder.items.map((it) => ({

@@ -17,8 +17,8 @@ import { classifyGarmentColor, GARMENT_COLOR_ANCHORS, REVIEW_SUGGESTED_DISTANCE 
 
 const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
 const STATUSES = ['draft', 'active'];
-const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-const DEFAULT_PRICE_BY_TYPE = { tee: 35, hoodie: 55, accessory: 20 };
+const SIZE_OPTIONS = ['S', 'M', 'L', 'XL', 'XXL'];
+const DEFAULT_PRICE_BY_TYPE = { tee: 35, hoodie: 35, accessory: 35 };
 
 function SizePills({ selected, onChange }) {
   return (
