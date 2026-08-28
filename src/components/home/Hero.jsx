@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useI18n } from '@/lib/i18n';
-import { READY_DESIGNS } from '@/lib/readyDesigns';
+import { useProducts } from '@/lib/useCatalog.jsx';
 import { BRAND_ASSETS } from '@/lib/brandAssets';
 import heroMain from '@/assets/designs/hero-main.jpg';
 
@@ -33,7 +33,8 @@ function splitAccent(line) {
 
 export default function Hero() {
   const { lang } = useI18n();
-  const lead = READY_DESIGNS[5];
+  const { products } = useProducts();
+  const lead = products[0];
   const lines = CAMPAIGNS[lang] || CAMPAIGNS.en;
 
   const [idx, setIdx] = useState(0);
@@ -127,22 +128,24 @@ export default function Hero() {
       </div>
 
       {/* Purchasable drop chip — pinned to the photo, bottom corner */}
-      <Link to="/shop" className="kh-hero-chip group">
-        <span className="kh-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>
-          {copy.dropTag} — {lead.code}
-        </span>
-        <span className="flex items-baseline gap-2">
-          <span style={{ fontFamily: "'Rakkas', 'IBM Plex Sans Arabic', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>
-            {lang === 'ar' ? lead.title_ar : lead.title_en}
+      {lead && (
+        <Link to={`/product/${lead.id}`} className="kh-hero-chip group">
+          <span className="kh-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>
+            {copy.dropTag}
           </span>
-          <span className="kh-mono text-[12px]" style={{ color: 'var(--ink)' }}>
-            ${lead.price}
+          <span className="flex items-baseline gap-2">
+            <span style={{ fontFamily: "'Rakkas', 'IBM Plex Sans Arabic', sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>
+              {lang === 'ar' ? (lead.name_ar || lead.name_en) : lead.name_en}
+            </span>
+            <span className="kh-mono text-[12px]" style={{ color: 'var(--ink)' }}>
+              ${lead.price}
+            </span>
           </span>
-        </span>
-        <span className="kh-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>
-          {copy.viewPiece}
-        </span>
-      </Link>
+          <span className="kh-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>
+            {copy.viewPiece}
+          </span>
+        </Link>
+      )}
 
       {/* The one loud sticker — rotated, lime, slightly unnecessary */}
       <span className="kh-hero-stamp" aria-hidden="true">{copy.stamp}</span>

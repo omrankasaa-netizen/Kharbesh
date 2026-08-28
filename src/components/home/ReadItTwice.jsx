@@ -1,37 +1,41 @@
 import React from 'react';
 import { Link } from 'react-router';
 import { useI18n } from '@/lib/i18n';
-import { READY_DESIGNS } from '@/lib/readyDesigns';
+import { useProducts } from '@/lib/useCatalog.jsx';
 
 /* Editorial gallery: why each Kharbesh reads twice.
-   Each entry pairs a detail crop of the artwork with the two readings. */
+   Curated copy per product id — pairs a detail crop of the LIVE product
+   photo with the two readings. Only renders when the matching product is
+   still active in the catalog; falls back to the next available product
+   if none of the curated ids are live, so the section never shows stale
+   artwork once a design is retired. */
 const ENTRIES = [
   {
-    id: 'financially-unstable',
+    matchNameIncludes: 'fine-ancially unstable',
     phrase: { en: "I'M FINE", ar: 'تمام' },
     first: { en: 'Tatmine hadye, ma2oule bsawt wadeh.', ar: 'طمأنة هادية، مقولة بصوت واضح.' },
     second: { en: 'La7ad ma el khat el a7mar byi2ta3 el jomle nossein: financially unstable.', ar: 'لحد ما الخط الأحمر بيقطع الجملة نصين: مالياً منهار.' },
-    crop: { x: '58%', y: '45%', scale: 1.8 },
+    crop: { x: '50%', y: '50%', scale: 1 },
   },
   {
-    id: 'masari-be-amen',
+    matchNameIncludes: 'massari bi amen',
     phrase: { en: 'MONEY IS SAFE', ar: 'المصاري بأمان' },
     first: { en: '3onwan mtamen, tale3 min bab el khazneh.', ar: 'عنوان مطمّن، طالع من باب الخزنة.' },
     second: { en: 'Bass mish ma3na. W ma kanet abadan.', ar: 'بس مش معنا. وما كانت أبداً.' },
-    crop: { x: '50%', y: '55%', scale: 1.8 },
-  },
-  {
-    id: 'jeyeh-3a-beli',
-    phrase: { en: 'IT CROSSED MY MIND', ar: 'جاي عبالي' },
-    first: { en: 'Khatra hadye, la7alak 3al tawle.', ar: 'خطرة هادية، لحالك عالطاولة.' },
-    second: { en: 'El no3 yalli ma byiji illa ma3 el sigara el talte.', ar: 'النوع يلي ما بيجي إلا مع السيكارة التالتة.' },
-    crop: { x: '50%', y: '58%', scale: 1.8 },
+    crop: { x: '50%', y: '50%', scale: 1 },
   },
 ];
 
 export default function ReadItTwice() {
   const { lang } = useI18n();
-  const items = ENTRIES.map((e) => ({ ...e, design: READY_DESIGNS.find((d) => d.id === e.id) })).filter((e) => e.design);
+  const { products, loading } = useProducts();
+
+  const items = ENTRIES.map((e) => ({
+    ...e,
+    product: products.find((p) => (p.name_en || '').toLowerCase().includes(e.matchNameIncludes)),
+  })).filter((e) => e.product);
+
+  if (!loading && items.length === 0) return null;
 
   return (
     <section style={{ background: 'var(--paper-2)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
@@ -48,20 +52,20 @@ export default function ReadItTwice() {
           </p>
         </div>
 
-        <div className="mt-12 grid gap-px lg:grid-cols-3" style={{ background: 'var(--line)', border: '1px solid var(--line)' }}>
+        <div className={`mt-12 grid gap-px ${items.length >= 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`} style={{ background: 'var(--line)', border: '1px solid var(--line)' }}>
           {items.map((e, i) => (
-            <article key={e.id} className="flex flex-col" style={{ background: 'var(--paper-2)' }}>
+            <article key={e.product.id} className="flex flex-col" style={{ background: 'var(--paper-2)' }}>
               {/* Detail crop of the artwork */}
               <div className="relative overflow-hidden" style={{ aspectRatio: '4 / 3', background: 'var(--paper-3)', borderBottom: '1px solid var(--line)' }}>
                 <img
-                  src={e.design.img}
-                  alt={`${e.design.title_en} — detail`}
+                  src={e.product.images?.[0]}
+                  alt={`${e.product.name_en} — detail`}
                   loading="lazy"
                   className="absolute inset-0 w-full h-full object-contain"
                   style={{ transform: `scale(${e.crop.scale})`, transformOrigin: `${e.crop.x} ${e.crop.y}` }}
                 />
                 <span className="kh-mono absolute top-3 left-3 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>
-                  {lang === 'ar' ? `تفصيل ٠${i + 1}` : `Detail 0${i + 1}`} — {e.design.code}
+                  {lang === 'ar' ? `تفصيل ٠${i + 1}` : `Detail 0${i + 1}`}
                 </span>
               </div>
 
@@ -85,7 +89,7 @@ export default function ReadItTwice() {
                   </div>
                 </dl>
 
-                <Link to="/shop" className="kh-btn-text mt-6 self-start !text-[13px]">
+                <Link to={`/product/${e.product.id}`} className="kh-btn-text mt-6 self-start !text-[13px]">
                   {lang === 'ar' ? 'شوف القطعة ←' : 'View piece →'}
                 </Link>
               </div>

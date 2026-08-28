@@ -1,11 +1,85 @@
 import React from 'react';
 import { Link } from 'react-router';
 import { useI18n } from '@/lib/i18n';
-import { READY_DESIGNS } from '@/lib/readyDesigns';
-import { BRAND_ASSETS, INK_FILTER } from '@/lib/brandAssets';
+import { useProducts, useColors, resolveColor } from '@/lib/useCatalog.jsx';
+import GarmentMockup, { contrastInk } from '@/components/GarmentMockup';
+
+const SHOWCASE_COUNT = 6;
+
+function ShowcaseCard({ product }) {
+  const { lang, t } = useI18n();
+  const colors = useColors();
+  const name = lang === 'ar' ? (product.name_ar || product.name_en) : product.name_en;
+  const coll = (product.collection_name || '').replace('Kharbesh ', '');
+  const isPreorder = product.preorder_type !== 'always_on';
+  const firstColorName = (product.approved_colors || [])[0];
+  const color = resolveColor(firstColorName, colors);
+  const hex = color?.hex || '#F0E9D6';
+  const ink = contrastInk(hex);
+  const img = product.images?.[1] ?? product.images?.[0];
+
+  return (
+    <Link to={`/product/${product.id}`} className="kh-cell kh-piece group flex flex-col">
+      <div className="flex items-center justify-between px-4 pt-4">
+        {coll ? (
+          <span
+            className="text-[10px] font-bold uppercase"
+            style={{ fontFamily: 'var(--brand-font-body)', letterSpacing: '.12em', color: 'var(--on-lime)', background: 'var(--lime)', padding: '3px 8px', borderRadius: 2 }}
+          >
+            {coll.toUpperCase()}
+          </span>
+        ) : <span />}
+        {isPreorder && (
+          <span className="kh-mono text-[11px]" style={{ color: 'var(--muted)' }}>
+            {t.product.preorder}
+          </span>
+        )}
+      </div>
+
+      <div className="kh-piece-media flex-1 flex items-end justify-center px-4 pt-2 relative" style={{ background: 'var(--brand-surface)' }}>
+        {img ? (
+          <img
+            src={img}
+            alt={name}
+            loading="lazy"
+            className="kh-piece-front w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            style={{ maxHeight: 260 }}
+          />
+        ) : (
+          <GarmentMockup
+            type={product.product_type}
+            color={hex}
+            textColor={ink}
+            phrase={product.phrase_ar}
+            className="w-[78%] h-[78%] transition-transform duration-300 group-hover:scale-[1.03]"
+          />
+        )}
+      </div>
+
+      <div className="px-4 pb-4 pt-3" style={{ borderTop: '1px solid var(--line)' }}>
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="kh-zig kh-zig-draw" style={{ fontFamily: 'var(--brand-font-body)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>
+            {name}
+          </span>
+          <span className="kh-mono text-[13px] shrink-0" style={{ color: 'var(--ink)' }}>
+            ${product.price}
+          </span>
+        </div>
+        <span className="kh-mono block mt-1 text-[11px] uppercase" style={{ color: 'var(--muted)' }}>
+          {lang === 'ar' ? 'شوف القطعة ←' : 'View piece →'}
+        </span>
+      </div>
+    </Link>
+  );
+}
 
 export default function DesignShowcase() {
   const { lang } = useI18n();
+  const { products, loading } = useProducts();
+  const featured = products.slice(0, SHOWCASE_COUNT);
+
+  if (!loading && featured.length === 0) return null;
+
   return (
     <section style={{ background: 'var(--paper)' }}>
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-16 sm:py-24">
@@ -26,54 +100,22 @@ export default function DesignShowcase() {
           </Link>
         </div>
 
-        <div className="kh-grid-hair grid grid-cols-2 lg:grid-cols-3">
-          {READY_DESIGNS.map((d) => (
-            <Link to="/shop" key={d.id} className="kh-cell kh-piece group flex flex-col">
-              <div className="flex items-center justify-between px-4 pt-4">
-                <span
-                  className="text-[10px] font-bold uppercase"
-                  style={{ fontFamily: 'var(--brand-font-body)', letterSpacing: '.12em', color: 'var(--on-lime)', background: 'var(--lime)', padding: '3px 8px', borderRadius: 2 }}
-                >
-                  {lang === 'ar' ? d.world_ar : d.world_en}
-                </span>
-                <span className="kh-mono text-[11px]" style={{ color: 'var(--muted)' }}>
-                  {d.code}
-                </span>
-              </div>
-
-              {/* Front artwork — swaps to back/neck view on hover (desktop) */}
-              <div className="kh-piece-media flex-1 flex items-end px-4 pt-2 relative">
-                <img
-                  src={d.img}
-                  alt={d.title_en}
-                  loading="lazy"
-                  className="kh-piece-front w-full object-contain"
-                  style={{ maxHeight: 260 }}
-                />
-                <div className="kh-piece-back absolute inset-0 flex flex-col items-center justify-center gap-2" aria-hidden="true">
-                  <img src={BRAND_ASSETS.monogramWhite} alt="" className="w-12 h-12" style={{ filter: INK_FILTER }} loading="lazy" />
-                  <span className="kh-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted)' }}>
-                    {lang === 'ar' ? 'الخلف' : 'Back'}
-                  </span>
+        {loading ? (
+          <div className="kh-grid-hair grid grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: SHOWCASE_COUNT }).map((_, i) => (
+              <div key={i} className="kh-cell flex flex-col animate-pulse">
+                <div className="aspect-square" style={{ background: 'var(--brand-surface)' }} />
+                <div className="px-4 pb-4 pt-3" style={{ borderTop: '1px solid var(--line)' }}>
+                  <div className="h-4 w-2/3 rounded-sm" style={{ background: 'var(--brand-surface)' }} />
                 </div>
               </div>
-
-              <div className="px-4 pb-4 pt-3" style={{ borderTop: '1px solid var(--line)' }}>
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="kh-zig kh-zig-draw" style={{ fontFamily: 'var(--brand-font-body)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>
-                    {lang === 'ar' ? d.title_ar : d.title_en}
-                  </span>
-                  <span className="kh-mono text-[13px] shrink-0" style={{ color: 'var(--ink)' }}>
-                    ${d.price}
-                  </span>
-                </div>
-                <span className="kh-mono block mt-1 text-[11px] uppercase" style={{ color: 'var(--muted)' }}>
-                  {lang === 'ar' ? 'شوف القطعة ←' : 'View piece →'}
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="kh-grid-hair grid grid-cols-2 lg:grid-cols-3">
+            {featured.map((p) => <ShowcaseCard key={p.id} product={p} />)}
+          </div>
+        )}
       </div>
     </section>
   );
