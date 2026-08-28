@@ -12,4 +12,5 @@ export const Paths = {
   login: "/login",
   oauthCallback: "/api/oauth/callback",
   googleOauthCallback: "/api/auth/google/callback",
+  driveOauthCallback: "/api/admin/drive/callback",
 } as const;

@@ -12,6 +12,8 @@ import {
   hardDeleteProduct,
   listAuditLogs,
 } from "./queries/admin";
+import { getDriveConnectionStatus, disconnectDrive } from "./queries/driveConnection";
+import { scanDriveFolder, commitDriveImport } from "./queries/driveImport";
 import {
   listAllProducts,
   createGarmentColor,
@@ -172,6 +174,36 @@ export const adminRouter = createRouter({
       }),
     )
     .mutation(({ ctx, input }) => bulkCreateProducts(input.items, ctx.user.id)),
+
+  // — Import from Drive: one-time Drive connect + folder scan/commit —
+  driveStatus: staffQuery.query(() => getDriveConnectionStatus()),
+  driveDisconnect: staffQuery.mutation(() => disconnectDrive()),
+  driveScan: staffQuery
+    .input(z.object({ folderLink: z.string().min(1).max(500) }))
+    .mutation(({ input }) => scanDriveFolder(input.folderLink)),
+  driveCommit: staffQuery
+    .input(
+      z.object({
+        items: z
+          .array(
+            z.object({
+              folderId: z.string(),
+              nameEn: z.string().min(1).max(180),
+              nameAr: z.string().max(180).nullable().optional(),
+              productType: productType,
+              price: z.number().min(0).max(1_000_000),
+              sizes: z.array(z.string()),
+              status: z.enum(["draft", "active"]),
+              garmentStyle: z.string().max(120).nullable().optional(),
+              collectionName: z.string().max(160).nullable().optional(),
+              colorFiles: z.record(z.string(), z.string()),
+            }),
+          )
+          .min(1)
+          .max(200),
+      }),
+    )
+    .mutation(({ ctx, input }) => commitDriveImport(input.items, ctx.user.id)),
 
   updateProduct: staffQuery
     .input(z.object({ id: idParam, data: productPatchSchema }))

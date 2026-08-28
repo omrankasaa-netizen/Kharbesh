@@ -420,6 +420,14 @@ export const kh = {
       },
     },
   },
+
+  /** Import from Drive admin tool: one-time Drive connect + folder scan/commit. */
+  driveImport: {
+    status: () => client.admin.driveStatus.query(),
+    disconnect: () => client.admin.driveDisconnect.mutate(),
+    scan: (folderLink) => client.admin.driveScan.mutate({ folderLink }),
+    commit: (items) => client.admin.driveCommit.mutate({ items }),
+  },
 };
 
 // The ported UI imports `{ base44 }` — keep that name working 1:1.

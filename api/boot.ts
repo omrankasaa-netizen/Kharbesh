@@ -7,6 +7,7 @@ import { createContext } from "./context";
 import { env } from "./lib/env";
 import { createOAuthCallbackHandler } from "./kimi/auth";
 import { createGoogleOAuthCallbackHandler } from "./google/auth";
+import { createDriveOAuthCallbackHandler } from "./google/driveAuth";
 import { Paths } from "@contracts/constants";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
@@ -78,6 +79,7 @@ app.use(
 );
 app.get(Paths.oauthCallback, createOAuthCallbackHandler());
 app.get(Paths.googleOauthCallback, createGoogleOAuthCallbackHandler());
+app.get(Paths.driveOauthCallback, createDriveOAuthCallbackHandler());
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
     endpoint: "/api/trpc",
