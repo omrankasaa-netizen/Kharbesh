@@ -242,29 +242,60 @@ export async function repairMislabeledAntracidPhotos(
     try {
       const antracidRows = (await db.execute(
         sql.raw(
-          `select id from \`product_color_images\` where productId = ${productId} and colorName = 'Antracid'`,
+          `select id, images from \`product_color_images\` where productId = ${productId} and colorName = 'Antracid'`,
         ),
-      )) as unknown as [{ id: number }[]];
-      if ((antracidRows[0] ?? []).length === 0) continue;
+      )) as unknown as [{ id: number; images: unknown }[]];
+      const antracidRow = (antracidRows[0] ?? [])[0];
+      if (!antracidRow) continue;
 
       const whiteRows = (await db.execute(
         sql.raw(
-          `select id from \`product_color_images\` where productId = ${productId} and colorName = 'White'`,
+          `select id, images from \`product_color_images\` where productId = ${productId} and colorName = 'White'`,
         ),
-      )) as unknown as [{ id: number }[]];
-      if ((whiteRows[0] ?? []).length > 0) {
+      )) as unknown as [{ id: number; images: unknown }[]];
+      const whiteRow = (whiteRows[0] ?? [])[0];
+
+      // A prior partial run (e.g. product creation itself, or the earlier
+      // version of this repair) already seeded an EMPTY White row for
+      // these products, which made the earlier "any White row exists ->
+      // skip" check silently no-op forever. Only skip when the White row
+      // already has real images; an empty one is safe (and correct) to
+      // fill in with the real photo currently sitting under Antracid.
+      const existingWhiteImages = Array.isArray(whiteRow?.images)
+        ? (whiteRow!.images as unknown[])
+        : [];
+      if (whiteRow && existingWhiteImages.length > 0) {
         console.log(
-          `[db] product ${productId} already has a White color-image row — skipping Antracid->White repair to avoid a duplicate.`,
+          `[db] product ${productId} already has a non-empty White color-image row — leaving both rows untouched pending manual review.`,
         );
         continue;
       }
 
-      await db.execute(
-        sql.raw(
-          `update \`product_color_images\` set colorName = 'White', updatedAt = NOW() where productId = ${productId} and colorName = 'Antracid'`,
-        ),
+      const antracidImagesJson = JSON.stringify(antracidRow.images ?? []).replace(
+        /'/g,
+        "''",
       );
-      console.log(`[db] repaired mislabeled color photo for product ${productId}: Antracid -> White`);
+
+      if (whiteRow) {
+        await db.execute(
+          sql.raw(
+            `update \`product_color_images\` set images = '${antracidImagesJson}', updatedAt = NOW() where id = ${whiteRow.id}`,
+          ),
+        );
+      } else {
+        await db.execute(
+          sql.raw(
+            `insert into \`product_color_images\` (productId, colorName, images, sortOrder, createdAt, updatedAt) values (${productId}, 'White', '${antracidImagesJson}', 0, NOW(), NOW())`,
+          ),
+        );
+      }
+
+      await db.execute(
+        sql.raw(`delete from \`product_color_images\` where id = ${antracidRow.id}`),
+      );
+      console.log(
+        `[db] repaired mislabeled color photo for product ${productId}: moved real photo from Antracid row into White row`,
+      );
     } catch (error) {
       console.error(`[db] FAILED to repair color label for product ${productId}:`, error);
     }
