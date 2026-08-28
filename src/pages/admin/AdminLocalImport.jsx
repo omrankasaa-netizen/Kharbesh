@@ -3,7 +3,7 @@ import { base44 } from '@/api/khClient';
 import { useColors } from '@/lib/useCatalog.jsx';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
-import { classifyGarmentColor } from '@/lib/localGarmentColorClassifier';
+import { classifyGarmentColor, GARMENT_COLOR_ANCHORS, REVIEW_SUGGESTED_DISTANCE } from '@/lib/localGarmentColorClassifier';
 
 // Local-folder version of the Drive import tool: same "one subfolder per
 // design, up to 4 color mockup photos" workflow and the same greedy
@@ -70,10 +70,26 @@ function ImageThumb({ candidate, muted, lang }) {
   );
 }
 
-/** Reads the garment color of every photo in a folder and greedily assigns
- * the single best match per color — mirrors the backend Drive classifier's
- * algorithm exactly (sort by distance, first-come-first-served per color,
- * leftovers become extras for manual assignment). */
+const COLOR_NAMES = GARMENT_COLOR_ANCHORS.map((a) => a.name);
+
+/**
+ * Reads the garment color of every photo in a folder, then finds the best
+ * overall pairing between the (up to 4) approved colors and the photos in
+ * that folder.
+ *
+ * Earlier version recorded only each photo's single best-guess color and
+ * dropped it entirely unless that guess was a very tight match. That broke
+ * down whenever two photos in the same folder both leaned toward the same
+ * anchor (e.g. two photos both reading closer to "White" under studio
+ * lighting) — the loser was discarded instead of being tried against the
+ * color that was actually still open, and folders where every photo's best
+ * guess collided ended up with zero photos matched at all.
+ *
+ * Instead: compute every (photo, color) distance, then repeatedly take the
+ * globally closest still-available pair until every color has a photo or
+ * every photo is used. This is the same class of fix as a min-cost bipartite
+ * match, sized for the handful of photos in one folder.
+ */
 async function classifyAndAssign(files) {
   const candidates = [];
   for (const file of files) {
@@ -82,17 +98,17 @@ async function classifyAndAssign(files) {
       candidates.push({
         file,
         thumbUrl: URL.createObjectURL(file),
-        guessedColor: guess.confident ? guess.colorName : null,
+        distances: guess.distances,
+        bestGuess: guess.colorName,
         confident: guess.confident,
-        distance: guess.distance,
       });
     } catch (err) {
       candidates.push({
         file,
         thumbUrl: '',
-        guessedColor: null,
+        distances: null,
+        bestGuess: null,
         confident: false,
-        distance: Infinity,
       });
     }
   }
@@ -100,15 +116,28 @@ async function classifyAndAssign(files) {
     c.id = `${file_key(c.file)}__${i}`;
   });
 
-  const colorMatches = {};
-  const claimed = new Set();
-  const sorted = [...candidates].sort((a, b) => a.distance - b.distance);
-  for (const c of sorted) {
-    if (!c.guessedColor || colorMatches[c.guessedColor] || claimed.has(c.id)) continue;
-    colorMatches[c.guessedColor] = c;
-    claimed.add(c.id);
+  const pairs = [];
+  for (const c of candidates) {
+    if (!c.distances) continue;
+    for (const color of COLOR_NAMES) {
+      pairs.push({ id: c.id, color, distance: c.distances[color] });
+    }
   }
-  return { candidates, colorMatches };
+  pairs.sort((a, b) => a.distance - b.distance);
+
+  const colorMatches = {};
+  const colorDistances = {};
+  const claimedIds = new Set();
+  const claimedColors = new Set();
+  for (const p of pairs) {
+    if (claimedIds.has(p.id) || claimedColors.has(p.color)) continue;
+    colorMatches[p.color] = candidates.find((c) => c.id === p.id);
+    colorDistances[p.color] = p.distance;
+    claimedIds.add(p.id);
+    claimedColors.add(p.color);
+    if (claimedColors.size === COLOR_NAMES.length) break;
+  }
+  return { candidates, colorMatches, colorDistances };
 }
 
 function file_key(file) {
@@ -169,12 +198,25 @@ function DesignCard({ design, colors, onUpdate, lang }) {
             const id = design.colorFiles[c.name_en];
             const candidate = id ? byId.get(id) : null;
             const autoId = design.autoColorFiles?.[c.name_en];
+            const isAutoStill = autoId && autoId === id;
+            const needsReview = isAutoStill && (design.colorDistances?.[c.name_en] ?? 0) > REVIEW_SUGGESTED_DISTANCE;
             return (
-              <div key={c.id} className="border border-border rounded-md p-2 flex items-center gap-2">
+              <div
+                key={c.id}
+                className="border rounded-md p-2 flex items-center gap-2"
+                style={{ borderColor: needsReview ? 'var(--brand-destructive)' : 'var(--border)' }}
+              >
                 <span className="w-3 h-3 rounded-full border border-border shrink-0" style={{ background: c.hex || '#ccc' }} aria-hidden />
                 <ImageThumb candidate={candidate} lang={lang} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium truncate">{c.name_en}</div>
+                  <div className="text-xs font-medium truncate flex items-center gap-1">
+                    {c.name_en}
+                    {needsReview && (
+                      <span title={lang === 'ar' ? 'راجع هالصورة — التخمين مش أكيد' : "Double-check this one \u2014 the guess isn't confident"} style={{ color: 'var(--brand-destructive)' }}>
+                        ⚠
+                      </span>
+                    )}
+                  </div>
                   <select
                     className="kh-input !text-[11px] !py-1 mt-1 w-full"
                     value={id || ''}
@@ -251,7 +293,7 @@ export default function AdminLocalImport() {
       const built = [];
       let i = 0;
       for (const [folderName, files] of groups) {
-        const { candidates, colorMatches } = await classifyAndAssign(files);
+        const { candidates, colorMatches, colorDistances } = await classifyAndAssign(files);
         const colorFiles = {};
         Object.entries(colorMatches).forEach(([color, c]) => { colorFiles[color] = c.id; });
         built.push({
@@ -266,6 +308,7 @@ export default function AdminLocalImport() {
           allCandidates: candidates,
           colorFiles,
           autoColorFiles: { ...colorFiles },
+          colorDistances,
         });
       }
       setDesigns(built);

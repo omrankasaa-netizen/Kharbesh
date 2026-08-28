@@ -16,6 +16,10 @@ export const GARMENT_COLOR_ANCHORS = [
 
 const CONFIDENT_MAX_DISTANCE = 70;
 
+/** Looser than CONFIDENT_MAX_DISTANCE — used only to flag a final assigned
+ * match as "worth a quick look" in the review UI, never to reject it. */
+export const REVIEW_SUGGESTED_DISTANCE = 100;
+
 function distance(a, b) {
   const dr = a[0] - b[0];
   const dg = a[1] - b[1];
@@ -83,16 +87,27 @@ async function averageCenterColor(file) {
   return [r / count, g / count, b / count];
 }
 
+/**
+ * Returns the distance from this photo's sampled color to EVERY anchor
+ * (not just the closest one). A folder-wide assignment step needs the full
+ * distance table to pick the best overall pairing between the 4 colors and
+ * the photos in a design's folder — picking only each photo's single
+ * best-guess color (the old behavior) meant two photos that both leaned
+ * toward the same anchor would collide, leaving the actually-open color
+ * unfilled even though one of those photos was a decent match for it.
+ */
 export async function classifyGarmentColor(file) {
   const avg = await averageCenterColor(file);
+  const distances = {};
   let best = GARMENT_COLOR_ANCHORS[0];
   let bestDist = Infinity;
   for (const anchor of GARMENT_COLOR_ANCHORS) {
     const d = distance(avg, anchor.rgb);
+    distances[anchor.name] = d;
     if (d < bestDist) {
       bestDist = d;
       best = anchor;
     }
   }
-  return { colorName: best.name, confident: bestDist <= CONFIDENT_MAX_DISTANCE, distance: bestDist };
+  return { colorName: best.name, confident: bestDist <= CONFIDENT_MAX_DISTANCE, distance: bestDist, distances };
 }
