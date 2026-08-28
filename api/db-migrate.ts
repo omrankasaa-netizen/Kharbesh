@@ -239,7 +239,7 @@ export async function repairMislabeledAntracidPhotos(
 ) {
   const allProductsDiag = (await db.execute(
     sql.raw(
-      `select p.id as productId, p.name as productName, pci.id, pci.colorName, pci.images from \`products\` p join \`product_color_images\` pci on pci.productId = p.id order by p.id, pci.colorName`,
+      `select p.id as productId, p.nameEn as productName, pci.id, pci.colorName, pci.images from \`products\` p join \`product_color_images\` pci on pci.productId = p.id order by p.id, pci.colorName`,
     ),
   )) as unknown as [
     { productId: number; productName: string; id: number; colorName: string; images: unknown }[],
