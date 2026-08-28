@@ -52,39 +52,51 @@ async function loadDrawable(file) {
   }
 }
 
-/** Average RGB of the photo's center-torso band — matches the backend
- * crop region exactly (22%/32% offset, 56%/40% size). */
+/** Median RGB of the torso's left/right side strips — matches the backend
+ * sampling strategy exactly. Deliberately avoids the center-chest band
+ * where a printed graphic almost always sits: averaging that band let
+ * bold dark print text drag a genuinely white shirt's color toward a
+ * darker anchor (observed misclassifying white shirts as "Antracid").
+ * Side strips stay plain fabric on virtually every mockup style, and the
+ * per-channel MEDIAN (not mean) means a stray print/shadow pixel can't
+ * skew the result unless it covers most of the sampled area. */
 async function averageCenterColor(file) {
   const source = await loadDrawable(file);
   const width = source.width || source.naturalWidth;
   const height = source.height || source.naturalHeight;
   if (!width || !height) throw new Error('Could not read image dimensions.');
 
-  const left = Math.round(width * 0.22);
   const top = Math.round(height * 0.32);
-  const cropWidth = Math.max(1, Math.round(width * 0.56));
-  const cropHeight = Math.max(1, Math.round(height * 0.4));
+  const stripHeight = Math.max(1, Math.round(height * 0.4));
+  const stripWidth = Math.max(1, Math.round(width * 0.14));
+  const leftStripX = Math.round(width * 0.08);
+  const rightStripX = Math.round(width * 0.78);
 
   const canvas = document.createElement('canvas');
-  canvas.width = cropWidth;
-  canvas.height = cropHeight;
+  canvas.width = stripWidth * 2;
+  canvas.height = stripHeight;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(source, left, top, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-  const { data } = ctx.getImageData(0, 0, cropWidth, cropHeight);
+  ctx.drawImage(source, leftStripX, top, stripWidth, stripHeight, 0, 0, stripWidth, stripHeight);
+  ctx.drawImage(source, rightStripX, top, stripWidth, stripHeight, stripWidth, 0, stripWidth, stripHeight);
+  const { data } = ctx.getImageData(0, 0, stripWidth * 2, stripHeight);
 
-  let r = 0;
-  let g = 0;
-  let b = 0;
-  let count = 0;
+  const rs = [];
+  const gs = [];
+  const bs = [];
   for (let i = 0; i < data.length; i += 4) {
-    r += data[i];
-    g += data[i + 1];
-    b += data[i + 2];
-    count++;
+    rs.push(data[i]);
+    gs.push(data[i + 1]);
+    bs.push(data[i + 2]);
   }
   if (typeof source.close === 'function') source.close();
-  if (count === 0) throw new Error('Empty crop region.');
-  return [r / count, g / count, b / count];
+  if (rs.length === 0) throw new Error('Empty crop region.');
+  return [median(rs), median(gs), median(bs)];
+}
+
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
 /**

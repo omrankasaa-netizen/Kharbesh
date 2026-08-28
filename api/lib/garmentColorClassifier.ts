@@ -48,10 +48,15 @@ function distance(a: [number, number, number], b: [number, number, number]): num
   return Math.sqrt(dr * dr + dg * dg + db * db + 3 * dLum * dLum);
 }
 
-/** Average RGB of the photo's center-torso band — front-facing product
- * mockups (model, shirt filling most of the frame) put the face in the
- * top ~30% and background at the extreme edges, so this band is
- * overwhelmingly fabric pixels in practice. */
+/** Median RGB of the torso's left/right side strips — deliberately avoids
+ * the center-chest band where a printed graphic almost always sits.
+ * Averaging the full center-torso region (the old approach) let bold dark
+ * print text drag a genuinely white/light shirt's average color toward a
+ * darker anchor (observed misclassifying white shirts as "Antracid").
+ * Side strips, just inside the arm seam, stay plain fabric on virtually
+ * every mockup style, and using the per-channel MEDIAN (not mean) across
+ * those pixels means even a stray print pixel or shadow can't skew the
+ * result unless it covers most of the sampled area. */
 async function averageCenterColor(buffer: Buffer): Promise<[number, number, number]> {
   const img = sharp(buffer).rotate();
   const meta = await img.metadata();
@@ -59,30 +64,42 @@ async function averageCenterColor(buffer: Buffer): Promise<[number, number, numb
   const height = meta.height ?? 0;
   if (!width || !height) throw new Error("Could not read image dimensions.");
 
-  const left = Math.round(width * 0.22);
   const top = Math.round(height * 0.32);
-  const cropWidth = Math.max(1, Math.round(width * 0.56));
-  const cropHeight = Math.max(1, Math.round(height * 0.4));
+  const stripHeight = Math.max(1, Math.round(height * 0.4));
+  const stripWidth = Math.max(1, Math.round(width * 0.14));
+  const leftStripX = Math.round(width * 0.08);
+  const rightStripX = Math.round(width * 0.78);
 
-  const { data, info } = await img
-    .extract({ left, top, width: cropWidth, height: cropHeight })
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
+  const strips = await Promise.all(
+    [leftStripX, rightStripX].map((left) =>
+      img
+        .clone()
+        .extract({ left, top, width: stripWidth, height: stripHeight })
+        .removeAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true }),
+    ),
+  );
 
-  const channels = info.channels;
-  let r = 0;
-  let g = 0;
-  let b = 0;
-  let count = 0;
-  for (let i = 0; i < data.length; i += channels) {
-    r += data[i];
-    g += data[i + 1];
-    b += data[i + 2];
-    count++;
+  const rs: number[] = [];
+  const gs: number[] = [];
+  const bs: number[] = [];
+  for (const { data, info } of strips) {
+    const channels = info.channels;
+    for (let i = 0; i < data.length; i += channels) {
+      rs.push(data[i]);
+      gs.push(data[i + 1]);
+      bs.push(data[i + 2]);
+    }
   }
-  if (count === 0) throw new Error("Empty crop region.");
-  return [r / count, g / count, b / count];
+  if (rs.length === 0) throw new Error("Empty crop region.");
+  return [median(rs), median(gs), median(bs)];
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
 export type ColorGuess = {

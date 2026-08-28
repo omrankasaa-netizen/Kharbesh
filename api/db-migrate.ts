@@ -221,3 +221,52 @@ export async function repairMigration0002Gaps(
     }
   }
 }
+
+/**
+ * One-time data repair for a Local Import color-guessing bug (fixed in the
+ * same change that adds this function — see api/lib/garmentColorClassifier.ts
+ * and src/lib/localGarmentColorClassifier.js). The old classifier averaged
+ * the full center-torso band, so a bold dark print graphic could drag a
+ * genuinely white shirt's average pixel color toward the "Antracid" anchor.
+ * Four already-imported products ended up with their one real photoshoot
+ * photo stored under colorName "Antracid" when the shirt in the photo is
+ * actually white. This is idempotent — it only acts on the exact rows still
+ * in the bad state (an Antracid row present, no White row yet), so it is
+ * safe to run on every boot and a no-op once applied.
+ */
+export async function repairMislabeledAntracidPhotos(
+  db: MySql2Database<Record<string, unknown>>,
+) {
+  const affectedProductIds = [26, 27, 29, 31];
+  for (const productId of affectedProductIds) {
+    try {
+      const antracidRows = (await db.execute(
+        sql.raw(
+          `select id from \`product_color_images\` where productId = ${productId} and colorName = 'Antracid'`,
+        ),
+      )) as unknown as [{ id: number }[]];
+      if ((antracidRows[0] ?? []).length === 0) continue;
+
+      const whiteRows = (await db.execute(
+        sql.raw(
+          `select id from \`product_color_images\` where productId = ${productId} and colorName = 'White'`,
+        ),
+      )) as unknown as [{ id: number }[]];
+      if ((whiteRows[0] ?? []).length > 0) {
+        console.log(
+          `[db] product ${productId} already has a White color-image row — skipping Antracid->White repair to avoid a duplicate.`,
+        );
+        continue;
+      }
+
+      await db.execute(
+        sql.raw(
+          `update \`product_color_images\` set colorName = 'White', updatedAt = NOW() where productId = ${productId} and colorName = 'Antracid'`,
+        ),
+      );
+      console.log(`[db] repaired mislabeled color photo for product ${productId}: Antracid -> White`);
+    } catch (error) {
+      console.error(`[db] FAILED to repair color label for product ${productId}:`, error);
+    }
+  }
+}

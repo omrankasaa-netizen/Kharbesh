@@ -111,7 +111,7 @@ if (env.isProduction) {
   try {
     const { migrate } = await import("drizzle-orm/mysql2/migrator");
     const { getDb } = await import("./queries/connection");
-    const { seedAlreadyAppliedMigrations, repairMigration0002Gaps } = await import(
+    const { seedAlreadyAppliedMigrations, repairMigration0002Gaps, repairMislabeledAntracidPhotos } = await import(
       "./db-migrate"
     );
     // Runs first and unconditionally: this database previously ended up
@@ -125,6 +125,7 @@ if (env.isProduction) {
     await repairMigration0002Gaps(getDb());
     await seedAlreadyAppliedMigrations(getDb(), "db/migrations");
     await migrate(getDb(), { migrationsFolder: "db/migrations" });
+    await repairMislabeledAntracidPhotos(getDb());
     console.log("[db] migrations applied.");
   } catch (error) {
     console.error("[db] migration step failed:", error);
