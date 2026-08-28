@@ -240,6 +240,17 @@ export async function repairMislabeledAntracidPhotos(
   const affectedProductIds = [26, 27, 29, 31];
   for (const productId of affectedProductIds) {
     try {
+      const allRows = (await db.execute(
+        sql.raw(
+          `select id, colorName, images from \`product_color_images\` where productId = ${productId} order by colorName`,
+        ),
+      )) as unknown as [{ id: number; colorName: string; images: unknown }[]];
+      for (const row of allRows[0] ?? []) {
+        console.log(
+          `[db] DIAGNOSTIC-ALL product ${productId} color=${row.colorName} id=${row.id} images=${JSON.stringify(row.images)}`,
+        );
+      }
+
       const antracidRows = (await db.execute(
         sql.raw(
           `select id, images from \`product_color_images\` where productId = ${productId} and colorName = 'Antracid'`,
