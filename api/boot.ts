@@ -111,7 +111,7 @@ if (env.isProduction) {
   try {
     const { migrate } = await import("drizzle-orm/mysql2/migrator");
     const { getDb } = await import("./queries/connection");
-    const { seedAlreadyAppliedMigrations, repairMigration0002Gaps, repairMislabeledAntracidPhotos } = await import(
+    const { seedAlreadyAppliedMigrations, repairMigration0002Gaps } = await import(
       "./db-migrate"
     );
     // Runs first and unconditionally: this database previously ended up
@@ -125,10 +125,21 @@ if (env.isProduction) {
     await repairMigration0002Gaps(getDb());
     await seedAlreadyAppliedMigrations(getDb(), "db/migrations");
     await migrate(getDb(), { migrationsFolder: "db/migrations" });
-    await repairMislabeledAntracidPhotos(getDb());
     console.log("[db] migrations applied.");
   } catch (error) {
     console.error("[db] migration step failed:", error);
+  }
+
+  // Runs unconditionally, independent of the migrate() try/catch above:
+  // that step has a separate, pre-existing "Query was empty" failure on
+  // every boot (unrelated to this repair) that would otherwise prevent
+  // this idempotent data fix from ever running.
+  try {
+    const { getDb } = await import("./queries/connection");
+    const { repairMislabeledAntracidPhotos } = await import("./db-migrate");
+    await repairMislabeledAntracidPhotos(getDb());
+  } catch (error) {
+    console.error("[db] Antracid photo repair step failed:", error);
   }
 
   serveStaticFiles(app);
