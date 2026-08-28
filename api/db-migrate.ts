@@ -255,6 +255,10 @@ export async function repairMislabeledAntracidPhotos(
       )) as unknown as [{ id: number; images: unknown }[]];
       const whiteRow = (whiteRows[0] ?? [])[0];
 
+      console.log(
+        `[db] DIAGNOSTIC product ${productId} — Antracid row id=${antracidRow.id} images=${JSON.stringify(antracidRow.images)}; White row id=${whiteRow?.id ?? "(none)"} images=${JSON.stringify(whiteRow?.images ?? null)}`,
+      );
+
       // A prior partial run (e.g. product creation itself, or the earlier
       // version of this repair) already seeded an EMPTY White row for
       // these products, which made the earlier "any White row exists ->
