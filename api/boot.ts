@@ -136,10 +136,10 @@ if (env.isProduction) {
   // this idempotent data fix from ever running.
   try {
     const { getDb } = await import("./queries/connection");
-    const { repairMislabeledAntracidPhotos } = await import("./db-migrate");
-    await repairMislabeledAntracidPhotos(getDb());
+    const { repairSwappedWhiteGreyPhotos } = await import("./db-migrate");
+    await repairSwappedWhiteGreyPhotos(getDb());
   } catch (error) {
-    console.error("[db] Antracid photo repair step failed:", error);
+    console.error("[db] White/Grey photo swap repair step failed:", error);
   }
 
   serveStaticFiles(app);

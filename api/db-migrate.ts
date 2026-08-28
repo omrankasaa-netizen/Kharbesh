@@ -223,98 +223,82 @@ export async function repairMigration0002Gaps(
 }
 
 /**
- * One-time data repair for a Local Import color-guessing bug (fixed in the
- * same change that adds this function — see api/lib/garmentColorClassifier.ts
- * and src/lib/localGarmentColorClassifier.js). The old classifier averaged
- * the full center-torso band, so a bold dark print graphic could drag a
- * genuinely white shirt's average pixel color toward the "Antracid" anchor.
- * Four already-imported products ended up with their one real photoshoot
- * photo stored under colorName "Antracid" when the shirt in the photo is
- * actually white. This is idempotent — it only acts on the exact rows still
- * in the bad state (an Antracid row present, no White row yet), so it is
- * safe to run on every boot and a no-op once applied.
+ * One-time data repair for a catalog-wide White/Grey photo swap. Direct
+ * visual inspection of every product's `product_color_images` rows (not
+ * just the earlier main-image spot check) showed that across the entire
+ * catalog, the row labeled "White" actually holds the photo of the
+ * heather-grey garment and the row labeled "Grey" holds the photo of the
+ * white garment — Black and Antracid rows are correct everywhere. This
+ * supersedes an earlier, incorrect theory (that Antracid held a mislabeled
+ * white photo) which never matched the real per-color image data.
+ *
+ * Fix: for every product that has exactly one White row and one Grey row,
+ * swap only their `images` JSON (colorName and sortOrder stay put on each
+ * row). Idempotency is tracked with a small marker table — Railway can
+ * restart the app without a new deploy, and swapping the same pair twice
+ * would just swap it back, so each productId is only ever repaired once.
  */
-export async function repairMislabeledAntracidPhotos(
+export async function repairSwappedWhiteGreyPhotos(
   db: MySql2Database<Record<string, unknown>>,
 ) {
-  const allProductsDiag = (await db.execute(
+  await db.execute(
     sql.raw(
-      `select p.id as productId, p.nameEn as productName, pci.id, pci.colorName, pci.images from \`products\` p join \`product_color_images\` pci on pci.productId = p.id order by p.id, pci.colorName`,
+      "create table if not exists `color_swap_repairs` (`productId` bigint unsigned primary key, `appliedAt` timestamp not null default (now()))",
     ),
-  )) as unknown as [
-    { productId: number; productName: string; id: number; colorName: string; images: unknown }[],
-  ];
-  for (const row of allProductsDiag[0] ?? []) {
-    console.log(
-      `[db] DIAGNOSTIC-CATALOG product ${row.productId} (${row.productName}) color=${row.colorName} id=${row.id} images=${JSON.stringify(row.images)}`,
-    );
+  );
+
+  const alreadyApplied = (await db.execute(
+    sql.raw("select productId from `color_swap_repairs`"),
+  )) as unknown as [{ productId: number }[]];
+  const appliedSet = new Set((alreadyApplied[0] ?? []).map((r) => r.productId));
+
+  const rows = (await db.execute(
+    sql.raw(
+      "select id, productId, colorName, images from `product_color_images` where colorName in ('White', 'Grey')",
+    ),
+  )) as unknown as [{ id: number; productId: number; colorName: string; images: unknown }[]];
+
+  const byProduct = new Map<number, { white?: { id: number; images: unknown }; grey?: { id: number; images: unknown } }>();
+  for (const row of rows[0] ?? []) {
+    const entry = byProduct.get(row.productId) ?? {};
+    if (row.colorName === "White") entry.white = { id: row.id, images: row.images };
+    if (row.colorName === "Grey") entry.grey = { id: row.id, images: row.images };
+    byProduct.set(row.productId, entry);
   }
 
-  const affectedProductIds = [26, 27, 29, 31];
-  for (const productId of affectedProductIds) {
-    try {
-      const antracidRows = (await db.execute(
-        sql.raw(
-          `select id, images from \`product_color_images\` where productId = ${productId} and colorName = 'Antracid'`,
-        ),
-      )) as unknown as [{ id: number; images: unknown }[]];
-      const antracidRow = (antracidRows[0] ?? [])[0];
-      if (!antracidRow) continue;
-
-      const whiteRows = (await db.execute(
-        sql.raw(
-          `select id, images from \`product_color_images\` where productId = ${productId} and colorName = 'White'`,
-        ),
-      )) as unknown as [{ id: number; images: unknown }[]];
-      const whiteRow = (whiteRows[0] ?? [])[0];
-
+  let repairedCount = 0;
+  for (const [productId, { white, grey }] of byProduct) {
+    if (appliedSet.has(productId)) continue;
+    if (!white || !grey) {
       console.log(
-        `[db] DIAGNOSTIC product ${productId} — Antracid row id=${antracidRow.id} images=${JSON.stringify(antracidRow.images)}; White row id=${whiteRow?.id ?? "(none)"} images=${JSON.stringify(whiteRow?.images ?? null)}`,
+        `[db] color-swap repair: product ${productId} missing a White or Grey row — skipping`,
       );
-
-      // A prior partial run (e.g. product creation itself, or the earlier
-      // version of this repair) already seeded an EMPTY White row for
-      // these products, which made the earlier "any White row exists ->
-      // skip" check silently no-op forever. Only skip when the White row
-      // already has real images; an empty one is safe (and correct) to
-      // fill in with the real photo currently sitting under Antracid.
-      const existingWhiteImages = Array.isArray(whiteRow?.images)
-        ? (whiteRow!.images as unknown[])
-        : [];
-      if (whiteRow && existingWhiteImages.length > 0) {
-        console.log(
-          `[db] product ${productId} already has a non-empty White color-image row — leaving both rows untouched pending manual review.`,
-        );
-        continue;
-      }
-
-      const antracidImagesJson = JSON.stringify(antracidRow.images ?? []).replace(
-        /'/g,
-        "''",
-      );
-
-      if (whiteRow) {
-        await db.execute(
-          sql.raw(
-            `update \`product_color_images\` set images = '${antracidImagesJson}', updatedAt = NOW() where id = ${whiteRow.id}`,
-          ),
-        );
-      } else {
-        await db.execute(
-          sql.raw(
-            `insert into \`product_color_images\` (productId, colorName, images, sortOrder, createdAt, updatedAt) values (${productId}, 'White', '${antracidImagesJson}', 0, NOW(), NOW())`,
-          ),
-        );
-      }
+      continue;
+    }
+    try {
+      const whiteImagesJson = JSON.stringify(white.images ?? []).replace(/'/g, "''");
+      const greyImagesJson = JSON.stringify(grey.images ?? []).replace(/'/g, "''");
 
       await db.execute(
-        sql.raw(`delete from \`product_color_images\` where id = ${antracidRow.id}`),
+        sql.raw(
+          `update \`product_color_images\` set images = '${greyImagesJson}', updatedAt = NOW() where id = ${white.id}`,
+        ),
       );
-      console.log(
-        `[db] repaired mislabeled color photo for product ${productId}: moved real photo from Antracid row into White row`,
+      await db.execute(
+        sql.raw(
+          `update \`product_color_images\` set images = '${whiteImagesJson}', updatedAt = NOW() where id = ${grey.id}`,
+        ),
       );
+      await db.execute(
+        sql.raw(
+          `insert into \`color_swap_repairs\` (productId) values (${productId})`,
+        ),
+      );
+      repairedCount++;
+      console.log(`[db] color-swap repair: swapped White/Grey photos for product ${productId}`);
     } catch (error) {
-      console.error(`[db] FAILED to repair color label for product ${productId}:`, error);
+      console.error(`[db] color-swap repair FAILED for product ${productId}:`, error);
     }
   }
+  console.log(`[db] color-swap repair: done, ${repairedCount} product(s) repaired this run`);
 }
