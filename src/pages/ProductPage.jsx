@@ -103,7 +103,7 @@ export default function ProductPage() {
 
       <div className="grid gap-8 lg:gap-16 lg:grid-cols-2">
         {/* Gallery */}
-        <div className="lg:sticky lg:top-24 lg:self-start">
+        <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <div className="bg-card border border-border rounded-md aspect-[4/5] flex items-center justify-center overflow-hidden">
             {activePhoto ? (
               <img
@@ -127,7 +127,7 @@ export default function ProductPage() {
         </div>
 
         {/* Purchase panel */}
-        <div>
+        <div className="min-w-0">
           <span className="kh-eyebrow">{product.collection_name}</span>
           <h1 className="mt-2 font-heading text-3xl sm:text-5xl" style={{ fontFamily: 'var(--brand-font-heading)' }}>{name}</h1>
           {product.phrase_ar && (
