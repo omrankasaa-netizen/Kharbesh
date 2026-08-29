@@ -3,13 +3,14 @@ import { base44 } from '@/api/khClient';
 import { useColors } from '@/lib/useCatalog.jsx';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
-import { classifyGarmentColor, GARMENT_COLOR_ANCHORS, REVIEW_SUGGESTED_DISTANCE } from '@/lib/localGarmentColorClassifier';
+import { classifyGarmentColor, GARMENT_COLOR_ANCHORS, REVIEW_SUGGESTED_DISTANCE, bestColorAssignment } from '@/lib/localGarmentColorClassifier';
 
 // Local-folder version of the Drive import tool: same "one subfolder per
-// design, up to 4 color mockup photos" workflow and the same greedy
-// color-assignment heuristic, but everything runs against files picked
-// straight from the founder's computer via <input webkitdirectory> — no
-// Google OAuth, no sensitive-scope verification, no Drive access at all.
+// design, up to 4 color mockup photos" workflow and the same min-cost
+// color-assignment logic (see `bestColorAssignment`), but everything runs
+// against files picked straight from the founder's computer via
+// <input webkitdirectory> — no Google OAuth, no sensitive-scope
+// verification, no Drive access at all.
 // Uploads reuse the exact same client-side downscale + R2 upload
 // (`base44.integrations.Core.UploadFile`) and product-creation
 // (`base44.entities.Product.bulkCreate`) calls as Bulk Import, so every
@@ -77,18 +78,14 @@ const COLOR_NAMES = GARMENT_COLOR_ANCHORS.map((a) => a.name);
  * overall pairing between the (up to 4) approved colors and the photos in
  * that folder.
  *
- * Earlier version recorded only each photo's single best-guess color and
- * dropped it entirely unless that guess was a very tight match. That broke
- * down whenever two photos in the same folder both leaned toward the same
- * anchor (e.g. two photos both reading closer to "White" under studio
- * lighting) — the loser was discarded instead of being tried against the
- * color that was actually still open, and folders where every photo's best
- * guess collided ended up with zero photos matched at all.
- *
- * Instead: compute every (photo, color) distance, then repeatedly take the
- * globally closest still-available pair until every color has a photo or
- * every photo is used. This is the same class of fix as a min-cost bipartite
- * match, sized for the handful of photos in one folder.
+ * Uses `bestColorAssignment` (a true min-cost bipartite match, brute-forced
+ * over every permutation since there are at most 4 colors) rather than a
+ * greedy "take the globally smallest single pair first" heuristic. Greedy
+ * is provably suboptimal whenever two anchors sit close together — White
+ * and Grey are only 35 RGB units apart — so a true-Grey photo that happens
+ * to read slightly closer to White than the true-White photo does would
+ * steal the White slot first under greedy, leaving the true-White photo
+ * mismatched even though swapping the two lowers the TOTAL cost.
  */
 async function classifyAndAssign(files) {
   const candidates = [];
@@ -116,26 +113,15 @@ async function classifyAndAssign(files) {
     c.id = `${file_key(c.file)}__${i}`;
   });
 
-  const pairs = [];
-  for (const c of candidates) {
-    if (!c.distances) continue;
-    for (const color of COLOR_NAMES) {
-      pairs.push({ id: c.id, color, distance: c.distances[color] });
-    }
-  }
-  pairs.sort((a, b) => a.distance - b.distance);
-
+  const assignment = bestColorAssignment(
+    candidates.map((c) => ({ id: c.id, distances: c.distances })),
+    COLOR_NAMES,
+  );
   const colorMatches = {};
   const colorDistances = {};
-  const claimedIds = new Set();
-  const claimedColors = new Set();
-  for (const p of pairs) {
-    if (claimedIds.has(p.id) || claimedColors.has(p.color)) continue;
-    colorMatches[p.color] = candidates.find((c) => c.id === p.id);
-    colorDistances[p.color] = p.distance;
-    claimedIds.add(p.id);
-    claimedColors.add(p.color);
-    if (claimedColors.size === COLOR_NAMES.length) break;
+  for (const { id, color, distance } of assignment) {
+    colorMatches[color] = candidates.find((c) => c.id === id);
+    colorDistances[color] = distance;
   }
   return { candidates, colorMatches, colorDistances };
 }

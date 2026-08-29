@@ -10,6 +10,8 @@ import {
   bulkCreateProducts,
   deleteProduct,
   hardDeleteProduct,
+  bulkUpdateProductStatus,
+  bulkHardDeleteProducts,
   listAuditLogs,
 } from "./queries/admin";
 import { getDriveConnectionStatus, disconnectDrive } from "./queries/driveConnection";
@@ -217,6 +219,16 @@ export const adminRouter = createRouter({
   hardDeleteProduct: superAdminQuery
     .input(z.object({ id: idParam }))
     .mutation(({ ctx, input }) => hardDeleteProduct(Number(input.id), ctx.user.id)),
+
+  /** Products list selection toolbar: set many products' status at once. */
+  bulkUpdateProductStatus: staffQuery
+    .input(z.object({ ids: z.array(idParam).min(1).max(500), status: z.enum(["active", "draft", "archived"]) }))
+    .mutation(({ ctx, input }) => bulkUpdateProductStatus(input.ids.map(Number), input.status, ctx.user.id)),
+
+  /** Products list selection toolbar: permanent batch delete — super_admin only. */
+  bulkHardDeleteProducts: superAdminQuery
+    .input(z.object({ ids: z.array(idParam).min(1).max(500) }))
+    .mutation(({ ctx, input }) => bulkHardDeleteProducts(input.ids.map(Number), ctx.user.id)),
 
   /**
    * Uploads a product photo (sent as a base64 data URL) to R2 and returns

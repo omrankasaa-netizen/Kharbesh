@@ -106,20 +106,119 @@ export type ColorGuess = {
   colorName: string;
   confident: boolean;
   distance: number;
+  /** Distance to EVERY anchor, keyed by color name — needed by callers that
+   * assign a whole folder of photos to colors at once (see
+   * `bestColorAssignment` below) instead of just taking each photo's own
+   * single best guess. */
+  distances: Record<string, number>;
 };
 
 export async function guessGarmentColor(buffer: Buffer): Promise<ColorGuess> {
   const avg = await averageCenterColor(buffer);
   let best: GarmentColorAnchor = GARMENT_COLOR_ANCHORS[0];
   let bestDist = Infinity;
+  const distances: Record<string, number> = {};
   for (const anchor of GARMENT_COLOR_ANCHORS) {
     const d = distance(avg, anchor.rgb);
+    distances[anchor.name] = d;
     if (d < bestDist) {
       bestDist = d;
       best = anchor;
     }
   }
-  return { colorName: best.name, confident: bestDist <= CONFIDENT_MAX_DISTANCE, distance: bestDist };
+  return { colorName: best.name, confident: bestDist <= CONFIDENT_MAX_DISTANCE, distance: bestDist, distances };
+}
+
+export type AssignmentItem = { id: string; distances: Record<string, number> | null };
+
+/**
+ * Finds the folder-wide pairing between a set of colors and a set of photos
+ * that minimizes the TOTAL distance across all pairs — i.e. a true min-cost
+ * assignment, not a greedy "take the globally smallest single pair first"
+ * heuristic. Greedy is provably suboptimal whenever two anchors sit close
+ * together (White at 242 and Grey at 207 are only 35 RGB units apart): if a
+ * true-Grey photo happens to read slightly closer to the White anchor than
+ * the true-White photo does, greedy steals the White slot for the Grey photo
+ * first (that's the single smallest distance in the whole list), leaving the
+ * true-White photo mismatched even though swapping the two would have a
+ * lower TOTAL cost. Brute-forcing every permutation is fine here — at most 4
+ * colors and a handful of photos per design folder, so at most a few
+ * thousand permutations in the worst case.
+ */
+export function bestColorAssignment(
+  items: AssignmentItem[],
+  colorNames: string[],
+): Array<{ id: string; color: string; distance: number }> {
+  let usable = items.filter((it) => it.distances);
+  const m = colorNames.length;
+  if (usable.length === 0 || m === 0) return [];
+  // Safety cap: a design folder normally has at most a handful of photos,
+  // but if something unexpected dumps in far more, keep only each photo's
+  // best few candidate colors worth of headroom (2x the color count) by
+  // best individual distance before permuting, so this never blows up.
+  const MAX_CANDIDATES = 12;
+  if (usable.length > MAX_CANDIDATES) {
+    usable = [...usable]
+      .sort((a, b) => Math.min(...Object.values(a.distances!)) - Math.min(...Object.values(b.distances!)))
+      .slice(0, MAX_CANDIDATES);
+  }
+  const n = usable.length;
+
+  let bestPairs: Array<{ id: string; color: string; distance: number }> = [];
+  let bestCost = Infinity;
+
+  function permute<T>(arr: T[], k: number, cb: (chosen: T[]) => void) {
+    const used = new Array(arr.length).fill(false);
+    const current: T[] = [];
+    function backtrack() {
+      if (current.length === k) {
+        cb(current.slice());
+        return;
+      }
+      for (let i = 0; i < arr.length; i++) {
+        if (used[i]) continue;
+        used[i] = true;
+        current.push(arr[i]);
+        backtrack();
+        current.pop();
+        used[i] = false;
+      }
+    }
+    backtrack();
+  }
+
+  if (n <= m) {
+    // Every photo gets used; choose which distinct colors they land on.
+    const colorIdx = colorNames.map((_, i) => i);
+    permute(colorIdx, n, (perm) => {
+      let cost = 0;
+      for (let i = 0; i < n; i++) cost += usable[i].distances![colorNames[perm[i]]];
+      if (cost < bestCost) {
+        bestCost = cost;
+        bestPairs = perm.map((cIdx, i) => ({
+          id: usable[i].id,
+          color: colorNames[cIdx],
+          distance: usable[i].distances![colorNames[cIdx]],
+        }));
+      }
+    });
+  } else {
+    // More photos than colors; choose which distinct photos fill the colors.
+    const itemIdx = usable.map((_, i) => i);
+    permute(itemIdx, m, (perm) => {
+      let cost = 0;
+      for (let j = 0; j < m; j++) cost += usable[perm[j]].distances![colorNames[j]];
+      if (cost < bestCost) {
+        bestCost = cost;
+        bestPairs = perm.map((itemI, j) => ({
+          id: usable[itemI].id,
+          color: colorNames[j],
+          distance: usable[itemI].distances![colorNames[j]],
+        }));
+      }
+    });
+  }
+  return bestPairs;
 }
 
 /** Small JPEG preview for the review UI — kept tiny so a 40+ design scan

@@ -1,6 +1,6 @@
 import { getDb } from "./connection";
 import { auditLogs, products, users } from "@db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { toUiProduct, upsertProductColorImages } from "./catalog";
 
 export async function listUsers() {
@@ -219,6 +219,49 @@ export async function deleteProduct(id: number, actorUserId: number) {
     detail: null,
   });
   return { success: true };
+}
+
+/**
+ * Batch status change for the admin Products list's row-selection toolbar
+ * (e.g. "set selected to active/draft"). One update statement, one summary
+ * audit row — not a loop of per-id `updateProduct` calls.
+ */
+export async function bulkUpdateProductStatus(
+  ids: number[],
+  status: "active" | "draft" | "archived",
+  actorUserId: number,
+) {
+  const db = getDb();
+  await db.update(products).set({ status, updatedAt: new Date() }).where(inArray(products.id, ids));
+  await db.insert(auditLogs).values({
+    actorUserId,
+    action: "product.bulk_status_updated",
+    entity: "product",
+    entityId: null,
+    detail: { ids, status },
+  });
+  return { success: true, count: ids.length };
+}
+
+/**
+ * Batch permanent delete for the admin Products list — super_admin only
+ * (gated in the router, not here). Meant for clearing test/re-import batches
+ * (e.g. wiping the catalog before a corrected Local Import re-upload), not
+ * routine catalog management. `product_color_images` cascade-deletes at the
+ * DB level via its FK.
+ */
+export async function bulkHardDeleteProducts(ids: number[], actorUserId: number) {
+  const db = getDb();
+  const rows = await db.query.products.findMany({ where: inArray(products.id, ids) });
+  await db.delete(products).where(inArray(products.id, ids));
+  await db.insert(auditLogs).values({
+    actorUserId,
+    action: "product.bulk_hard_deleted",
+    entity: "product",
+    entityId: null,
+    detail: { ids, names: rows.map((r) => r.nameEn) },
+  });
+  return { success: true, count: ids.length };
 }
 
 /**

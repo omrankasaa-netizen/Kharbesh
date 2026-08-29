@@ -108,3 +108,23 @@ export const IconTruck = ({ size = 24 }) => (
     <path d="M2.5 7.5h11v8h-11v-8z" /><path d="M13.5 11h4l3 3v1.5h-7V11z" /><circle cx="6.5" cy="17.5" r="1.6" /><circle cx="16.5" cy="17.5" r="1.6" />
   </svg>
 );
+
+/* Lebanon flag + cedar seal — the one deliberate flag/cedar use on the site,
+   reserved for the "100% Lebanese made" line only (explicit founder
+   exception to the no-flags brand rule). Full color, not currentColor. */
+export const LebanonSeal = ({ size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
+    <defs>
+      <clipPath id="kh-lb-seal-clip"><circle cx="20" cy="20" r="18" /></clipPath>
+    </defs>
+    <circle cx="20" cy="20" r="19" fill="none" stroke="var(--ink)" strokeOpacity="0.25" strokeWidth="1" />
+    <g clipPath="url(#kh-lb-seal-clip)">
+      <rect x="2" y="2" width="36" height="36" fill="#ED1C24" />
+      <rect x="2" y="11" width="36" height="18" fill="#FFFFFF" />
+      <path
+        d="M20 14.5c-1.8 2.4-3.6 4.2-5.2 5.6 1.1-.3 2.2-.5 3.3-.6-1.6 2-3.4 3.7-5.4 5.1 2-.5 3.9-.9 5.7-1.1v3.1h3.2v-3.1c1.8.2 3.7.6 5.7 1.1-2-1.4-3.8-3.1-5.4-5.1 1.1.1 2.2.3 3.3.6-1.6-1.4-3.4-3.2-5.2-5.6z"
+        fill="#00A651"
+      />
+    </g>
+  </svg>
+);

@@ -6,7 +6,7 @@ import {
   downloadDriveFile,
 } from "../lib/googleDrive";
 import { getDriveAccessToken } from "./driveConnection";
-import { guessGarmentColor, makeThumbnailDataUrl } from "../lib/garmentColorClassifier";
+import { bestColorAssignment, GARMENT_COLOR_ANCHORS, guessGarmentColor, makeThumbnailDataUrl } from "../lib/garmentColorClassifier";
 import { uploadDataUrlToR2 } from "../lib/r2";
 import { bulkCreateProducts, type ProductWritableFields } from "./admin";
 
@@ -63,7 +63,7 @@ export async function scanDriveFolder(folderLinkOrId: string): Promise<{
       const files = await listDriveChildren(folder.id, accessToken);
       const images = files.filter((f) => f.mimeType.startsWith(IMAGE_MIME_PREFIX));
 
-      const candidates: Array<{ image: ScannedImage; distance: number }> = [];
+      const candidates: Array<{ image: ScannedImage; distances: Record<string, number> | null }> = [];
       for (const file of images) {
         try {
           const { buffer } = await downloadDriveFile(file.id, accessToken);
@@ -79,7 +79,7 @@ export async function scanDriveFolder(folderLinkOrId: string): Promise<{
               guessedColor: guess.confident ? guess.colorName : null,
               confident: guess.confident,
             },
-            distance: guess.distance,
+            distances: guess.distances,
           });
         } catch (err) {
           candidates.push({
@@ -90,23 +90,32 @@ export async function scanDriveFolder(folderLinkOrId: string): Promise<{
               guessedColor: null,
               confident: false,
             },
-            distance: Infinity,
+            distances: null,
           });
           console.error(`[drive-import] Failed to read ${file.name} in ${folder.name}:`, err);
         }
       }
 
-      // Greedy assignment: sort confident candidates by distance so the
-      // single best match per color wins the slot; anything left over
-      // (including ties that lost) goes to extras for manual review.
+      // True min-cost assignment across the whole folder — see
+      // `bestColorAssignment` for why the old greedy "smallest single pair
+      // first" approach could swap White/Grey photos when their distances
+      // to those two close anchors happened to cross over. Only photos that
+      // individually cleared the confidence bar participate, matching the
+      // old behavior of leaving low-confidence photos for manual review
+      // instead of forcing them into a slot.
+      const colorNames = GARMENT_COLOR_ANCHORS.map((a) => a.name);
+      const confidentCandidates = candidates.filter((c) => c.image.guessedColor);
+      const assignment = bestColorAssignment(
+        confidentCandidates.map((c) => ({ id: c.image.fileId, distances: c.distances })),
+        colorNames,
+      );
       const colorMatches: Record<string, ScannedImage> = {};
       const claimedFileIds = new Set<string>();
-      const sorted = [...candidates].sort((a, b) => a.distance - b.distance);
-      for (const c of sorted) {
-        const color = c.image.guessedColor;
-        if (!color || colorMatches[color] || claimedFileIds.has(c.image.fileId)) continue;
-        colorMatches[color] = c.image;
-        claimedFileIds.add(c.image.fileId);
+      for (const { id, color } of assignment) {
+        const match = candidates.find((c) => c.image.fileId === id);
+        if (!match) continue;
+        colorMatches[color] = match.image;
+        claimedFileIds.add(id);
       }
       const extraImages = candidates
         .filter((c) => !claimedFileIds.has(c.image.fileId))

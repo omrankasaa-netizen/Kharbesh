@@ -16,7 +16,7 @@ function ShowcaseCard({ product }) {
   const color = resolveColor(firstColorName, colors);
   const hex = color?.hex || '#F0E9D6';
   const ink = contrastInk(hex);
-  const img = product.images?.[1] ?? product.images?.[0];
+  const img = product.images?.[0];
 
   return (
     <Link to={`/product/${product.id}`} className="kh-cell kh-piece group flex flex-col">

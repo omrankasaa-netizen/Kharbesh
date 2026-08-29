@@ -137,8 +137,9 @@ function TogglePills({ options, selected, onChange }) {
 /**
  * Per-color garment photos: uploads are saved immediately against the real
  * product id (color images are keyed by DB id, not the draft form state),
- * separate from the main product Save button. Front/back thumbnails let a
- * shopper preview the actual printed shirt in the color they picked.
+ * separate from the main product Save button. Exactly one photo per
+ * approved color — front and back are shot combined into a single image,
+ * so there's no separate back slot to manage.
  */
 function ColorImagesSection({ productId, approvedColors, lang }) {
   const [byColor, setByColor] = useState({});
@@ -171,21 +172,18 @@ function ColorImagesSection({ productId, approvedColors, lang }) {
   }, [productId, approvedColors]);
 
   const onUpload = async (colorName, e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
     setUploadingColor(colorName);
     try {
-      const urls = [];
-      for (const file of files) {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
-        urls.push(file_url);
-      }
-      setByColor((m) => ({ ...m, [colorName]: [...(m[colorName] || []), ...urls] }));
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      // One photo per color — a new upload replaces whatever was there.
+      setByColor((m) => ({ ...m, [colorName]: [file_url] }));
     } finally { setUploadingColor(null); }
   };
 
-  const removeImage = (colorName, idx) => {
-    setByColor((m) => ({ ...m, [colorName]: (m[colorName] || []).filter((_, i) => i !== idx) }));
+  const removeImage = (colorName) => {
+    setByColor((m) => ({ ...m, [colorName]: [] }));
   };
 
   const saveColor = async (colorName) => {
@@ -211,14 +209,12 @@ function ColorImagesSection({ productId, approvedColors, lang }) {
         <div key={colorName} className="border border-border rounded-md p-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-sm font-medium">{colorName}</span>
-            <span className="text-[11px] text-muted-foreground">{lang === 'ar' ? '(الأولى = أمام، الثانية = خلف)' : '(1st = front, 2nd = back)'}</span>
           </div>
           <div className="flex flex-wrap gap-3 mb-3">
             {(byColor[colorName] || []).map((url, i) => (
               <div key={i} className="relative w-20 h-20 rounded-md overflow-hidden border border-border">
                 <img src={url} alt="" className="w-full h-full object-cover" />
-                <span className="absolute bottom-0.5 left-0.5 bg-black/70 text-white text-[10px] px-1 rounded">{i === 0 ? 'Front' : i === 1 ? 'Back' : i + 1}</span>
-                <button type="button" onClick={() => removeImage(colorName, i)} className="absolute top-0.5 right-0.5 bg-black/70 text-white text-xs w-5 h-5 rounded-full">×</button>
+                <button type="button" onClick={() => removeImage(colorName)} className="absolute top-0.5 right-0.5 bg-black/70 text-white text-xs w-5 h-5 rounded-full">×</button>
               </div>
             ))}
           </div>
@@ -226,7 +222,6 @@ function ColorImagesSection({ productId, approvedColors, lang }) {
             <input
               type="file"
               accept="image/*"
-              multiple
               onChange={(e) => onUpload(colorName, e)}
               disabled={uploadingColor === colorName}
               className="text-sm"
@@ -247,13 +242,13 @@ function ColorImagesSection({ productId, approvedColors, lang }) {
   );
 }
 
-/** Cover photo uploader with explicit Front/Back slots (index 0/1 of the
- * top-level `images` array) — used as the Shop-grid thumbnail and the
- * gallery fallback before a shopper picks a color. */
+/** Cover photo uploader — a single image (index 0 of the top-level `images`
+ * array) used as the Shop-grid thumbnail and the gallery fallback before a
+ * shopper's per-color photo has loaded. Front and back are shot combined
+ * into one photo, so there's only ever one cover slot. */
 function CoverPhotosField({ images, onUpload, onRemove, uploading, lang }) {
   const slots = [
-    { idx: 0, label: lang === 'ar' ? 'الأمام' : 'Front' },
-    { idx: 1, label: lang === 'ar' ? 'الخلف' : 'Back' },
+    { idx: 0, label: lang === 'ar' ? 'صورة الغلاف' : 'Cover photo' },
   ];
   return (
     <div className="flex flex-wrap gap-4">
@@ -376,6 +371,8 @@ export default function AdminProducts() {
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const priceTouched = useRef(false);
 
   const load = async () => {
@@ -500,6 +497,63 @@ export default function AdminProducts() {
     setProducts((ps) => ps.map((x) => (x.id === p.id ? updated : x)));
   };
 
+  // ── Selection + batch actions ─────────────────────────────────────────
+  const toggleSelected = (id) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  const allVisibleSelected = visible.length > 0 && visible.every((p) => selectedIds.has(p.id));
+  const someVisibleSelected = visible.some((p) => selectedIds.has(p.id));
+
+  const toggleSelectAll = () => setSelectedIds((prev) => {
+    if (allVisibleSelected) {
+      // Unselect only what's currently visible (search may be filtering the list).
+      const next = new Set(prev);
+      visible.forEach((p) => next.delete(p.id));
+      return next;
+    }
+    const next = new Set(prev);
+    visible.forEach((p) => next.add(p.id));
+    return next;
+  });
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const bulkSetStatus = async (status) => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    setBulkBusy(true);
+    try {
+      await base44.entities.Product.bulkUpdateStatus(ids, status);
+      setProducts((ps) => ps.map((p) => (selectedIds.has(p.id) ? { ...p, status } : p)));
+      clearSelection();
+    } catch (err) {
+      window.alert(err?.message || (lang === 'ar' ? 'ما قدرنا نبدّل الحالة.' : 'Could not update status.'));
+    } finally { setBulkBusy(false); }
+  };
+
+  const bulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    const confirmWord = lang === 'ar' ? 'حذف' : 'DELETE';
+    const typed = window.prompt(
+      lang === 'ar'
+        ? `حذف نهائي لـ ${ids.length} منتج! ما في تراجع. اكتب "${confirmWord}" للتأكيد:`
+        : `Permanent delete of ${ids.length} product(s) — this cannot be undone. Type "${confirmWord}" to confirm:`,
+    );
+    if (typed !== confirmWord) return;
+    setBulkBusy(true);
+    try {
+      await base44.entities.Product.bulkHardDelete(ids);
+      setProducts((ps) => ps.filter((p) => !selectedIds.has(p.id)));
+      clearSelection();
+    } catch (err) {
+      window.alert(err?.message || (lang === 'ar' ? 'ما قدرنا نحذف.' : 'Could not delete.'));
+    } finally { setBulkBusy(false); }
+  };
+
   return (
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-12">
       <PageHeader eyebrow="Admin" title={lang === 'ar' ? 'المنتجات' : 'Products'} />
@@ -592,12 +646,12 @@ export default function AdminProducts() {
             </Field>
           </SectionCard>
 
-          {/* 5. Photos — cover front/back, plus per-color photos once saved */}
+          {/* 5. Photos — cover photo, plus one photo per approved color once saved */}
           <SectionCard
             title={lang === 'ar' ? '٥. الصور' : '5. Photos'}
             sub={lang === 'ar'
-              ? 'صورة الأمام والخلف الأساسية. لبيك ما في صور مرفوعة، بيظهر شعار خربش كصورة مؤقتة.'
-              : 'The main front and back photo. Until you upload real garment photos, the Kharbesh logo placeholder shows instead.'}
+              ? 'صورة المنتج الأساسية. لبيك ما في صورة مرفوعة، بيظهر شعار خربش كصورة مؤقتة.'
+              : 'The main product photo. Until you upload a real garment photo, the Kharbesh logo placeholder shows instead.'}
           >
             <CoverPhotosField
               images={form.images}
@@ -720,6 +774,47 @@ export default function AdminProducts() {
             </div>
           )}
 
+          {selectedIds.size > 0 && (
+            <div
+              className="mt-6 flex flex-wrap items-center gap-3 rounded-md border px-4 py-3"
+              style={{ borderColor: 'var(--brand-accent)', background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)' }}
+            >
+              <span className="text-sm font-medium">
+                {lang === 'ar' ? `${selectedIds.size} منتج محدد` : `${selectedIds.size} selected`}
+              </span>
+              <button
+                type="button"
+                disabled={bulkBusy}
+                onClick={() => bulkSetStatus('active')}
+                className="kh-btn-secondary !text-xs !py-1.5 !px-3"
+              >
+                {lang === 'ar' ? 'تفعيل' : 'Set active'}
+              </button>
+              <button
+                type="button"
+                disabled={bulkBusy}
+                onClick={() => bulkSetStatus('draft')}
+                className="kh-btn-secondary !text-xs !py-1.5 !px-3"
+              >
+                {lang === 'ar' ? 'مسودة' : 'Set draft'}
+              </button>
+              {isSuperAdmin && (
+                <button
+                  type="button"
+                  disabled={bulkBusy}
+                  onClick={bulkDelete}
+                  className="kh-btn-secondary !text-xs !py-1.5 !px-3"
+                  style={{ color: 'var(--brand-destructive)', fontWeight: 600 }}
+                >
+                  {lang === 'ar' ? 'حذف نهائي' : 'Delete selected'}
+                </button>
+              )}
+              <button type="button" onClick={clearSelection} className="kh-btn-text text-xs ml-auto">
+                {lang === 'ar' ? 'إلغاء التحديد' : 'Clear selection'}
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div className="text-muted-foreground mt-8">Loading…</div>
           ) : (
@@ -727,6 +822,15 @@ export default function AdminProducts() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-muted-foreground border-b border-border">
+                    <th className="py-3 pr-3 w-8">
+                      <input
+                        type="checkbox"
+                        checked={allVisibleSelected}
+                        ref={(el) => { if (el) el.indeterminate = !allVisibleSelected && someVisibleSelected; }}
+                        onChange={toggleSelectAll}
+                        aria-label={lang === 'ar' ? 'تحديد الكل' : 'Select all'}
+                      />
+                    </th>
                     <th className="py-3 pr-3">Product</th>
                     <th className="py-3 pr-3">Type</th>
                     <th className="py-3 pr-3">Price</th>
@@ -738,6 +842,14 @@ export default function AdminProducts() {
                 <tbody>
                   {visible.map((p) => (
                     <tr key={p.id} className="border-b border-border">
+                      <td className="py-3 pr-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(p.id)}
+                          onChange={() => toggleSelected(p.id)}
+                          aria-label={lang === 'ar' ? 'تحديد' : `Select ${p.name_en}`}
+                        />
+                      </td>
                       <td className="py-3 pr-3">
                         <button onClick={() => startEdit(p)} className="text-left hover:underline">{p.name_en}</button>
                         <div className="text-xs text-muted-foreground">{p.collection_name}</div>
@@ -765,7 +877,7 @@ export default function AdminProducts() {
                       </td>
                     </tr>
                   ))}
-                  {visible.length === 0 && <tr><td colSpan={6} className="py-8 text-muted-foreground">No products.</td></tr>}
+                  {visible.length === 0 && <tr><td colSpan={7} className="py-8 text-muted-foreground">No products.</td></tr>}
                 </tbody>
               </table>
             </div>

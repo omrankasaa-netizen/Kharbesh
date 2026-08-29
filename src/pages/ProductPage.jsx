@@ -5,7 +5,7 @@ import { useProducts, useColors, resolveColor } from '@/lib/useCatalog.jsx';
 import { useCart } from '@/lib/cart';
 import { base44 } from '@/api/khClient';
 import GarmentMockup, { contrastInk } from '@/components/GarmentMockup';
-import { Scribble, IconHeart, IconShare, IconCotton, IconNoSweat, IconNoWrinkle, IconFit, IconCash, IconTruck } from '@/components/Brand';
+import { IconHeart, IconShare, IconCotton, IconNoSweat, IconNoWrinkle, IconFit, IconCash, IconTruck, LebanonSeal } from '@/components/Brand';
 import { STANDARD_FRONT_BY_COLOR } from '@/lib/standardPhotos';
 import { useSiteSettings } from '@/lib/useCatalog.jsx';
 import { whatsappLink } from '@/lib/whatsapp';
@@ -22,7 +22,6 @@ export default function ProductPage() {
 
   const product = products.find((p) => p.id === id);
 
-  const [view, setView] = useState('front');
   const [colorName, setColorName] = useState('');
   const [size, setSize] = useState('');
   const [qty, setQty] = useState(1);
@@ -57,15 +56,11 @@ export default function ProductPage() {
   const ink = contrastInk(hex);
   const canAdd = colorName && size;
   const activeColorPhotos = colorImages[selectedColor?.name_en] || null;
-  // Front: prefer a real per-color photo, else fall back to the standard
-  // front-of-shirt shot for the selected color (every design ships with a
-  // plain standard front unless it explicitly prints something there).
-  // Back: prefer a real per-color photo, else fall back to the product's
-  // generic back cover — the actual design that makes this product unique.
-  const standardFront = selectedColor ? STANDARD_FRONT_BY_COLOR[selectedColor.name_en] : null;
-  const frontPhoto = activeColorPhotos?.[0] || standardFront || product?.images?.[0] || null;
-  const backPhoto = activeColorPhotos?.[1] || product?.images?.[1] || product?.images?.[0] || null;
-  const activePhoto = view === 'front' ? frontPhoto : backPhoto;
+  // One photo per color — front and back are shot combined into a single
+  // image. Prefer the real per-color photo, else fall back to the standard
+  // placeholder shot for the selected color, else the product's cover photo.
+  const standardPhoto = selectedColor ? STANDARD_FRONT_BY_COLOR[selectedColor.name_en] : null;
+  const activePhoto = activeColorPhotos?.[0] || standardPhoto || product?.images?.[0] || null;
 
   if (loading) return <div className="max-w-[1400px] mx-auto px-6 py-20 text-muted-foreground">{t.common.loading}</div>;
   if (!product) return <div className="max-w-[1400px] mx-auto px-6 py-20"><p>Product not found.</p><Link to="/shop" className="kh-btn-text mt-4">{t.nav.shop}</Link></div>;
@@ -81,7 +76,7 @@ export default function ProductPage() {
       productName: name,
       phrase: product.phrase_ar,
       productType: product.product_type,
-      image: product.images?.[1] ?? product.images?.[0],
+      image: product.images?.[0],
       color: colorName,
       size,
       quantity: qty,
@@ -124,15 +119,10 @@ export default function ProductPage() {
                 type={product.product_type}
                 color={hex}
                 textColor={ink}
-                phrase={view === 'front' ? product.phrase_ar : (product.payoff_en || product.phrase_ar)}
-                view={view}
+                phrase={product.phrase_ar}
                 className="w-[75%] h-[75%]"
               />
             )}
-          </div>
-          <div className="flex gap-2 mt-3">
-            <button onClick={() => setView('front')} className={`kh-btn-outline kh-btn-filter !text-[12px] !py-2 !px-3 ${view === 'front' ? '!bg-primary !text-primary-foreground' : ''}`}>{t.product.front}</button>
-            <button onClick={() => setView('back')} className={`kh-btn-outline kh-btn-filter !text-[12px] !py-2 !px-3 ${view === 'back' ? '!bg-primary !text-primary-foreground' : ''}`}>{t.product.back}</button>
           </div>
         </div>
 
@@ -229,7 +219,7 @@ export default function ProductPage() {
               { Icon: IconNoWrinkle, label: t.product.featNoWrinkle },
               { Icon: IconFit, label: t.product.featClassicFit, note: t.product.featClassicFitNote },
               { Icon: IconCash, label: t.product.featCod },
-              { Icon: IconTruck, label: t.product.featDeliveryLebanon, note: `${t.product.featShipping} · ${t.product.featShippingNote}` },
+              { Icon: IconTruck, label: `${t.product.featDeliveryLebanon} · ${t.product.featDeliveryTime}`, note: `${t.product.featShipping} · ${t.product.featShippingNote}` },
             ].map(({ Icon, label, note }) => (
               <div key={label} className="flex items-start gap-3">
                 <span className="shrink-0 mt-0.5" style={{ color: 'hsl(var(--accent))' }}><Icon size={20} /></span>
@@ -244,20 +234,8 @@ export default function ProductPage() {
           {/* Product specs */}
           <div className="mt-8 border-t border-border pt-6 grid grid-cols-2 gap-x-4 gap-y-5 text-sm">
             <div>
-              <span className="kh-eyebrow block mb-1">{t.product.estDispatch}</span>
-              <span>{product.estimated_dispatch_window}</span>
-            </div>
-            <div>
-              <span className="kh-eyebrow block mb-1">{t.product.productionTime}</span>
-              <span>{product.estimated_production_days} {lang === 'ar' ? 'يوم' : 'days'}</span>
-            </div>
-            <div>
               <span className="kh-eyebrow block mb-1">{t.product.print}</span>
               <span>{product.placement}</span>
-            </div>
-            <div>
-              <span className="kh-eyebrow block mb-1">{t.product.fit}</span>
-              <span>{product.fit_en || product.garment_style}</span>
             </div>
             {product.measurements_en && (
               <div>
@@ -272,32 +250,10 @@ export default function ProductPage() {
           </div>
 
           <div className="mt-6 flex items-center gap-3 text-sm">
-            <Scribble width={40} />
-            <span className="font-heading tracking-wide" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.product.madeIn}</span>
+            <LebanonSeal size={30} />
+            <span className="font-heading tracking-wide" style={{ fontFamily: 'var(--brand-font-heading)' }}>100% Lebanese made</span>
           </div>
         </div>
-      </div>
-
-      {/* THE JOKE / THE PIECE — editorial footnotes */}
-      <div className="mt-14 grid gap-px sm:grid-cols-2" style={{ background: 'var(--line)', border: '1px solid var(--line)' }}>
-        <section style={{ background: 'var(--paper)' }} className="p-6 sm:p-8">
-          <span className="kh-eyebrow">{lang === 'ar' ? 'النكتة' : 'The joke'}</span>
-          <p className="mt-4 text-base leading-relaxed" style={{ color: 'var(--ink)' }}>
-            {lang === 'ar'
-              ? (product.description_ar || desc)
-              : (product.description_en || desc)}
-          </p>
-        </section>
-        <section style={{ background: 'var(--paper)' }} className="p-6 sm:p-8">
-          <span className="kh-eyebrow">{lang === 'ar' ? 'القطعة' : 'The piece'}</span>
-          <p className="mt-4 text-sm leading-relaxed" style={{ color: 'var(--ink)' }}>{t.product.qualityBlurb}</p>
-          <ul className="mt-4 space-y-2 text-sm" style={{ color: 'var(--muted)' }}>
-            {product.fit_en && <li><strong style={{ color: 'var(--ink)' }}>{t.product.fit}:</strong> {product.fit_en}</li>}
-            {product.placement && <li><strong style={{ color: 'var(--ink)' }}>{t.product.print}:</strong> {product.placement}</li>}
-            {(product.care_en || product.care_ar) && <li><strong style={{ color: 'var(--ink)' }}>{t.product.care}:</strong> {lang === 'ar' ? (product.care_ar || product.care_en) : product.care_en}</li>}
-            {product.estimated_dispatch_window && <li><strong style={{ color: 'var(--ink)' }}>{t.product.estDispatch}:</strong> {product.estimated_dispatch_window}</li>}
-          </ul>
-        </section>
       </div>
     </div>
   );

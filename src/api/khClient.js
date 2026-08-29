@@ -166,6 +166,11 @@ export const kh = {
       hardDelete: (id) => client.admin.hardDeleteProduct.mutate({ id: String(id) }),
       /** Bulk Import page: creates many products (each with its own color photos) in one call. */
       bulkCreate: (items) => client.admin.bulkCreateProducts.mutate({ items }),
+      /** Products list selection toolbar: set many products' status at once. */
+      bulkUpdateStatus: (ids, status) =>
+        client.admin.bulkUpdateProductStatus.mutate({ ids: ids.map(String), status }),
+      /** Products list selection toolbar: permanent batch delete — server enforces super_admin. */
+      bulkHardDelete: (ids) => client.admin.bulkHardDeleteProducts.mutate({ ids: ids.map(String) }),
     },
 
     Order: {
@@ -329,8 +334,11 @@ export const kh = {
     },
 
     ProductColorImages: {
+      // Public read — the storefront (anonymous shoppers) and the admin editor
+      // both need this to show the correct per-color garment photo. Writes
+      // below stay staff-gated on the server.
       list: async (productId) => {
-        const rows = await client.admin.productColorImages.query({ productId: String(productId) });
+        const rows = await client.catalog.productColorImages.query({ productId: String(productId) });
         return (rows || []).map((r) => ({ ...r, images: resolveAssetUrls(r.images) }));
       },
       upsert: (productId, colorName, images) =>
