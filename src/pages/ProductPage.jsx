@@ -182,17 +182,21 @@ export default function ProductPage() {
           </fieldset>
 
           {/* Qty + add */}
-          <div className="mt-8 flex items-center gap-4">
-            <div className="flex items-center border border-border rounded-sm">
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-11 h-12 text-lg" aria-label="Decrease">−</button>
-              <span className="w-12 text-center font-heading" style={{ fontFamily: 'var(--brand-font-heading)' }}>{qty}</span>
-              <button onClick={() => setQty((q) => q + 1)} className="w-11 h-12 text-lg" aria-label="Increase">+</button>
+          <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+              <div className="shrink-0 flex items-center border border-border rounded-sm">
+                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-11 h-12 text-lg" aria-label="Decrease">−</button>
+                <span className="w-12 text-center font-heading" style={{ fontFamily: 'var(--brand-font-heading)' }}>{qty}</span>
+                <button onClick={() => setQty((q) => q + 1)} className="w-11 h-12 text-lg" aria-label="Increase">+</button>
+              </div>
+              <button onClick={handleAdd} disabled={!canAdd} className="kh-btn-scribble flex-1 !justify-center">
+                {added ? '✓ Added' : (lang === 'ar' ? 'ضيفها عالخربشة ←' : 'Add to bag →')}
+              </button>
             </div>
-            <button onClick={handleAdd} disabled={!canAdd} className="kh-btn-scribble flex-1 !justify-center">
-              {added ? '✓ Added' : (lang === 'ar' ? 'ضيفها عالخربشة ←' : 'Add to bag →')}
-            </button>
-            <button className="kh-btn-icon" aria-label="Save"><IconHeart size={20} /></button>
-            <button className="kh-btn-icon" aria-label="Share"><IconShare size={20} /></button>
+            <div className="shrink-0 flex items-center gap-2 sm:gap-4 self-end sm:self-auto">
+              <button className="kh-btn-icon" aria-label="Save"><IconHeart size={20} /></button>
+              <button className="kh-btn-icon" aria-label="Share"><IconShare size={20} /></button>
+            </div>
           </div>
           {!canAdd && <p className="text-xs text-muted-foreground mt-3">{t.product.preorderNote}</p>}
 
