@@ -1161,18 +1161,8 @@ a:hover > .kh-zig-draw,
 .kh-view-toggle[data-on="true"] { color: var(--ink); background-size: 100% 5px; }
 [dir="rtl"] .kh-view-toggle { background-position: 100% 100%; }
 
-/* Piece cell — front artwork swaps to back/neck view on hover */
+/* Piece cell — single combined front+back photo, no hover swap (one photo per color now) */
 .kh-piece-media { min-height: 180px; }
-.kh-piece-back {
-  opacity: 0;
-  background: var(--paper-2);
-  transition: opacity 0.2s ease;
-}
-.kh-piece-front { transition: opacity 0.2s ease; }
-@media (hover: hover) {
-  .kh-piece:hover .kh-piece-front { opacity: 0; }
-  .kh-piece:hover .kh-piece-back { opacity: 1; }
-}
 
 /* ===== Worlds — bento layout, one accent color + shape per world, one micro-action each ===== */
 .kh-world {
