@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { useCart } from '@/lib/cart';
+import { cachedMe } from '@/api/khClient';
 import { BrandLogo, IconBag, DotsMark } from '@/components/Brand';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
@@ -9,7 +10,14 @@ export default function Navbar() {
   const { t, lang, toggle } = useI18n();
   const { count } = useCart();
   const [open, setOpen] = useState(false);
+  const [me, setMe] = useState(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let cancelled = false;
+    cachedMe().then((u) => { if (!cancelled) setMe(u); });
+    return () => { cancelled = true; };
+  }, []);
 
   const links = [
     { to: '/shop', label: lang === 'ar' ? 'تسوّق' : 'Shop', tip: lang === 'ar' ? 'كل القطع' : 'Every piece', primary: true },
@@ -59,6 +67,7 @@ export default function Navbar() {
               {lang === 'en' ? 'عربي' : 'EN'}
             </button>
             <Link to="/track" className="hidden sm:inline-block kh-nav-quiet">{t.nav.track}</Link>
+            <Link to={me ? '/profile' : '/login'} className="hidden sm:inline-block kh-nav-quiet">{t.nav.account}</Link>
             <Link to="/cart" className="kh-nav-bag" aria-label={t.nav.cart}>
               <IconBag size={18} />
               <span>{lang === 'ar' ? `خربشة (${count})` : `Bag (${count})`}</span>
@@ -97,6 +106,10 @@ export default function Navbar() {
             <NavLink to="/track" onClick={() => setOpen(false)} className="kh-menu-item group kh-menu-quiet">
               <span className="kh-menu-index">06</span>
               <span className="kh-menu-word">{t.nav.track}</span>
+            </NavLink>
+            <NavLink to={me ? '/profile' : '/login'} onClick={() => setOpen(false)} className="kh-menu-item group kh-menu-quiet">
+              <span className="kh-menu-index">07</span>
+              <span className="kh-menu-word">{t.nav.account}</span>
             </NavLink>
             <div className="mt-10 flex items-center justify-between">
               <button onClick={() => { toggle(); }} className="kh-nav-quiet">{lang === 'en' ? 'عربي' : 'ENGLISH'}</button>

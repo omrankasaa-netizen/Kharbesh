@@ -110,13 +110,29 @@ export default function Login() {
       <Scribble className="mx-auto mt-6" width={120} />
       <p className="mt-6 text-muted-foreground">
         {lang === 'ar'
-          ? 'سجّل دخولك بحساب Kimi لتتبّع طلباتك وتدير حسابك.'
-          : 'Sign in with your Kimi account to track orders and manage your profile.'}
+          ? 'سجّل دخولك بحساب Google أو Kimi لتتبّع طلباتك وتدير حسابك.'
+          : 'Sign in with Google or your Kimi account to track orders and manage your profile.'}
       </p>
+      {params.get('error') && (
+        <p className="mt-4 text-sm" style={{ color: 'var(--brick, #B5432B)' }}>
+          {lang === 'ar' ? 'فشل تسجيل الدخول عبر Google. جرّب مرة تانية.' : 'Google sign-in failed. Please try again.'}
+        </p>
+      )}
+      <button
+        disabled={checking}
+        onClick={() => { window.location.href = `/api/auth/google/start?flow=customer&returnTo=${encodeURIComponent(returnTo)}`; }}
+        className="kh-btn-scribble mt-8 !justify-center mx-auto"
+      >
+        {checking
+          ? t.common.loading
+          : lang === 'ar'
+            ? 'تابع بحساب Google'
+            : 'Continue with Google'}
+      </button>
       <button
         disabled={checking}
         onClick={() => { window.location.href = getOAuthUrl(returnTo); }}
-        className="kh-btn-scribble mt-8 !justify-center mx-auto"
+        className="kh-btn-scribble mt-3 !justify-center mx-auto"
       >
         {checking
           ? t.common.loading

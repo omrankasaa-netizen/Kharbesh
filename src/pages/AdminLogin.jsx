@@ -15,25 +15,19 @@ function safeReturnTo(raw) {
   }
 }
 
-function getGoogleOAuthUrl(returnTo) {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const redirectUri = `${window.location.origin}/api/auth/google/callback`;
-  const state = btoa(JSON.stringify({ redirectUri, returnTo }));
-
-  const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  url.searchParams.set('client_id', clientId);
-  url.searchParams.set('redirect_uri', redirectUri);
-  url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', 'openid email profile');
-  url.searchParams.set('access_type', 'online');
-  url.searchParams.set('prompt', 'select_account');
-  url.searchParams.set('state', state);
-  return url.toString();
+/**
+ * The authorize URL is built server-side by /api/auth/google/start: it mints
+ * the CSRF nonce cookie the callback verifies — something a client-side
+ * link can't do. flow=staff keeps this page on the staff allowlist path.
+ */
+function getGoogleStartUrl(returnTo) {
+  return `/api/auth/google/start?flow=staff&returnTo=${encodeURIComponent(returnTo)}`;
 }
 
 const ERROR_COPY = {
   access_denied: 'Sign-in was cancelled.',
   not_authorized: "That Google account isn't on the staff list. Ask an admin to add your email.",
+  state_mismatch: 'Sign-in session expired. Please try again.',
   server_error: 'Something went wrong on our end. Try again in a moment.',
 };
 
@@ -42,7 +36,6 @@ export default function AdminLogin() {
   const [checking, setChecking] = useState(true);
   const returnTo = safeReturnTo(params.get('returnTo'));
   const errorCode = params.get('error');
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   useEffect(() => {
     (async () => {
@@ -72,19 +65,13 @@ export default function AdminLogin() {
         </p>
       )}
 
-      {clientId ? (
-        <button
-          disabled={checking}
-          onClick={() => { window.location.href = getGoogleOAuthUrl(returnTo); }}
-          className="kh-btn-scribble mt-8 !justify-center mx-auto"
-        >
-          {checking ? 'Loading…' : 'Continue with Google →'}
-        </button>
-      ) : (
-        <p className="mt-8 text-sm text-muted-foreground">
-          Google sign-in isn't configured yet on this deployment.
-        </p>
-      )}
+      <button
+        disabled={checking}
+        onClick={() => { window.location.href = getGoogleStartUrl(returnTo); }}
+        className="kh-btn-scribble mt-8 !justify-center mx-auto"
+      >
+        {checking ? 'Loading…' : 'Continue with Google →'}
+      </button>
 
       <Link to="/" className="kh-btn-text mt-10 !text-[12px]">← Back to shop</Link>
     </div>
