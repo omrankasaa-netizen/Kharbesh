@@ -4,6 +4,7 @@ import { base44 } from '@/api/khClient';
 import { useColors } from '@/lib/useCatalog.jsx';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
+import { toast } from '@/components/ui/use-toast';
 
 const PENDING_STATUSES = ['order_received', 'preorder_confirmed', 'in_production'];
 const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
@@ -61,13 +62,43 @@ export default function AdminFactory() {
   const toggleOrder = (id) =>
     setSelectedOrderIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
+  // Orders already inside a live (non-cancelled) print job — hidden from the
+  // picker so staff can't accidentally queue the same order twice.
+  const queuedOrderIds = useMemo(() => {
+    const set = new Set();
+    for (const fo of factoryOrders) {
+      if (fo.type !== 'print_job' || fo.status === 'cancelled') continue;
+      for (const it of fo.items || []) {
+        if (it.source_order_id != null) set.add(String(it.source_order_id));
+      }
+    }
+    return set;
+  }, [factoryOrders]);
+  const selectableOrders = useMemo(
+    () => pendingOrders.filter((o) => !queuedOrderIds.has(String(o.id))),
+    [pendingOrders, queuedOrderIds],
+  );
+
   const generatePrintJob = async () => {
     if (!selectedOrderIds.length) return;
     setBusy(true);
     try {
       const created = await base44.entities.FactoryOrder.generatePrintJob(selectedOrderIds);
       setFactoryOrders((f) => [created, ...f]);
+      // Remove the queued orders from the pending list so they can't be
+      // selected again without a reload.
+      setPendingOrders((os) => os.filter((o) => !selectedOrderIds.includes(o.id) && !selectedOrderIds.includes(Number(o.id))));
       setSelectedOrderIds([]);
+      const skipped = created?.skipped_order_numbers || [];
+      if (skipped.length) {
+        toast({
+          title: lang === 'ar'
+            ? `تم تخطي ${skipped.length} طلب — موجودين أصلاً بطلب طباعة: ${skipped.join(', ')}`
+            : `Skipped ${skipped.length} order(s) already in a print job: ${skipped.join(', ')}`,
+        });
+      }
+    } catch (err) {
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا ننشئ طلب الطباعة' : 'Could not create print job'), variant: 'destructive' });
     } finally { setBusy(false); }
   };
 
@@ -84,22 +115,36 @@ export default function AdminFactory() {
       setFactoryOrders((f) => [created, ...f]);
       setRestockRows([{ product_type: 'tee', color: '', size: '', quantity: 1 }]);
       setRestockNotes('');
+    } catch (err) {
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نبعت طلب إعادة التعبئة' : 'Could not create restock request'), variant: 'destructive' });
     } finally { setBusy(false); }
   };
 
   const markSent = async (fo) => {
-    const updated = await base44.entities.FactoryOrder.markSent(fo.id);
-    setFactoryOrders((f) => f.map((x) => (x.id === fo.id ? updated : x)));
+    try {
+      const updated = await base44.entities.FactoryOrder.markSent(fo.id);
+      setFactoryOrders((f) => f.map((x) => (x.id === fo.id ? updated : x)));
+    } catch (err) {
+      toast({ title: err?.message || 'Update failed.', variant: 'destructive' });
+    }
   };
   const markFulfilled = async (fo) => {
     if (!window.confirm(lang === 'ar' ? 'تأكيد الاستلام؟ رح يتحدّث المخزون تلقائياً.' : 'Mark fulfilled? This updates blank stock automatically.')) return;
-    const updated = await base44.entities.FactoryOrder.markFulfilled(fo.id);
-    setFactoryOrders((f) => f.map((x) => (x.id === fo.id ? updated : x)));
+    try {
+      const updated = await base44.entities.FactoryOrder.markFulfilled(fo.id);
+      setFactoryOrders((f) => f.map((x) => (x.id === fo.id ? updated : x)));
+    } catch (err) {
+      toast({ title: err?.message || 'Update failed.', variant: 'destructive' });
+    }
   };
   const cancel = async (fo) => {
     if (!window.confirm(lang === 'ar' ? 'إلغاء هالطلب؟' : 'Cancel this factory order?')) return;
-    const updated = await base44.entities.FactoryOrder.cancel(fo.id);
-    setFactoryOrders((f) => f.map((x) => (x.id === fo.id ? updated : x)));
+    try {
+      const updated = await base44.entities.FactoryOrder.cancel(fo.id);
+      setFactoryOrders((f) => f.map((x) => (x.id === fo.id ? updated : x)));
+    } catch (err) {
+      toast({ title: err?.message || 'Cancel failed.', variant: 'destructive' });
+    }
   };
 
   const draftJobs = useMemo(() => factoryOrders.filter((f) => f.status === 'draft'), [factoryOrders]);
@@ -117,14 +162,14 @@ export default function AdminFactory() {
           </h2>
           <p className="text-xs text-muted-foreground mb-4">{lang === 'ar' ? 'اختر الطلبات الجاهزة للطباعة' : 'Select orders ready to send for printing.'}</p>
           <div className="max-h-64 overflow-y-auto space-y-1 border border-border rounded-md p-2">
-            {pendingOrders.map((o) => (
+            {selectableOrders.map((o) => (
               <label key={o.id} className="flex items-center gap-2 text-sm py-1.5 px-1 cursor-pointer">
                 <input type="checkbox" checked={selectedOrderIds.includes(o.id)} onChange={() => toggleOrder(o.id)} />
                 <span className="font-heading" style={{ fontFamily: 'var(--brand-font-heading)' }}>{o.order_number}</span>
                 <span className="text-muted-foreground">{o.full_name} — {o.status.replace(/_/g, ' ')}</span>
               </label>
             ))}
-            {pendingOrders.length === 0 && <p className="text-muted-foreground text-sm p-2">No orders pending production.</p>}
+            {selectableOrders.length === 0 && <p className="text-muted-foreground text-sm p-2">{pendingOrders.length > 0 ? (lang === 'ar' ? 'كل الطلبات الجاهزة موجودة أصلاً بطلبات طباعة.' : 'All pending orders are already queued in print jobs.') : 'No orders pending production.'}</p>}
           </div>
           <button onClick={generatePrintJob} disabled={!selectedOrderIds.length || busy} className="kh-btn-primary mt-4">
             {lang === 'ar' ? `إنشاء طلب طباعة (${selectedOrderIds.length})` : `Generate print job (${selectedOrderIds.length})`}

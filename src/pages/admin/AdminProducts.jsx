@@ -1,19 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { base44, hasRole } from '@/api/khClient';
 import { useAuth } from '@/lib/AuthContext';
-import { useColors, useGarmentStyles, useCatalogRefresh } from '@/lib/useCatalog.jsx';
+import { useColors, useGarmentStyles, useCatalogRefresh, useCollections } from '@/lib/useCatalog.jsx';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
 import { STANDARD_FRONT_BY_COLOR, DEFAULT_COVER_FRONT } from '@/lib/standardPhotos';
 import QuickAddProduct from './QuickAddProduct.jsx';
+import { PRODUCT_TYPES, PRODUCT_STATUSES, PREORDER_TYPES, DEFAULT_PRICE_BY_TYPE } from '@/lib/productFormShared';
+import { toast } from '@/components/ui/use-toast';
 
-const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
-const STATUSES = ['active', 'draft', 'archived'];
-const PREORDER_TYPES = ['always_on', 'open_until', 'quantity_target', 'limited_quantity'];
-
-// Sensible starting price per garment type — staff can still override.
-// Tees default to $35 per the brand's current pricing (Aug 2026).
-const DEFAULT_PRICE_BY_TYPE = { tee: 35, hoodie: 35, accessory: 35 };
+const STATUSES = PRODUCT_STATUSES;
 
 const emptyForm = {
   name_en: '', name_ar: '', phrase_en: '', phrase_ar: '', payoff_en: '',
@@ -39,13 +35,15 @@ function toFormShape(p) {
   };
 }
 
+// units_sold is auto-managed by orders (cancelling an order returns its
+// units) — edits from this form are ignored, so it's never sent.
 function toPayload(f) {
+  const { units_sold: _unitsSold, ...rest } = f;
   return {
-    ...f,
+    ...rest,
     price: Number(f.price) || 0,
     compare_at_price: f.compare_at_price === '' ? null : Number(f.compare_at_price),
     preorder_capacity: f.preorder_capacity === '' ? null : Number(f.preorder_capacity),
-    units_sold: Number(f.units_sold) || 0,
     estimated_production_days: Number(f.estimated_production_days) || 0,
     sort_order: Number(f.sort_order) || 0,
     name_ar: f.name_ar || null,
@@ -362,6 +360,14 @@ export default function AdminProducts() {
   const isSuperAdmin = hasRole(user, 'super_admin');
   const colors = useColors();
   const styles = useGarmentStyles();
+  const collections = useCollections();
+  // Existing collection names for the datalist/quick-assign dropdown. Includes
+  // any free-typed collection names already on products that aren't formal
+  // collection records yet, so nothing looks "lost" in the dropdown.
+  const collectionNames = useMemo(() => {
+    const names = new Set((collections || []).map((c) => c.name_en).filter(Boolean));
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [collections]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null); // 'new' | id | null
@@ -470,8 +476,12 @@ export default function AdminProducts() {
 
   const archive = async (p) => {
     if (!window.confirm(lang === 'ar' ? 'أرشفة هالمنتج؟' : `Archive "${p.name_en}"?`)) return;
-    await base44.entities.Product.delete(p.id);
-    setProducts((ps) => ps.map((x) => (x.id === p.id ? { ...x, status: 'archived' } : x)));
+    try {
+      await base44.entities.Product.delete(p.id);
+      setProducts((ps) => ps.map((x) => (x.id === p.id ? { ...x, status: 'archived' } : x)));
+    } catch (err) {
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نأرشف' : 'Could not archive'), variant: 'destructive' });
+    }
   };
 
   // Super_admin-only permanent delete (test-data cleanup pre-launch). Requires
@@ -493,8 +503,27 @@ export default function AdminProducts() {
   };
 
   const quickStatus = async (p, status) => {
-    const updated = await base44.entities.Product.update(p.id, { status });
-    setProducts((ps) => ps.map((x) => (x.id === p.id ? updated : x)));
+    try {
+      const updated = await base44.entities.Product.update(p.id, { status });
+      setProducts((ps) => ps.map((x) => (x.id === p.id ? updated : x)));
+    } catch (err) {
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نحدّث الحالة' : 'Could not update status'), variant: 'destructive' });
+    }
+  };
+
+  // Quick collection (category) assignment straight from the products table —
+  // no need to open the full editor just to move a tee into a collection.
+  const quickCollection = async (p, collectionName) => {
+    const next = collectionName || null;
+    if ((p.collection_name ?? null) === next) return;
+    const prev = p.collection_name;
+    setProducts((ps) => ps.map((x) => (x.id === p.id ? { ...x, collection_name: next } : x)));
+    try {
+      await base44.entities.Product.update(p.id, { collection_name: next });
+    } catch (err) {
+      setProducts((ps) => ps.map((x) => (x.id === p.id ? { ...x, collection_name: prev } : x)));
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نحدّث المجموعة' : 'Could not update collection'), variant: 'destructive' });
+    }
   };
 
   // ── Selection + batch actions ─────────────────────────────────────────
@@ -582,7 +611,10 @@ export default function AdminProducts() {
                 </select>
               </Field>
               <Field label={lang === 'ar' ? 'المجموعة' : 'Collection'}>
-                <input className="kh-input" value={form.collection_name || ''} onChange={set('collection_name')} placeholder="Kharbesh Quotes" />
+                <input className="kh-input" list="kh-collection-names" value={form.collection_name || ''} onChange={set('collection_name')} placeholder="Kharbesh Quotes" />
+                <datalist id="kh-collection-names">
+                  {collectionNames.map((c) => <option key={c} value={c} />)}
+                </datalist>
               </Field>
               <Field label={lang === 'ar' ? 'قصة القطعة' : 'Garment style'} help={lang === 'ar' ? 'مثلاً: أوفرسايز، ريغولر، بيكيه' : 'e.g. Oversized, Regular Fit, Pique'}>
                 <GarmentStyleField
@@ -729,7 +761,9 @@ export default function AdminProducts() {
                   <input type="number" className="kh-input" value={form.preorder_capacity} onChange={set('preorder_capacity')} />
                 </Field>
                 <Field label="Preorder close date"><input type="date" className="kh-input" value={form.preorder_close_date} onChange={set('preorder_close_date')} /></Field>
-                <Field label="Units sold"><input type="number" className="kh-input" value={form.units_sold} onChange={set('units_sold')} /></Field>
+                <Field label="Units sold" help={lang === 'ar' ? 'بتتحدّث تلقائياً من الطلبات — إلغاء الطلب بيرجّع القطع هون. التعديل اليدوي بينتجاهَل.' : 'Auto-managed by orders — cancelling an order returns its units here. Edits are ignored.'}>
+                  <input type="number" className="kh-input opacity-60" value={form.units_sold} readOnly disabled />
+                </Field>
                 <Field label="Est. production days"><input type="number" className="kh-input" value={form.estimated_production_days} onChange={set('estimated_production_days')} /></Field>
                 <Field label="Est. dispatch window"><input className="kh-input" value={form.estimated_dispatch_window || ''} onChange={set('estimated_dispatch_window')} placeholder="7–10 days" /></Field>
               </div>
@@ -852,7 +886,21 @@ export default function AdminProducts() {
                       </td>
                       <td className="py-3 pr-3">
                         <button onClick={() => startEdit(p)} className="text-left hover:underline">{p.name_en}</button>
-                        <div className="text-xs text-muted-foreground">{p.collection_name}</div>
+                        {/* Quick category (collection) assign — inline, no need
+                            to open the full editor just to move a tee. */}
+                        <select
+                          value={p.collection_name || ''}
+                          onChange={(e) => quickCollection(p, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1 text-xs text-muted-foreground bg-transparent border border-transparent hover:border-border rounded px-1 py-0.5 max-w-[180px] cursor-pointer"
+                          title={lang === 'ar' ? 'غيّر المجموعة' : 'Change collection'}
+                        >
+                          <option value="">{lang === 'ar' ? '— بلا مجموعة —' : '— No collection —'}</option>
+                          {p.collection_name && !collectionNames.includes(p.collection_name) && (
+                            <option value={p.collection_name}>{p.collection_name}</option>
+                          )}
+                          {collectionNames.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
                       </td>
                       <td className="py-3 pr-3">{p.product_type}</td>
                       <td className="py-3 pr-3">${p.price}</td>

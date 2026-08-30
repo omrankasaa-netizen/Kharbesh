@@ -3,11 +3,11 @@ import { base44 } from '@/api/khClient';
 import { useColors } from '@/lib/useCatalog.jsx';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
+import { PRODUCT_TYPES, SIZE_OPTIONS, DEFAULT_PRICE_BY_TYPE } from '@/lib/productFormShared';
 
-const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
+// Bulk import only ever creates drafts or actives — archiving is a
+// per-product action in the editor, not something a CSV should do.
 const STATUSES = ['draft', 'active'];
-const SIZE_OPTIONS = ['S', 'M', 'L', 'XL', 'XXL'];
-const DEFAULT_PRICE_BY_TYPE = { tee: 35, hoodie: 35, accessory: 35 };
 
 const TEMPLATE_HEADER = ['name_en', 'name_ar', 'phrase_en', 'description_en', 'product_type', 'price', 'sizes', 'status'];
 const TEMPLATE_ROWS = [

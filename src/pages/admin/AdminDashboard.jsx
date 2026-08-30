@@ -38,9 +38,12 @@ export default function AdminDashboard() {
     })();
   }, [isSuperAdmin]);
 
-  const totalOrders = orders.length;
-  const pending = orders.filter((o) => o.status === 'order_received' || o.status === 'preorder_confirmed' || o.status === 'in_production');
-  const revenue = orders.reduce((s, o) => s + (o.total || 0), 0);
+  // Cancelled orders aren't real business — exclude them from the counts and
+  // revenue so the dashboard reflects what actually needs attention/money.
+  const live = orders.filter((o) => o.status !== 'cancelled');
+  const totalOrders = live.length;
+  const pending = live.filter((o) => o.status === 'order_received' || o.status === 'preorder_confirmed' || o.status === 'in_production');
+  const revenue = live.reduce((s, o) => s + (o.total || 0), 0);
   const recent = orders.slice(0, 6);
   const lowStock = stock.filter((s) => s.is_low);
   const openFactoryJobs = factoryOrders.filter((f) => ['draft', 'sent'].includes(f.status));

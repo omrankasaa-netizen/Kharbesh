@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { base44 } from '@/api/khClient';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
+import { useCollections } from '@/lib/useCatalog.jsx';
+import { toast } from '@/components/ui/use-toast';
 
 const VALUE_TYPES = ['percent', 'fixed'];
 const APPLIES_TO = ['all', 'product_type', 'collection'];
@@ -54,7 +56,12 @@ function ValueFields({ type, valueInput, onType, onValue, lang }) {
         </select>
       </Field>
       <Field label={type === 'percent' ? (lang === 'ar' ? 'النسبة %' : 'Percent (%)') : (lang === 'ar' ? 'المبلغ $' : 'Amount ($)')}>
-        <input type="number" step={type === 'percent' ? '1' : '0.01'} className="kh-input" value={valueInput} onChange={(e) => onValue(e.target.value)} />
+        <input type="number" step={type === 'percent' ? '1' : '0.01'} min="0" max={type === 'percent' ? 100 : undefined} className="kh-input" value={valueInput} onChange={(e) => onValue(e.target.value)} />
+        {type === 'percent' && (
+          <span className="block text-[11px] text-muted-foreground mt-1">
+            {lang === 'ar' ? 'أقصى حد 100% — أكثر من هيك يعني عم ندفع للزبون' : 'Capped at 100% — anything above pays the customer to order.'}
+          </span>
+        )}
       </Field>
     </>
   );
@@ -125,13 +132,21 @@ function PromoCodesTab({ lang }) {
 
   const remove = async (p) => {
     if (!window.confirm(lang === 'ar' ? `حذف الكود "${p.code}"؟` : `Delete code "${p.code}"?`)) return;
-    await base44.entities.Promotions.promoCodes.remove(p.id);
-    setRows((rs) => rs.filter((r) => r.id !== p.id));
+    try {
+      await base44.entities.Promotions.promoCodes.remove(p.id);
+      setRows((rs) => rs.filter((r) => r.id !== p.id));
+    } catch (err) {
+      toast({ title: err?.message || 'Delete failed.', variant: 'destructive' });
+    }
   };
 
   const toggleActive = async (p) => {
-    const updated = await base44.entities.Promotions.promoCodes.update(p.id, { active: !p.active });
-    setRows((rs) => rs.map((r) => (r.id === p.id ? updated : r)));
+    try {
+      const updated = await base44.entities.Promotions.promoCodes.update(p.id, { active: !p.active });
+      setRows((rs) => rs.map((r) => (r.id === p.id ? updated : r)));
+    } catch (err) {
+      toast({ title: err?.message || 'Update failed.', variant: 'destructive' });
+    }
   };
 
   if (editingId) {
@@ -236,6 +251,7 @@ function DiscountsTab({ lang }) {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyDiscount);
+  const collections = useCollections();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -271,13 +287,21 @@ function DiscountsTab({ lang }) {
 
   const remove = async (d) => {
     if (!window.confirm(lang === 'ar' ? `حذف "${d.name_en}"؟` : `Delete "${d.name_en}"?`)) return;
-    await base44.entities.Promotions.discounts.remove(d.id);
-    setRows((rs) => rs.filter((r) => r.id !== d.id));
+    try {
+      await base44.entities.Promotions.discounts.remove(d.id);
+      setRows((rs) => rs.filter((r) => r.id !== d.id));
+    } catch (err) {
+      toast({ title: err?.message || 'Delete failed.', variant: 'destructive' });
+    }
   };
 
   const toggleActive = async (d) => {
-    const updated = await base44.entities.Promotions.discounts.update(d.id, { active: !d.active });
-    setRows((rs) => rs.map((r) => (r.id === d.id ? updated : r)));
+    try {
+      const updated = await base44.entities.Promotions.discounts.update(d.id, { active: !d.active });
+      setRows((rs) => rs.map((r) => (r.id === d.id ? updated : r)));
+    } catch (err) {
+      toast({ title: err?.message || 'Update failed.', variant: 'destructive' });
+    }
   };
 
   if (editingId) {
@@ -299,7 +323,17 @@ function DiscountsTab({ lang }) {
           </Field>
           {form.applies_to !== 'all' && (
             <Field label={form.applies_to === 'product_type' ? (lang === 'ar' ? 'نوع المنتج (tee/hoodie/accessory)' : 'Product type (tee/hoodie/accessory)') : (lang === 'ar' ? 'اسم الكوليكشن' : 'Collection name')}>
-              <input className="kh-input" value={form.applies_value} onChange={set('applies_value')} />
+              <input
+                className="kh-input"
+                value={form.applies_value}
+                onChange={set('applies_value')}
+                {...(form.applies_to === 'collection' ? { list: 'kh-discount-collection-names' } : {})}
+              />
+              {form.applies_to === 'collection' && (
+                <datalist id="kh-discount-collection-names">
+                  {(collections || []).map((c) => <option key={c.id} value={c.name_en} />)}
+                </datalist>
+              )}
             </Field>
           )}
           <Field label={lang === 'ar' ? 'يبدأ (اختياري)' : 'Starts at (optional)'}>
@@ -433,13 +467,21 @@ function CampaignsTab({ lang }) {
 
   const remove = async (c) => {
     if (!window.confirm(lang === 'ar' ? `حذف "${c.title_en}"؟` : `Delete "${c.title_en}"?`)) return;
-    await base44.entities.Promotions.campaigns.remove(c.id);
-    setRows((rs) => rs.filter((r) => r.id !== c.id));
+    try {
+      await base44.entities.Promotions.campaigns.remove(c.id);
+      setRows((rs) => rs.filter((r) => r.id !== c.id));
+    } catch (err) {
+      toast({ title: err?.message || 'Delete failed.', variant: 'destructive' });
+    }
   };
 
   const toggleActive = async (c) => {
-    const updated = await base44.entities.Promotions.campaigns.update(c.id, { active: !c.active });
-    setRows((rs) => rs.map((r) => (r.id === c.id ? updated : r)));
+    try {
+      const updated = await base44.entities.Promotions.campaigns.update(c.id, { active: !c.active });
+      setRows((rs) => rs.map((r) => (r.id === c.id ? updated : r)));
+    } catch (err) {
+      toast({ title: err?.message || 'Update failed.', variant: 'destructive' });
+    }
   };
 
   if (editingId) {
