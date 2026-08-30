@@ -7,6 +7,7 @@ import { useI18n } from '@/lib/i18n';
 const LINKS = [
   { to: '/admin/dashboard', label_en: 'Dashboard', label_ar: 'لوحة التحكم', minRole: 'staff' },
   { to: '/admin/orders', label_en: 'Orders', label_ar: 'الطلبات', minRole: 'staff' },
+  { to: '/admin/custom-requests', label_en: 'Custom Requests', label_ar: 'طلبات خاصة', minRole: 'staff' },
   { to: '/admin/products', label_en: 'Products', label_ar: 'المنتجات', minRole: 'staff' },
   { to: '/admin/bulk-import', label_en: 'Bulk Import', label_ar: 'استيراد بالجملة', minRole: 'staff' },
   { to: '/admin/local-import', label_en: 'Local Import', label_ar: 'استيراد من مجلد', minRole: 'staff' },
