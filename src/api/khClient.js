@@ -242,6 +242,11 @@ export const kh = {
       hardDelete: (id) => client.admin.hardDeleteOrder.mutate({ id: String(id) }),
       /** Manual "Send follow-up" button in the admin panel. */
       sendFollowupEmail: (id) => client.admin.sendOrderFollowupEmail.mutate({ id: String(id) }),
+      /** Courier handoff: which courier company took the parcel. */
+      markHandedToCourier: (id, courierName) =>
+        client.admin.markHandedToCourier.mutate({ id: String(id), courier_name: courierName }),
+      /** COD settlement: the courier paid us this order's cash. */
+      markCashCollected: (id) => client.admin.markCashCollected.mutate({ id: String(id) }),
     },
 
     /** Store config: banner, feature toggles, and payment-method control
@@ -352,6 +357,13 @@ export const kh = {
       addExpense: (data) => client.admin.addOverheadExpense.mutate(data),
       deleteExpense: (id) => client.admin.deleteOverheadExpense.mutate({ id: String(id) }),
       getSummary: (from, to) => client.admin.financialSummary.query({ from, to }),
+      codOutstandingByCourier: (from, to) => client.admin.codOutstandingByCourier.query({ from, to }),
+      getProfitShares: () => client.admin.profitShares.query(),
+      updateProfitShares: (shares) => client.admin.updateProfitShares.mutate({ shares }),
+      listFactoryPayments: (from, to) => client.admin.factoryPayments.query({ from, to }),
+      addFactoryPayment: (data) => client.admin.addFactoryPayment.mutate(data),
+      deleteFactoryPayment: (id) => client.admin.deleteFactoryPayment.mutate({ id: String(id) }),
+      getFactoryPayable: () => client.admin.factoryPayable.query(),
       listMargins: () => client.admin.productMargins.query(),
       updateProductCost: (id, costPrice) =>
         client.admin.updateProductCost.mutate({ id: String(id), cost_price: costPrice }),

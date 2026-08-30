@@ -22,6 +22,11 @@ export default function AdminOrders() {
   const [hasMore, setHasMore] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [followupState, setFollowupState] = useState({}); // { [orderId]: 'sending' | 'sent' | 'error' }
+  const [courierDrafts, setCourierDrafts] = useState({}); // { [orderId]: courier name being typed }
+  const [courierBusy, setCourierBusy] = useState({}); // { [orderId]: true while a courier mutation is in flight }
+
+  // Courier companies used before — offered as suggestions on the handoff input.
+  const knownCouriers = [...new Set(orders.map((o) => o.courier_name).filter(Boolean))].sort();
 
   useEffect(() => {
     (async () => {
@@ -57,6 +62,43 @@ export default function AdminOrders() {
       setOrders((os) => os.map((o) => o.id === id ? { ...o, status: newStatus } : o));
     } catch (err) {
       toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نحدّث الحالة' : 'Could not update status'), variant: 'destructive' });
+    }
+  };
+
+  // Optimistic update + rollback: patch the row immediately, replace with
+  // the server-returned order on success, restore the old list on failure.
+  const handToCourier = async (o) => {
+    const name = (courierDrafts[o.id] ?? '').trim();
+    if (!name || courierBusy[o.id]) return;
+    const prevOrders = orders;
+    setCourierBusy((s) => ({ ...s, [o.id]: true }));
+    setOrders((os) => os.map((x) => x.id === o.id ? { ...x, courier_name: name, handed_to_courier_at: new Date().toISOString() } : x));
+    try {
+      const updated = await base44.entities.Order.markHandedToCourier(o.id, name);
+      setOrders((os) => os.map((x) => x.id === o.id ? updated : x));
+      toast({ title: lang === 'ar' ? 'انسلمت للشركة ✓' : 'Handed to courier ✓' });
+    } catch (err) {
+      setOrders(prevOrders);
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نسجّل التسليم' : 'Could not record the handoff'), variant: 'destructive' });
+    } finally {
+      setCourierBusy((s) => ({ ...s, [o.id]: false }));
+    }
+  };
+
+  const collectCash = async (o) => {
+    if (courierBusy[o.id]) return;
+    const prevOrders = orders;
+    setCourierBusy((s) => ({ ...s, [o.id]: true }));
+    setOrders((os) => os.map((x) => x.id === o.id ? { ...x, cash_collected_at: new Date().toISOString() } : x));
+    try {
+      const updated = await base44.entities.Order.markCashCollected(o.id);
+      setOrders((os) => os.map((x) => x.id === o.id ? updated : x));
+      toast({ title: lang === 'ar' ? 'انقبض الكاش ✓' : 'Cash collected ✓' });
+    } catch (err) {
+      setOrders(prevOrders);
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نسجّل القبض' : 'Could not record the collection'), variant: 'destructive' });
+    } finally {
+      setCourierBusy((s) => ({ ...s, [o.id]: false }));
     }
   };
 
@@ -212,6 +254,60 @@ export default function AdminOrders() {
                                 <div className="text-muted-foreground">{o.notes}</div>
                               </div>
                             )}
+                            <div className="pt-3 mt-1 border-t border-border">
+                              <div className="kh-eyebrow mb-2">{lang === 'ar' ? 'شركة التوصيل' : 'Courier'}</div>
+                              {o.handed_to_courier_at ? (
+                                <div className="space-y-1.5">
+                                  <div className="flex justify-between gap-2">
+                                    <span className="text-muted-foreground">{lang === 'ar' ? 'الشركة' : 'Company'}</span>
+                                    <span>{o.courier_name}</span>
+                                  </div>
+                                  <div className="flex justify-between gap-2">
+                                    <span className="text-muted-foreground">{lang === 'ar' ? 'انسلمت ب' : 'Handed off'}</span>
+                                    <span>{new Date(o.handed_to_courier_at).toLocaleString()}</span>
+                                  </div>
+                                  {o.cash_collected_at ? (
+                                    <div className="flex justify-between gap-2">
+                                      <span className="text-muted-foreground">{lang === 'ar' ? 'انقبض الكاش ب' : 'Cash collected'}</span>
+                                      <span style={{ color: 'var(--brand-accent)' }}>{new Date(o.cash_collected_at).toLocaleString()}</span>
+                                    </div>
+                                  ) : o.payment_method === 'whish' ? (
+                                    <div className="text-xs text-muted-foreground">{lang === 'ar' ? 'مدفوع أونلاين — ما في كاش عالتوصيل' : 'Paid online — no COD cash to collect.'}</div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => collectCash(o)}
+                                      disabled={courierBusy[o.id]}
+                                      className="kh-btn-secondary !py-1.5 !px-3 text-xs"
+                                    >
+                                      {courierBusy[o.id] ? t.common.loading : (lang === 'ar' ? 'قبضنا الكاش' : 'Cash collected')}
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <input
+                                    type="text"
+                                    list={`couriers-${o.id}`}
+                                    placeholder={lang === 'ar' ? 'اسم شركة التوصيل' : 'Courier company name'}
+                                    className="kh-input !h-9 !py-1 max-w-[200px]"
+                                    value={courierDrafts[o.id] ?? ''}
+                                    onChange={(e) => setCourierDrafts((d) => ({ ...d, [o.id]: e.target.value }))}
+                                  />
+                                  <datalist id={`couriers-${o.id}`}>
+                                    {knownCouriers.map((c) => <option key={c} value={c} />)}
+                                  </datalist>
+                                  <button
+                                    type="button"
+                                    onClick={() => handToCourier(o)}
+                                    disabled={courierBusy[o.id] || !(courierDrafts[o.id] ?? '').trim()}
+                                    className="kh-btn-secondary !py-1.5 !px-3 text-xs disabled:opacity-50"
+                                  >
+                                    {courierBusy[o.id] ? t.common.loading : (lang === 'ar' ? 'سلّمناها للشركة' : 'Handed to courier')}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground pt-2">
                               {o.internal_status && <span className="px-2 py-0.5 rounded border border-border">{o.internal_status}</span>}
                               {o.is_guest && <span>{lang === 'ar' ? 'ضيف' : 'guest'}</span>}

@@ -64,6 +64,13 @@
       "when": 1788116498223,
       "tag": "0008_add_garment_costs",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1788125398117,
+      "tag": "0009_right_dark_beast",
+      "breakpoints": true
     }
   ]
 }

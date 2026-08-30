@@ -27,6 +27,9 @@ export function toUiOrder(o: Order) {
     applied_discounts: o.appliedDiscounts ?? [],
     total: o.totalCents / 100,
     payment_method: o.paymentMethod,
+    courier_name: o.courierName,
+    handed_to_courier_at: o.handedToCourierAt?.toISOString() ?? null,
+    cash_collected_at: o.cashCollectedAt?.toISOString() ?? null,
     status: o.status,
     internal_status: o.internalStatus,
     language: o.language,
@@ -347,6 +350,61 @@ export async function updateOrderStatus(
     });
     const [row] = await tx.select().from(orders).where(eq(orders.id, id));
     return row ? toUiOrder(row) : null;
+  });
+}
+
+/**
+ * Records that an order was handed to a courier company for delivery.
+ * Re-marking with the same courier is a no-op (safe to retry after a
+ * network failure); switching to a different courier after handoff is
+ * rejected — that would rewrite delivery history.
+ */
+export async function markHandedToCourier(id: number, courierName: string, actorUserId: number) {
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    const [prev] = await tx.select().from(orders).where(eq(orders.id, id)).for("update");
+    if (!prev) throw new Error("ORDER_NOT_FOUND");
+    if (prev.handedToCourierAt) {
+      if (prev.courierName === courierName) return toUiOrder(prev);
+      throw new Error("ALREADY_HANDED_TO_COURIER");
+    }
+    const now = new Date();
+    await tx.update(orders).set({ courierName, handedToCourierAt: now, updatedAt: now }).where(eq(orders.id, id));
+    await tx.insert(auditLogs).values({
+      actorUserId,
+      action: "order.handed_to_courier",
+      entity: "order",
+      entityId: String(id),
+      detail: { courier_name: courierName },
+    });
+    const [row] = await tx.select().from(orders).where(eq(orders.id, id));
+    return toUiOrder(row);
+  });
+}
+
+/**
+ * Records that the courier settled this order's COD cash with us. Requires
+ * the handoff to have happened first — cash can't arrive from a courier we
+ * never gave the parcel to. Re-marking is a no-op.
+ */
+export async function markCashCollected(id: number, actorUserId: number) {
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    const [prev] = await tx.select().from(orders).where(eq(orders.id, id)).for("update");
+    if (!prev) throw new Error("ORDER_NOT_FOUND");
+    if (prev.cashCollectedAt) return toUiOrder(prev);
+    if (!prev.handedToCourierAt) throw new Error("HANDOFF_FIRST");
+    const now = new Date();
+    await tx.update(orders).set({ cashCollectedAt: now, updatedAt: now }).where(eq(orders.id, id));
+    await tx.insert(auditLogs).values({
+      actorUserId,
+      action: "order.cash_collected",
+      entity: "order",
+      entityId: String(id),
+      detail: { courier_name: prev.courierName, totalCents: prev.totalCents },
+    });
+    const [row] = await tx.select().from(orders).where(eq(orders.id, id));
+    return toUiOrder(row);
   });
 }
 
