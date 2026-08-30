@@ -26,18 +26,23 @@ export function getDb() {
     // callback-style connection, not the promise wrapper -- use
     // .promise() to get an awaitable query method on it.
     pool.on("connection", (connection) => {
-      connection
+      // mysql2's typings omit promise() on PoolConnection even though the
+      // method exists at runtime (the callback-style connection carries it).
+      (connection as unknown as { promise(): { query(sql: string): Promise<unknown> } })
         .promise()
         .query("SET SESSION sort_buffer_size = 8388608")
         .catch((error: unknown) => {
           console.error("[db] failed to raise sort_buffer_size on new connection:", error);
         });
     });
+    // drizzle-orm 0.45's bundled mysql2 typings resolve Pool to a different
+    // declaration than the app's mysql2 import, so TS sees two unrelated
+    // "Pool" types even though it's the same runtime object — cast narrowly.
     instance = drizzle({
       client: pool,
       mode: "planetscale",
       schema: fullSchema,
-    });
+    }) as unknown as typeof instance;
   }
   return instance;
 }
