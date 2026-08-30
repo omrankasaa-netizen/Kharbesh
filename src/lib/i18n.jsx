@@ -118,6 +118,11 @@ const dictionaries = {
       whishHandleLabel: 'Send to this Whish number',
       whishInstructionsFallback: 'Send the order total to the number above, then place your order — we confirm payment before production starts.',
       paymentUnavailable: 'Checkout is temporarily unavailable. Please contact us to place your order.',
+      phoneInvalid: 'Enter a valid phone number — we confirm orders on WhatsApp.',
+      signInTitle: 'Checkout faster — sign in with Google',
+      signInSub: 'We’ll prefill your details and save your orders to your account.',
+      signInGoogle: 'Continue with Google',
+      signedInAs: 'Signed in as',
     },
     confirm: {
       title: 'Order received',
@@ -312,6 +317,11 @@ const dictionaries = {
       paymentUnavailable: 'الدفع مش متوفر حالياً. تواصل معنا لتأكيد طلبك.',
       back: 'رجوع للسلة',
       autoDiscount: 'خصم مطبّق',
+      phoneInvalid: 'أدخل رقم هاتف صحيح — منأكد الطلبات عبر واتساب.',
+      signInTitle: 'خلص أسرع — سجل بحساب Google',
+      signInSub: 'منعبّي معلوماتك تلقائياً ومنحفظ طلباتك بحسابك.',
+      signInGoogle: 'تابع بحساب Google',
+      signedInAs: 'مسجل كـ',
     },
     confirm: {
       title: 'وصلنا الطلب',
