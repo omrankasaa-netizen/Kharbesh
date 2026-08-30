@@ -27,16 +27,28 @@ export default function AdminFinancials() {
   const [garmentDrafts, setGarmentDrafts] = useState({}); // { [product_type]: { cost, label } }
   const [savingGarmentType, setSavingGarmentType] = useState(null);
   const [newGarment, setNewGarment] = useState({ product_type: '', label: '', cost: '' });
+  const [codByCourier, setCodByCourier] = useState([]);
+  const [shares, setShares] = useState([]); // draft rows: { name, percent } (percent as string while typing)
+  const [savedShares, setSavedShares] = useState([]);
+  const [savingShares, setSavingShares] = useState(false);
+  const [payable, setPayable] = useState(null);
+  const [payments, setPayments] = useState([]);
+  const [paymentForm, setPaymentForm] = useState({ amount: '', payment_date: new Date().toISOString().slice(0, 10), note: '' });
+  const [savingPayment, setSavingPayment] = useState(false);
 
   const loadAll = async (from, to) => {
     setLoading(true);
     try {
-      const [uc, exp, sum, marg, gc] = await Promise.all([
+      const [uc, exp, sum, marg, gc, cod, ps, pay, fp] = await Promise.all([
         base44.entities.Financials.getUnitCosts(),
         base44.entities.Financials.listExpenses(from || undefined, to || undefined),
         base44.entities.Financials.getSummary(from || undefined, to || undefined),
         base44.entities.Financials.listMargins(),
         base44.entities.Financials.getGarmentCosts(),
+        base44.entities.Financials.codOutstandingByCourier(from || undefined, to || undefined),
+        base44.entities.Financials.getProfitShares(),
+        base44.entities.Financials.getFactoryPayable(),
+        base44.entities.Financials.listFactoryPayments(from || undefined, to || undefined),
       ]);
       setUnitCosts(uc);
       setUnitForm({ blank_tee_cost: uc.blank_tee_cost, print_fee: uc.print_fee, packaging_cost: uc.packaging_cost });
@@ -44,6 +56,11 @@ export default function AdminFinancials() {
       setSummary(sum);
       setMargins(marg || []);
       setGarmentCosts(gc || []);
+      setCodByCourier(cod || []);
+      setSavedShares(ps?.shares || []);
+      setShares((ps?.shares || []).map((s) => ({ name: s.name, percent: String(s.percent) })));
+      setPayable(pay || null);
+      setPayments(fp || []);
     } finally { setLoading(false); }
   };
   useEffect(() => { loadAll(); }, []);
@@ -123,6 +140,53 @@ export default function AdminFinancials() {
     await base44.entities.Financials.deleteExpense(id);
     setExpenses((e) => e.filter((x) => x.id !== id));
     loadAll(range.from, range.to);
+  };
+
+  // ── Partner profit split ─────────────────────────────────────────────────
+  const shareRowsValid = (rows) =>
+    rows.length >= 1 && rows.length <= 4 &&
+    rows.every((r) => r.name.trim().length >= 1 && r.name.length <= 60 && r.percent !== '' && Number(r.percent) >= 0 && Number(r.percent) <= 100);
+  const sharesTotal = shares.reduce((sum, r) => sum + (Number(r.percent) || 0), 0);
+  const sharesCanSave = shareRowsValid(shares) && Math.abs(sharesTotal - 100) < 0.005;
+
+  const saveShares = async () => {
+    if (!sharesCanSave) return;
+    setSavingShares(true);
+    try {
+      const updated = await base44.entities.Financials.updateProfitShares(
+        shares.map((r) => ({ name: r.name.trim(), percent: Number(r.percent) })),
+      );
+      setSavedShares(updated?.shares || []);
+      setShares((updated?.shares || []).map((s) => ({ name: s.name, percent: String(s.percent) })));
+      toast({ title: lang === 'ar' ? 'انحفظ التقسيم ✓' : 'Split saved ✓' });
+    } catch (err) {
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نحفظ التقسيم' : 'Could not save the split'), variant: 'destructive' });
+    } finally { setSavingShares(false); }
+  };
+
+  // ── Factory payments ─────────────────────────────────────────────────────
+  const addPayment = async () => {
+    if (!paymentForm.amount || Number(paymentForm.amount) <= 0) return;
+    setSavingPayment(true);
+    try {
+      await base44.entities.Financials.addFactoryPayment({ ...paymentForm, amount: Number(paymentForm.amount), note: paymentForm.note.trim() || undefined });
+      setPaymentForm({ amount: '', payment_date: new Date().toISOString().slice(0, 10), note: '' });
+      toast({ title: lang === 'ar' ? 'انحفظ الدفع ✓' : 'Payment logged ✓' });
+      loadAll(range.from, range.to);
+    } catch (err) {
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نحفظ الدفعة' : 'Could not log the payment'), variant: 'destructive' });
+    } finally { setSavingPayment(false); }
+  };
+
+  const deletePayment = async (id) => {
+    if (!window.confirm(lang === 'ar' ? 'متأكد تحذف هالدفعة؟' : 'Delete this payment?')) return;
+    try {
+      await base44.entities.Financials.deleteFactoryPayment(id);
+      setPayments((p) => p.filter((x) => x.id !== id));
+      loadAll(range.from, range.to);
+    } catch (err) {
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نحذف' : 'Could not delete'), variant: 'destructive' });
+    }
   };
 
   return (
@@ -245,6 +309,164 @@ export default function AdminFinancials() {
                 <input placeholder="Description (optional)" className="kh-input" value={expenseForm.description} onChange={(e) => setExpenseForm((f) => ({ ...f, description: e.target.value }))} />
               </div>
               <button onClick={addExpense} className="kh-btn-primary mt-3">{lang === 'ar' ? 'إضافة' : 'Add expense'}</button>
+            </section>
+
+            <section className="bg-card border border-border rounded-md p-5">
+              <h2 className="font-heading text-lg uppercase mb-1" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'تحصيل الكاش' : 'Cash collection'}</h2>
+              <p className="text-xs text-muted-foreground mb-4">
+                {lang === 'ar'
+                  ? 'التوصيل عند الاستلام (COD): الكاش بيبقى مع شركة التوصيل لحد ما تسلّمنا ياه — "وصلت" ما تعني "قبضنا".'
+                  : 'Cash on delivery: the courier holds the cash until they settle with us — "delivered" does not mean "paid".'}
+              </p>
+              {summary && (
+                <div className="grid gap-3 sm:grid-cols-3 mb-4">
+                  {[
+                    [lang === 'ar' ? 'منقبض' : 'Collected', money(summary.cod_collected), 'var(--brand-accent)'],
+                    [lang === 'ar' ? 'لسا ما انقبض' : 'Outstanding', money(summary.cod_outstanding), 'var(--brand-destructive)'],
+                    [lang === 'ar' ? 'مدفوع أونلاين (Whish)' : 'Paid online (Whish)', money(summary.online_revenue), undefined],
+                  ].map(([label, val, color]) => (
+                    <div key={label} className="border border-border rounded-md p-3">
+                      <div className="text-[11px] uppercase text-muted-foreground">{label}</div>
+                      <div className="font-heading text-xl mt-0.5" style={{ fontFamily: 'var(--brand-font-heading)', color: color || 'inherit' }}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {summary && summary.cod_outstanding > 0 && (
+                <div className="text-xs text-muted-foreground mb-4">
+                  {lang === 'ar' ? 'منها عند شركة التوصيل' : 'Of which already with a courier'}: <span className="text-foreground">{money(summary.cod_outstanding_with_courier)}</span>
+                </div>
+              )}
+              <div className="text-xs uppercase text-muted-foreground mb-2">{lang === 'ar' ? 'اللي لسا ما انقبض، حسب الشركة' : 'Outstanding by courier'}</div>
+              <table className="w-full text-sm">
+                <thead><tr className="text-left text-muted-foreground border-b border-border">
+                  <th className="py-2 pr-3">{lang === 'ar' ? 'الشركة' : 'Courier'}</th>
+                  <th className="py-2 pr-3">{lang === 'ar' ? 'طلبات' : 'Orders'}</th>
+                  <th className="py-2 pr-3">{lang === 'ar' ? 'المبلغ' : 'Total'}</th>
+                </tr></thead>
+                <tbody>
+                  {codByCourier.map((c) => (
+                    <tr key={c.courier_name} className="border-b border-border">
+                      <td className="py-2 pr-3">{c.courier_name}</td>
+                      <td className="py-2 pr-3">{c.order_count}</td>
+                      <td className="py-2 pr-3">{money(c.total)}</td>
+                    </tr>
+                  ))}
+                  {codByCourier.length === 0 && <tr><td colSpan={3} className="py-6 text-muted-foreground">{lang === 'ar' ? 'ما في مبالغ مع شركات التوصيل.' : 'Nothing outstanding with couriers.'}</td></tr>}
+                </tbody>
+              </table>
+            </section>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2 mt-6">
+            <section className="bg-card border border-border rounded-md p-5">
+              <h2 className="font-heading text-lg uppercase mb-1" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'تقسيم الأرباح' : 'Partner split'}</h2>
+              <p className="text-xs text-muted-foreground mb-4">
+                {lang === 'ar' ? 'حصص الشركاء من صافي الربح — لازم يكون المجموع ١٠٠٪.' : 'Partner shares of net profit — the percents must total exactly 100%.'}
+              </p>
+              <div className="space-y-2">
+                {shares.map((row, idx) => (
+                  <div key={idx} className="flex items-end gap-2">
+                    <input
+                      type="text" placeholder={lang === 'ar' ? 'اسم الشريك' : 'Partner name'} className="kh-input !h-9 !py-1 flex-1"
+                      value={row.name}
+                      onChange={(e) => setShares((rows) => rows.map((r, i) => i === idx ? { ...r, name: e.target.value } : r))}
+                    />
+                    <input
+                      type="number" step="0.01" min="0" max="100" placeholder="%" className="kh-input !h-9 !py-1 max-w-[90px]"
+                      value={row.percent}
+                      onChange={(e) => setShares((rows) => rows.map((r, i) => i === idx ? { ...r, percent: e.target.value } : r))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShares((rows) => rows.filter((_, i) => i !== idx))}
+                      className="kh-btn-text text-xs"
+                      style={{ color: 'var(--brand-destructive)' }}
+                      title={lang === 'ar' ? 'شيل الشريك' : 'Remove partner'}
+                    >✕</button>
+                  </div>
+                ))}
+                {shares.length === 0 && <div className="text-sm text-muted-foreground">{lang === 'ar' ? 'لسا ما في شركاء — ضيف تحت.' : 'No partners yet — add one below.'}</div>}
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => shares.length < 4 && setShares((rows) => [...rows, { name: '', percent: '' }])}
+                    disabled={shares.length >= 4}
+                    className="kh-btn-text text-xs disabled:opacity-50"
+                  >
+                    {lang === 'ar' ? '+ إضافة شريك' : '+ Add partner'}
+                  </button>
+                  <span className="text-sm" style={{ color: Math.abs(sharesTotal - 100) < 0.005 ? 'var(--brand-accent)' : 'var(--brand-destructive)' }}>
+                    {lang === 'ar' ? 'المجموع' : 'Total'}: {Math.round(sharesTotal * 100) / 100}%
+                  </span>
+                </div>
+                <button onClick={saveShares} disabled={!sharesCanSave || savingShares} className="kh-btn-primary disabled:opacity-50">
+                  {savingShares ? 'Saving…' : (lang === 'ar' ? 'حفظ التقسيم' : 'Save split')}
+                </button>
+              </div>
+              {savedShares.length > 0 && summary && (
+                <div className="mt-5 pt-4 border-t border-border">
+                  <div className="text-xs uppercase text-muted-foreground mb-2">
+                    {lang === 'ar' ? 'توزيع صافي الربح للفترة المحددة' : 'Split of this range\u2019s net profit'} ({money(summary.net_profit)})
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    {savedShares.map((s) => (
+                      <div key={s.name} className="flex justify-between">
+                        <span>{s.name} <span className="text-muted-foreground text-xs">({s.percent}%)</span></span>
+                        <span>{money((summary.net_profit * s.percent) / 100)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            <section className="bg-card border border-border rounded-md p-5">
+              <h2 className="font-heading text-lg uppercase mb-1" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'المصنع' : 'Factory'}</h2>
+              <p className="text-xs text-muted-foreground mb-4">
+                {lang === 'ar'
+                  ? 'شو لازمنا للمصنع: قيمة السادة المستهلكة + أجور الطباعة، ناقص اللي دفعناه.'
+                  : 'What we owe the factory: consumed blanks + fulfilled print fees, minus payments made.'}
+              </p>
+              {payable && (
+                <div className="space-y-1.5 text-sm mb-5">
+                  <div className="flex justify-between"><span className="text-muted-foreground">{lang === 'ar' ? 'قيمة السادة المستهلكة' : 'Consumed blanks'}</span><span>{money(payable.blanks_value)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{lang === 'ar' ? 'أجور الطباعة (طلبات منفذة)' : 'Print fees (fulfilled jobs)'}</span><span>{money(payable.print_fees_value)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{lang === 'ar' ? 'المدفوع للمصنع' : 'Paid to factory'}</span><span>-{money(payable.payments_total)}</span></div>
+                  <div className="flex justify-between pt-2 border-t border-border font-medium">
+                    <span>{lang === 'ar' ? 'الباقي للمصنع' : 'Payable'}</span>
+                    <span className="font-heading text-lg" style={{ fontFamily: 'var(--brand-font-heading)', color: payable.payable > 0 ? 'var(--brand-destructive)' : 'var(--brand-accent)' }}>{money(payable.payable)}</span>
+                  </div>
+                </div>
+              )}
+              <div className="text-xs uppercase text-muted-foreground mb-2">{lang === 'ar' ? 'دفعة جديدة' : 'Log a payment'}</div>
+              <div className="grid gap-3 sm:grid-cols-3 mb-5">
+                <input type="number" step="0.01" min="0" placeholder="Amount ($)" className="kh-input" value={paymentForm.amount} onChange={(e) => setPaymentForm((f) => ({ ...f, amount: e.target.value }))} />
+                <input type="date" className="kh-input" value={paymentForm.payment_date} onChange={(e) => setPaymentForm((f) => ({ ...f, payment_date: e.target.value }))} />
+                <input placeholder={lang === 'ar' ? 'ملاحظة (اختياري)' : 'Note (optional)'} className="kh-input" value={paymentForm.note} onChange={(e) => setPaymentForm((f) => ({ ...f, note: e.target.value }))} />
+              </div>
+              <button onClick={addPayment} disabled={savingPayment || !paymentForm.amount} className="kh-btn-primary disabled:opacity-50 mb-5">
+                {savingPayment ? 'Saving…' : (lang === 'ar' ? 'إضافة دفعة' : 'Add payment')}
+              </button>
+              <table className="w-full text-sm">
+                <thead><tr className="text-left text-muted-foreground border-b border-border">
+                  <th className="py-2 pr-3">{lang === 'ar' ? 'التاريخ' : 'Date'}</th>
+                  <th className="py-2 pr-3">{lang === 'ar' ? 'المبلغ' : 'Amount'}</th>
+                  <th className="py-2 pr-3">{lang === 'ar' ? 'ملاحظة' : 'Note'}</th>
+                  <th className="py-2 pr-3"></th>
+                </tr></thead>
+                <tbody>
+                  {payments.map((p) => (
+                    <tr key={p.id} className="border-b border-border">
+                      <td className="py-2 pr-3">{p.payment_date}</td>
+                      <td className="py-2 pr-3">{money(p.amount)}</td>
+                      <td className="py-2 pr-3">{p.note || '—'}</td>
+                      <td className="py-2 pr-3 text-right"><button onClick={() => deletePayment(p.id)} className="kh-btn-text text-xs" style={{ color: 'var(--brand-destructive)' }}>{lang === 'ar' ? 'حذف' : 'Delete'}</button></td>
+                    </tr>
+                  ))}
+                  {payments.length === 0 && <tr><td colSpan={4} className="py-6 text-muted-foreground">{lang === 'ar' ? 'ما في دفعات بهالفترة.' : 'No payments in this range.'}</td></tr>}
+                </tbody>
+              </table>
             </section>
           </div>
 
