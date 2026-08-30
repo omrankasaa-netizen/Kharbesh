@@ -29,7 +29,14 @@ import {
   upsertProductColorImages,
   deleteProductColorImages,
 } from "./queries/catalog";
-import { listAllOrders, updateOrderStatus, hardDeleteOrder, sendOrderFollowupEmail } from "./queries/orders";
+import {
+  listAllOrders,
+  updateOrderStatus,
+  hardDeleteOrder,
+  sendOrderFollowupEmail,
+  markHandedToCourier,
+  markCashCollected,
+} from "./queries/orders";
 import {
   listAllCustomRequests,
   updateCustomRequestStatus,
@@ -58,6 +65,13 @@ import {
   addOverheadExpense,
   deleteOverheadExpense,
   getFinancialSummary,
+  codOutstandingByCourier,
+  getProfitShares,
+  updateProfitShares,
+  listFactoryPayments,
+  addFactoryPayment,
+  deleteFactoryPayment,
+  getFactoryPayable,
   listProductMargins,
   updateProductCost,
 } from "./queries/financials";
@@ -312,6 +326,28 @@ export const adminRouter = createRouter({
     .input(z.object({ id: idParam }))
     .mutation(({ input }) => sendOrderFollowupEmail(Number(input.id))),
 
+  /** Courier handoff: records which courier company took the parcel. */
+  markHandedToCourier: staffQuery
+    .input(z.object({ id: idParam, courier_name: z.string().trim().min(1).max(120) }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await markHandedToCourier(Number(input.id), input.courier_name, ctx.user.id);
+      } catch (err) {
+        rethrowFriendly(err);
+      }
+    }),
+
+  /** COD settlement: the courier paid us this order's cash. */
+  markCashCollected: staffQuery
+    .input(z.object({ id: idParam }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await markCashCollected(Number(input.id), ctx.user.id);
+      } catch (err) {
+        rethrowFriendly(err);
+      }
+    }),
+
   customRequests: staffQuery.query(() => listAllCustomRequests()),
 
   updateCustomRequestStatus: staffQuery
@@ -561,11 +597,14 @@ export const adminRouter = createRouter({
         role: z.enum(["staff", "admin", "super_admin"]),
       }),
     )
-    .mutation(({ ctx, input }) => upsertStaff(input, ctx.user.id, ctx.user.email)),
+    // superAdminQuery guarantees an authenticated session, and every session
+    // user has an email (login is email-based), so the non-null assertion is safe.
+    .mutation(({ ctx, input }) => upsertStaff(input, ctx.user.id, ctx.user.email!)),
 
   removeStaff: superAdminQuery
     .input(z.object({ email: z.string().email() }))
-    .mutation(({ ctx, input }) => removeStaff(input.email, ctx.user.id, ctx.user.email)),
+    // See upsertStaff: superAdminQuery guarantees a session user with an email.
+    .mutation(({ ctx, input }) => removeStaff(input.email, ctx.user.id, ctx.user.email!)),
 
   unitCosts: superAdminQuery.query(() => getUnitCosts()),
 
@@ -622,6 +661,51 @@ export const adminRouter = createRouter({
   financialSummary: superAdminQuery
     .input(z.object({ from: z.string().max(10).optional(), to: z.string().max(10).optional() }).optional())
     .query(({ input }) => getFinancialSummary(input?.from, input?.to)),
+
+  /** COD cash still owed to us, grouped by courier company. */
+  codOutstandingByCourier: superAdminQuery
+    .input(z.object({ from: z.string().max(10).optional(), to: z.string().max(10).optional() }).optional())
+    .query(({ input }) => codOutstandingByCourier(input?.from, input?.to)),
+
+  profitShares: superAdminQuery.query(() => getProfitShares()),
+
+  updateProfitShares: superAdminQuery
+    .input(
+      z.object({
+        shares: z
+          .array(z.object({ name: z.string().trim().min(1).max(60), percent: z.number().min(0).max(100) }))
+          .min(1)
+          .max(4),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await updateProfitShares(input.shares, ctx.user.id);
+      } catch (err) {
+        rethrowFriendly(err);
+      }
+    }),
+
+  factoryPayments: superAdminQuery
+    .input(z.object({ from: z.string().max(10).optional(), to: z.string().max(10).optional() }).optional())
+    .query(({ input }) => listFactoryPayments(input?.from, input?.to)),
+
+  addFactoryPayment: superAdminQuery
+    .input(
+      z.object({
+        amount: z.number().min(0.01).max(1_000_000),
+        payment_date: z.string().min(1).max(10),
+        note: z.string().max(500).optional(),
+      }),
+    )
+    .mutation(({ ctx, input }) => addFactoryPayment(input, ctx.user.id)),
+
+  deleteFactoryPayment: superAdminQuery
+    .input(z.object({ id: idParam }))
+    .mutation(({ input }) => deleteFactoryPayment(Number(input.id))),
+
+  /** What we owe the factory: consumed blanks + fulfilled print fees − payments. */
+  factoryPayable: superAdminQuery.query(() => getFactoryPayable()),
 
   productMargins: superAdminQuery.query(() => listProductMargins()),
 
