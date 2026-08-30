@@ -1,6 +1,22 @@
-import { and, eq, gte, lte, ne } from "drizzle-orm";
+import { and, eq, gte, isNotNull, isNull, lte, ne } from "drizzle-orm";
 import { getDb } from "./connection";
-import { garmentCosts, orders, overheadExpenses, products, unitCostSettings, type GarmentCost, type OrderLineItem } from "@db/schema";
+import {
+  auditLogs,
+  blankStock,
+  factoryOrderItems,
+  factoryOrders,
+  factoryPayments,
+  garmentCosts,
+  orders,
+  overheadExpenses,
+  products,
+  profitSplitSettings,
+  stockMovements,
+  unitCostSettings,
+  type FactoryPayment,
+  type GarmentCost,
+  type OrderLineItem,
+} from "@db/schema";
 
 function toUiExpense(e: typeof overheadExpenses.$inferSelect) {
   return {
@@ -188,8 +204,25 @@ export async function getFinancialSummary(from?: string, to?: string) {
   let revenueCents = 0;
   let unitsCount = 0;
   let cogsCents = 0;
+  // COD cash tracking: 'delivered' ≠ 'cash received' — the courier holds the
+  // cash until the weekly settlement, so collected vs outstanding is tracked
+  // on the order itself (cashCollectedAt / handedToCourierAt).
+  let codCollectedCents = 0;
+  let codOutstandingCents = 0;
+  let codOutstandingWithCourierCents = 0;
+  let onlineRevenueCents = 0;
   for (const o of orderRows) {
     revenueCents += o.totalCents;
+    if (o.paymentMethod === "cash_on_delivery") {
+      if (o.cashCollectedAt) {
+        codCollectedCents += o.totalCents;
+      } else {
+        codOutstandingCents += o.totalCents;
+        if (o.handedToCourierAt) codOutstandingWithCourierCents += o.totalCents;
+      }
+    } else if (o.paymentMethod === "whish") {
+      onlineRevenueCents += o.totalCents;
+    }
     for (const item of o.items as OrderLineItem[]) {
       unitsCount += item.quantity;
       cogsCents += item.quantity * (costForType(item.productType) + printFeeCents + packagingCostCents);
@@ -214,6 +247,196 @@ export async function getFinancialSummary(from?: string, to?: string) {
     overhead,
     net_profit: netProfit,
     margin_pct: revenue > 0 ? Math.round((netProfit / revenue) * 1000) / 10 : 0,
+    cod_collected: codCollectedCents / 100,
+    cod_outstanding: codOutstandingCents / 100,
+    cod_outstanding_with_courier: codOutstandingWithCourierCents / 100,
+    online_revenue: onlineRevenueCents / 100,
+  };
+}
+
+/**
+ * Outstanding COD cash grouped by courier company: handed-off, not-yet-
+ * collected, non-cancelled orders. Drives the weekly settlement chase.
+ */
+export async function codOutstandingByCourier(from?: string, to?: string) {
+  const db = getDb();
+  const conditions = [
+    ne(orders.status, "cancelled"),
+    eq(orders.paymentMethod, "cash_on_delivery"),
+    isNull(orders.cashCollectedAt),
+    isNotNull(orders.handedToCourierAt),
+  ];
+  if (from) conditions.push(gte(orders.createdAt, new Date(from)));
+  if (to) conditions.push(lte(orders.createdAt, new Date(to + "T23:59:59")));
+  const rows = await db
+    .select({ courierName: orders.courierName, totalCents: orders.totalCents })
+    .from(orders)
+    .where(and(...conditions));
+  const byCourier = new Map<string, { order_count: number; total_cents: number }>();
+  for (const r of rows) {
+    const name = r.courierName ?? "(unknown)";
+    const entry = byCourier.get(name) ?? { order_count: 0, total_cents: 0 };
+    entry.order_count += 1;
+    entry.total_cents += r.totalCents;
+    byCourier.set(name, entry);
+  }
+  return [...byCourier.entries()]
+    .map(([courier_name, e]) => ({ courier_name, order_count: e.order_count, total: e.total_cents / 100 }))
+    .sort((a, b) => b.total - a.total);
+}
+
+// ── Partner profit split (super_admin) ───────────────────────────────────────
+
+export type ProfitShare = { name: string; percent: number };
+
+/**
+ * Validates the partner split. Returns null when valid, otherwise a friendly
+ * error code the router maps to a message that survives tRPC masking. Kept
+ * pure (no DB) so it's unit-testable; zod in the router guards shape too.
+ */
+export function validateProfitShares(shares: ProfitShare[]): string | null {
+  if (!Array.isArray(shares) || shares.length < 1 || shares.length > 4) return "INVALID_SHARES";
+  for (const s of shares) {
+    if (!s || typeof s.name !== "string" || s.name.trim().length < 1 || s.name.length > 60) return "INVALID_SHARES";
+    if (typeof s.percent !== "number" || !Number.isFinite(s.percent) || s.percent < 0 || s.percent > 100) {
+      return "INVALID_SHARES";
+    }
+  }
+  const total = shares.reduce((sum, s) => sum + s.percent, 0);
+  // Tolerate float dust from decimal percents (e.g. 33.3 + 33.3 + 33.4).
+  if (Math.abs(total - 100) > 1e-6) return "SHARES_MUST_TOTAL_100";
+  return null;
+}
+
+/** Single-row profit-split settings, lazily created empty on first read. */
+export async function getProfitShares() {
+  const db = getDb();
+  const [row] = await db.select().from(profitSplitSettings).limit(1);
+  if (row) {
+    return { id: String(row.id), shares: row.shares, updated_date: row.updatedAt.toISOString() };
+  }
+  const [{ id }] = await db.insert(profitSplitSettings).values({ shares: [] }).$returningId();
+  return { id: String(id), shares: [] as ProfitShare[], updated_date: new Date().toISOString() };
+}
+
+export async function updateProfitShares(shares: ProfitShare[], actorUserId: number) {
+  const invalid = validateProfitShares(shares);
+  if (invalid) throw new Error(invalid);
+  const db = getDb();
+  const cleaned = shares.map((s) => ({ name: s.name.trim(), percent: s.percent }));
+  const [row] = await db.select().from(profitSplitSettings).limit(1);
+  if (row) {
+    await db
+      .update(profitSplitSettings)
+      .set({ shares: cleaned, updatedAt: new Date() })
+      .where(eq(profitSplitSettings.id, row.id));
+  } else {
+    await db.insert(profitSplitSettings).values({ shares: cleaned });
+  }
+  await db.insert(auditLogs).values({
+    actorUserId,
+    action: "profit_shares.updated",
+    entity: "profit_split_settings",
+    entityId: null,
+    detail: { shares: cleaned },
+  });
+  return getProfitShares();
+}
+
+// ── Factory payable ledger (super_admin) ─────────────────────────────────────
+
+function toUiFactoryPayment(p: FactoryPayment) {
+  return {
+    id: String(p.id),
+    amount: p.amountCents / 100,
+    payment_date: p.paymentDate,
+    note: p.note,
+    created_date: p.createdAt.toISOString(),
+  };
+}
+
+export async function listFactoryPayments(from?: string, to?: string) {
+  const db = getDb();
+  const conditions = [];
+  if (from) conditions.push(gte(factoryPayments.paymentDate, from));
+  if (to) conditions.push(lte(factoryPayments.paymentDate, to));
+  const rows = conditions.length
+    ? await db.select().from(factoryPayments).where(and(...conditions))
+    : await db.select().from(factoryPayments);
+  return rows.sort((a, b) => b.paymentDate.localeCompare(a.paymentDate)).map(toUiFactoryPayment);
+}
+
+export async function addFactoryPayment(
+  data: { amount: number; payment_date: string; note?: string },
+  actorUserId: number,
+) {
+  const db = getDb();
+  const [{ id }] = await db
+    .insert(factoryPayments)
+    .values({
+      amountCents: Math.round(data.amount * 100),
+      paymentDate: data.payment_date,
+      note: data.note ?? null,
+      createdByUserId: actorUserId,
+    })
+    .$returningId();
+  const [row] = await db.select().from(factoryPayments).where(eq(factoryPayments.id, id)).limit(1);
+  return toUiFactoryPayment(row);
+}
+
+export async function deleteFactoryPayment(id: number) {
+  const db = getDb();
+  await db.delete(factoryPayments).where(eq(factoryPayments.id, id));
+  return { success: true };
+}
+
+/**
+ * What we owe the factory right now, minus what we've already paid:
+ *  - blanks value: every 'consumed' stock movement (blanks the factory
+ *    turned into printed pieces) × the CURRENT garment_costs price for that
+ *    garment type (tee-cost fallback for unknown types, same as COGS). This
+ *    is a current-price estimate — historical cost isn't snapshotted on the
+ *    movement row.
+ *  - print fees: items of print_job factory orders that reached 'fulfilled'
+ *    (the factory-done state — drafts/sent jobs haven't been worked yet,
+ *    cancelled ones never will be) × the current print fee.
+ *  - minus the sum of logged factory_payments.
+ * All returned in dollars.
+ */
+export async function getFactoryPayable() {
+  const db = getDb();
+  const { map: blankCostByType, fallback: fallbackBlankCost } = await getGarmentCostMapCents();
+  const unitCosts = await getUnitCosts();
+  const printFeeCents = Math.round(unitCosts.print_fee * 100);
+
+  const consumedRows = await db
+    .select({ productType: blankStock.productType, quantityDelta: stockMovements.quantityDelta })
+    .from(stockMovements)
+    .innerJoin(blankStock, eq(stockMovements.stockId, blankStock.id))
+    .where(eq(stockMovements.type, "consumed"));
+
+  let blanksCents = 0;
+  for (const r of consumedRows) {
+    // Consumed deltas are negative (stock leaves the shelf).
+    const qty = Math.max(0, -r.quantityDelta);
+    blanksCents += qty * (blankCostByType.get(r.productType) ?? fallbackBlankCost);
+  }
+
+  const printRows = await db
+    .select({ quantity: factoryOrderItems.quantity })
+    .from(factoryOrderItems)
+    .innerJoin(factoryOrders, eq(factoryOrderItems.factoryOrderId, factoryOrders.id))
+    .where(and(eq(factoryOrders.type, "print_job"), eq(factoryOrders.status, "fulfilled")));
+  const printFeesCents = printRows.reduce((sum, r) => sum + r.quantity, 0) * printFeeCents;
+
+  const paymentRows = await db.select({ amountCents: factoryPayments.amountCents }).from(factoryPayments);
+  const paymentsCents = paymentRows.reduce((sum, r) => sum + r.amountCents, 0);
+
+  return {
+    blanks_value: blanksCents / 100,
+    print_fees_value: printFeesCents / 100,
+    payments_total: paymentsCents / 100,
+    payable: (blanksCents + printFeesCents - paymentsCents) / 100,
   };
 }
 
