@@ -219,7 +219,7 @@ export const adminRouter = createRouter({
         items: z
           .array(
             z.object({
-              folderId: z.string().min(1).max(500),
+              folderId: z.string(),
               nameEn: z.string().min(1).max(180),
               nameAr: z.string().max(180).nullable().optional(),
               productType: productType,
@@ -305,7 +305,7 @@ export const adminRouter = createRouter({
   /** Permanent delete — super_admin only. There is no soft-delete for orders. */
   hardDeleteOrder: superAdminQuery
     .input(z.object({ id: idParam }))
-    .mutation(({ ctx, input }) => hardDeleteOrder(Number(input.id))),
+    .mutation(({ ctx, input }) => hardDeleteOrder(Number(input.id), ctx.user.id)),
 
   /** Manual "Send follow-up" button on an order row — no automatic timer. */
   sendOrderFollowupEmail: staffQuery
