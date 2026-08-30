@@ -30,6 +30,9 @@ const dictionaries = {
       communityEyebrow: 'Community',
       communityTitle: 'Your teta said it first.',
       communitySub: 'Kel 3ayle 3andha he jomle. Eb3atha lna — momken tkoun el drop el jaye.',
+      communityTagTitle: 'Wear it. Tag it. Get featured.',
+      communityTagSub: 'Tag us in your Kharbesh fit for a chance to show up here — and in the next drop’s credits.',
+      communityFollow: 'Follow along',
     },
     product: {
       preorder: 'Preorder',
@@ -48,6 +51,13 @@ const dictionaries = {
       chooseSize: 'Choose size',
       quantity: 'Quantity',
       addToCart: 'Add to cart',
+      addToBag: 'Add to bag →',
+      addedToBag: '✓ Added',
+      shareCopied: 'Link copied',
+      saved: 'Saved to your wishlist',
+      removedFromWishlist: 'Removed from your wishlist',
+      orderWhatsapp: 'Order via WhatsApp',
+      notFound: 'Product not found.',
       estDispatch: 'Estimated dispatch',
       productionTime: 'Production time',
       fit: 'Fit',
@@ -172,6 +182,9 @@ const dictionaries = {
       emailOrPhone: 'Email or phone',
       find: 'Find order',
       notFound: 'We couldn’t find that order. Check your details and try again.',
+      reviewing: 'We’re reviewing this order — we’ll reach out on WhatsApp if we need anything.',
+      cancelled: 'This order was cancelled.',
+      unknownStatus: 'Status update coming — check back soon.',
     },
     story: {
       title: 'Our story',
@@ -202,7 +215,16 @@ const dictionaries = {
       whatsappCta: 'Chat on WhatsApp',
       or: 'or',
     },
-    footer: { tagline: 'Labsak byehki 3annak — Kharbesh it your way.', rights: 'Kel el ha22 mahfouz.', madeIn: 'Mfakkar fiha, m3amle, w matbou3a fi Lebnan.' },
+    footer: {
+      tagline: 'Labsak byehki 3annak — Kharbesh it your way.', rights: 'Kel el ha22 mahfouz.', madeIn: 'Mfakkar fiha, m3amle, w matbou3a fi Lebnan.',
+      shop: 'Shop', help: 'Help', social: 'Social', sizeGuide: 'Size guide',
+      newsletterTitle: 'Join the Kharbesh list',
+      newsletterSub: 'Drops, customs, and studio kharabish — before anyone else.',
+      newsletterPlaceholder: 'Your email',
+      newsletterCta: 'I’m in',
+      newsletterSuccess: 'You’re in!',
+      newsletterInvalid: 'Enter a valid email.',
+    },
     common: { loading: 'Loading…', from: 'From', currency: '$', maintenanceTitle: 'Back soon', maintenanceBody: 'We’re doing some kharbesh behind the scenes. Check back shortly.' },
   },
   ar: {
@@ -232,6 +254,9 @@ const dictionaries = {
       communityEyebrow: 'المجتمع',
       communityTitle: 'تيتك قالتها أول.',
       communitySub: 'كل بيت إلو جملته. بعتهالنا — يمكن تكون دروبنا الجاي.',
+      communityTagTitle: 'البسها. علّم علينا. وانعرض.',
+      communityTagSub: 'علّم علينا بلبستك الخربشة — يمكن تظهر هون، وبكريديت الدروب الجاي.',
+      communityFollow: 'تابعنا',
     },
     product: {
       preorder: 'طلب مسبق',
@@ -250,6 +275,13 @@ const dictionaries = {
       chooseSize: 'اختر المقاس',
       quantity: 'الكمية',
       addToCart: 'أضف للسلة',
+      addToBag: 'ضيفها عالخربشة ←',
+      addedToBag: '✓ انضافت',
+      shareCopied: 'انسخ الرابط',
+      saved: 'انحفظت بالمفضلة',
+      removedFromWishlist: 'انشالت من المفضلة',
+      orderWhatsapp: 'أطلب عبر واتساب',
+      notFound: 'المنتج مش موجود.',
       estDispatch: 'التسليم المتوقع',
       productionTime: 'مدة الإنتاج',
       fit: 'القصّة',
@@ -374,6 +406,9 @@ const dictionaries = {
       emailOrPhone: 'البريد أو الهاتف',
       find: 'ابحث',
       notFound: 'ما لقينا الطلب. تأكد من المعلومات وحاول مرة تانية.',
+      reviewing: 'عم نراجع الطلب — منحكيك ع واتساب إذا بدنا شي منك.',
+      cancelled: 'اتلغى هالطلب.',
+      unknownStatus: 'تحديث الحالة جاي قريباً — رجّع تفقّد.',
     },
     story: {
       title: 'حكايتنا',
@@ -387,7 +422,7 @@ const dictionaries = {
         { q: 'متى بيوصل طلبي؟', a: 'كل منتج عليه نافذة تسليم متوقعة. الطلبات المسبقة بتشحن بعد الإنتاج؛ القطع حسب الطلب بتشحن خلال ٢-٣ أسابيع.' },
         { q: 'فيني ألغي طلب مسبق؟', a: 'إيه، لنقفل النافذة. بعدها منكون طلبنا القماش وما بيصير إلغاء — بس فيك تطلب تبديل حسب السياسة.' },
         { q: 'كيف المقاسات؟', a: 'كل قطعة عليها قصّتها ومقاساتها بصفحة المنتج. التيشيرت الواسع بيطلع بوكس؛ الكلاسيك بحجمه الطبيعي.' },
-        { q: 'بتشحنوا خارج لبنان؟', a: 'إيه. الشحن بيحسب عند الدفع حسب وجهتك. ممكن في رسوم جمركية.' },
+        { q: 'بتشحنوا خارج لبنان؟', a: 'لسّا لا — حالياً منشحن بس داخل لبنان، بـ ٤$ ثابتة لأي منطقة (ومجاني فوق الـ ١٠٠$). الشحن للشرق الأوسط والعالم جاي لاحقاً. منأكد التوقيت معك ع واتساب.' },
         { q: 'شو هو على ذوقك؟', a: 'طلب مخصص على ذوقك. بعتلنا جملتك وحكايتها — منحوّلها لتصميم خربش، بتشوفه وتوافق عليه، وبعدين منطبع. بيبلّش من ٤٠$.' },
       ],
     },
@@ -404,22 +439,48 @@ const dictionaries = {
       whatsappCta: 'دردش على واتساب',
       or: 'أو',
     },
-    footer: { tagline: 'لبسك بيحكي عنك — Kharbesh it your way.', rights: 'كل الحقوق محفوظة.', madeIn: 'مفكَّر فيه، مصنوع ومطبوع في لبنان.' },
+    footer: {
+      tagline: 'لبسك بيحكي عنك — Kharbesh it your way.', rights: 'كل الحقوق محفوظة.', madeIn: 'مفكَّر فيه، مصنوع ومطبوع في لبنان.',
+      shop: 'تسوّق', help: 'مساعدة', social: 'السوشال', sizeGuide: 'دليل المقاسات',
+      newsletterTitle: 'انضم لقائمة خربش',
+      newsletterSub: 'الدروبات، الطلبات المخصصة، وخربشات الستوديو — قبل الكل.',
+      newsletterPlaceholder: 'إيميلك',
+      newsletterCta: 'اشترك',
+      newsletterSuccess: 'صرت معنا!',
+      newsletterInvalid: 'أدخل بريد صحيح.',
+    },
     common: { loading: 'جاري التحميل…', from: 'من', currency: '$', maintenanceTitle: 'رجعانين قريباً', maintenanceBody: 'عم نرتب شوي من الخلف. رجّع تفقّدنا بعد شوي.' },
   },
 };
 
-/* In-memory language preference — sandboxed preview iframes block
-   localStorage, so we remember the choice for the session only. */
+/* Language preference persists in localStorage so a reload keeps the
+   visitor's language. Sandboxed preview iframes block storage, so every
+   access is wrapped in try/catch and falls back to a module-scope value. */
+const LANG_KEY = 'kh_lang';
 let memoryLang = 'en';
 
+function loadLang() {
+  try {
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved === 'en' || saved === 'ar') return saved;
+  } catch {
+    /* storage blocked — session-only fallback */
+  }
+  return memoryLang;
+}
+
 export const I18nProvider = ({ children }) => {
-  const [lang, setLang] = useState(() => memoryLang);
+  const [lang, setLang] = useState(loadLang);
   const t = dictionaries[lang];
   const dir = t.dir;
 
   useEffect(() => {
     memoryLang = lang;
+    try {
+      localStorage.setItem(LANG_KEY, lang);
+    } catch {
+      /* storage blocked — session-only fallback */
+    }
     document.documentElement.lang = lang;
     document.documentElement.dir = dir;
   }, [lang, dir]);

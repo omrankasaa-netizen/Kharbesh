@@ -12,6 +12,7 @@ export default function AdminMessages() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [subscribers, setSubscribers] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -19,6 +20,13 @@ export default function AdminMessages() {
         setMessages(await base44.entities.ContactMessages.list());
       } finally {
         setLoading(false);
+      }
+    })();
+    (async () => {
+      try {
+        setSubscribers(await base44.entities.Newsletter.list());
+      } catch {
+        setSubscribers([]);
       }
     })();
   }, []);
@@ -79,6 +87,39 @@ export default function AdminMessages() {
           {filtered.length === 0 && <p className="text-muted-foreground">{lang === 'ar' ? 'ما في رسائل.' : 'No messages.'}</p>}
         </div>
       )}
+
+      {/* Newsletter list — signups from the footer form. */}
+      <div className="mt-14 pt-8 border-t border-border">
+        <h2 className="font-heading text-xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>
+          {lang === 'ar' ? 'النشرة' : 'Newsletter'}
+        </h2>
+        <p className="text-sm text-muted-foreground mt-2 max-w-[560px]">
+          {lang === 'ar'
+            ? 'الإيميلات يلي اشتركت من فورم الفوتر — لائحة المجتمع للإطلاق.'
+            : 'Emails that subscribed through the footer form — the launch community list.'}
+        </p>
+        {subscribers === null ? (
+          <div className="text-muted-foreground mt-6">{lang === 'ar' ? 'جاري التحميل…' : 'Loading…'}</div>
+        ) : subscribers.length === 0 ? (
+          <p className="text-muted-foreground mt-6">{lang === 'ar' ? 'لسّا ما حدا اشترك.' : 'No subscribers yet.'}</p>
+        ) : (
+          <>
+            <p className="kh-eyebrow mt-6">
+              {lang === 'ar' ? `${subscribers.length} مشترك` : `${subscribers.length} subscriber${subscribers.length === 1 ? '' : 's'}`}
+            </p>
+            <ul className="mt-4 divide-y divide-border border border-border rounded-md max-w-[720px]">
+              {subscribers.map((s) => (
+                <li key={s.id} className="p-3 flex flex-wrap justify-between gap-2 text-sm">
+                  <span className="font-medium">{s.email}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {s.language === 'ar' ? 'عربي' : 'EN'} · {new Date(s.created_date).toLocaleDateString(lang === 'ar' ? 'ar-LB' : 'en-US')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
     </div>
   );
 }

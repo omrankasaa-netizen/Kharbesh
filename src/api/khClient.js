@@ -307,6 +307,13 @@ export const kh = {
       updateStatus: (id, status) => client.contactMessages.updateStatus.mutate({ id, status }),
     },
 
+    Newsletter: {
+      /** Public: Footer signup form. Duplicate emails succeed silently. */
+      subscribe: (email, language) => client.newsletter.subscribe.mutate({ email, language }),
+      /** Staff-only list for the admin Messages page. */
+      list: () => client.newsletter.list.query(),
+    },
+
     User: { list: () => client.admin.users.query() },
 
     Staff: {

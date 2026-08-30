@@ -55,8 +55,8 @@ export const IconMail = ({ size = 24 }) => (
     <path d="M3 6.5l8.4 6a1 1 0 0 0 1.2 0L21 6.5" />
   </svg>
 );
-export const IconHeart = ({ size = 24 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+export const IconHeart = ({ size = 24, filled = false }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 20s-7-4.6-7-9.5A3.9 3.9 0 0 1 12 7a3.9 3.9 0 0 1 7 3.5C19 15.4 12 20 12 20z" />
   </svg>
 );

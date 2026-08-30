@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { useProducts, useColors, resolveColor } from '@/lib/useCatalog.jsx';
 import { useCart } from '@/lib/cart';
+import { toggleWishlist, isSaved } from '@/lib/wishlist';
+import { toast } from '@/components/ui/use-toast';
 import { base44 } from '@/api/khClient';
 import GarmentMockup, { contrastInk } from '@/components/GarmentMockup';
 import { IconHeart, IconShare, IconCotton, IconNoSweat, IconNoWrinkle, IconFit, IconCash, IconTruck, LebanonSeal } from '@/components/Brand';
@@ -27,6 +29,12 @@ export default function ProductPage() {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [colorImages, setColorImages] = useState({});
+  const [saved, setSaved] = useState(false);
+
+  // Sync the wishlist heart once the product resolves (products load async).
+  useEffect(() => {
+    if (product) setSaved(isSaved(product.id));
+  }, [product?.id]);
 
   useEffect(() => {
     if (!product) return;
@@ -65,7 +73,7 @@ export default function ProductPage() {
   const activePhoto = activeColorPhotos?.[0] || standardPhoto || product?.images?.[0] || null;
 
   if (loading) return <div className="max-w-[1400px] mx-auto px-6 py-20 text-muted-foreground">{t.common.loading}</div>;
-  if (!product) return <div className="max-w-[1400px] mx-auto px-6 py-20"><p>Product not found.</p><Link to="/shop" className="kh-btn-text mt-4">{t.nav.shop}</Link></div>;
+  if (!product) return <div className="max-w-[1400px] mx-auto px-6 py-20"><p>{t.product.notFound}</p><Link to="/shop" className="kh-btn-text mt-4">{t.nav.shop}</Link></div>;
 
   const name = lang === 'ar' ? (product.name_ar || product.name_en) : product.name_en;
   const desc = lang === 'ar' ? (product.description_ar || product.description_en) : product.description_en;
@@ -86,6 +94,31 @@ export default function ProductPage() {
     });
     setAdded(true);
     setTimeout(() => navigate('/cart'), 500);
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: name, url });
+        return;
+      } catch {
+        // User dismissed the native sheet or it failed — fall through to copy.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Clipboard blocked (sandboxed preview) — still surface the same toast.
+    }
+    toast({ title: t.product.shareCopied });
+  };
+
+  const handleSave = () => {
+    const next = toggleWishlist(product.id);
+    const nowSaved = next.includes(product.id);
+    setSaved(nowSaved);
+    toast({ title: nowSaved ? t.product.saved : t.product.removedFromWishlist });
   };
 
   // Raw capacity/units-sold numbers are no longer public (audit M4) — the
@@ -183,6 +216,7 @@ export default function ProductPage() {
                 <button key={s} onClick={() => setSize(s)} className={`min-w-[3rem] kh-btn-outline kh-btn-filter !text-[13px] !py-2 !px-3 ${size === s ? '!bg-primary !text-primary-foreground' : ''}`}>{s}</button>
               ))}
             </div>
+            <Link to="/sizing-guide" className="kh-btn-text !text-[12px] mt-3 inline-flex">{t.product.sizeGuide} →</Link>
           </fieldset>
 
           {/* Qty + add */}
@@ -194,12 +228,20 @@ export default function ProductPage() {
                 <button onClick={() => setQty((q) => q + 1)} className="w-11 h-12 text-lg" aria-label="Increase">+</button>
               </div>
               <button onClick={handleAdd} disabled={!canAdd} className="kh-btn-scribble flex-1 !justify-center">
-                {added ? '✓ Added' : (lang === 'ar' ? 'ضيفها عالخربشة ←' : 'Add to bag →')}
+                {added ? t.product.addedToBag : t.product.addToBag}
               </button>
             </div>
             <div className="shrink-0 flex items-center gap-2 sm:gap-4 self-end sm:self-auto">
-              <button className="kh-btn-icon" aria-label="Save"><IconHeart size={20} /></button>
-              <button className="kh-btn-icon" aria-label="Share"><IconShare size={20} /></button>
+              <button
+                onClick={handleSave}
+                className="kh-btn-icon"
+                aria-label="Save"
+                aria-pressed={saved}
+                style={saved ? { color: 'hsl(var(--accent))' } : undefined}
+              >
+                <IconHeart size={20} filled={saved} />
+              </button>
+              <button onClick={handleShare} className="kh-btn-icon" aria-label="Share"><IconShare size={20} /></button>
             </div>
           </div>
           {!canAdd && <p className="text-xs text-muted-foreground mt-3">{t.product.preorderNote}</p>}
@@ -216,7 +258,7 @@ export default function ProductPage() {
             className="kh-btn-outline mt-3 !justify-center flex w-full items-center gap-2"
           >
             <IconWhatsApp size={18} />
-            {lang === 'ar' ? 'أطلب عبر واتساب' : 'Order via WhatsApp'}
+            {t.product.orderWhatsapp}
           </a>
 
           {/* Feature highlights */}

@@ -303,6 +303,16 @@ export const contactMessages = mysqlTable("contact_messages", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
+// ── Newsletter ───────────────────────────────────────────────────────────────
+// Footer email capture for the launch community list. Email is unique so
+// repeat signups are idempotent; `language` stores the UI locale at signup.
+export const newsletterSubscribers = mysqlTable("newsletter_subscribers", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  language: varchar("language", { length: 8 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 // ── Site settings + audit ────────────────────────────────────────────────────
 export const siteSettings = mysqlTable("site_settings", {
   id: serial("id").primaryKey(),
@@ -579,6 +589,7 @@ export type Product = typeof products.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type CustomRequest = typeof customRequests.$inferSelect;
 export type ContactMessage = typeof contactMessages.$inferSelect;
+export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
 export type BlankStock = typeof blankStock.$inferSelect;
 export type StockMovement = typeof stockMovements.$inferSelect;
 export type FactoryOrder = typeof factoryOrders.$inferSelect;

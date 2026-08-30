@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/khClient';
+import { useProducts } from '@/lib/useCatalog.jsx';
+import { loadWishlist } from '@/lib/wishlist';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
 
@@ -14,9 +16,12 @@ const TIER_LABEL = {
 export default function Profile() {
   const { user } = useAuth();
   const { t, lang } = useI18n();
+  const { products } = useProducts();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loyalty, setLoyalty] = useState(null);
+  const [wishlistIds] = useState(() => loadWishlist());
+  const savedProducts = products.filter((p) => wishlistIds.includes(p.id));
 
   useEffect(() => {
     (async () => {
@@ -92,6 +97,33 @@ export default function Profile() {
           )}
         </section>
       </div>
+      {savedProducts.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-heading text-xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>
+            {lang === 'ar' ? 'المفضلة' : 'Saved for later'}
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {savedProducts.map((p) => (
+              <Link key={p.id} to={`/product/${p.id}`} className="bg-card border border-border rounded-md overflow-hidden group">
+                <div className="aspect-square bg-muted overflow-hidden">
+                  {p.images?.[0] && (
+                    <img
+                      src={p.images[0]}
+                      alt={lang === 'ar' ? (p.name_ar || p.name_en) : p.name_en}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      loading="lazy"
+                    />
+                  )}
+                </div>
+                <div className="p-3">
+                  <p className="text-sm font-medium truncate">{lang === 'ar' ? (p.name_ar || p.name_en) : p.name_en}</p>
+                  <p className="text-xs text-muted-foreground mt-1">${p.price}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
