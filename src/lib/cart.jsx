@@ -2,17 +2,49 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const CartContext = createContext();
 
-/* In-memory cart state — persists across route changes within the same
-   session (SPA navigation never reloads the page). Sandboxed preview
-   iframes block localStorage/sessionStorage, so we keep it in module
-   scope instead of writing to browser storage. */
+const STORAGE_KEY = 'kh_cart_v1';
+
+/* Cart persistence: localStorage so a refresh doesn't wipe the bag, with a
+   module-scope fallback because sandboxed preview iframes block browser
+   storage. Every access is wrapped in try/catch for the same reason. */
 let memoryCart = [];
 
+function loadCart() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return memoryCart;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    // Drop malformed entries: an item needs at least a product id and a
+    // positive integer quantity; everything else is coerced/kept as-is.
+    return parsed
+      .filter((item) => item && typeof item === 'object' && item.productId != null)
+      .map((item) => {
+        const quantity = Math.max(1, Math.floor(Number(item.quantity)) || 1);
+        const color = item.color ?? '';
+        const size = item.size ?? '';
+        return { ...item, quantity, color, size, key: item.key || `${item.productId}|${color}|${size}` };
+      });
+  } catch {
+    return memoryCart;
+  }
+}
+
+function saveCart(items) {
+  memoryCart = items;
+  try {
+    if (items.length) localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    else localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* storage blocked (sandboxed preview) — module scope still holds it */
+  }
+}
+
 export const CartProvider = ({ children }) => {
-  const [items, setItems] = useState(() => memoryCart);
+  const [items, setItems] = useState(loadCart);
 
   useEffect(() => {
-    memoryCart = items;
+    saveCart(items);
   }, [items]);
 
   const addItem = (item) => {
