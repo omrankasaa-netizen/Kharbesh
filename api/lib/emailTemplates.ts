@@ -251,6 +251,155 @@ export function adminNewOrderEmail(order: Order): { subject: string; html: strin
   return { subject, html, text };
 }
 
+/** Shape the owner-notification email needs — matches the UI-mapped
+ *  custom request (toUiCustomRequest) / the validated submit input. */
+export type CustomRequestNotification = {
+  name: string;
+  email: string;
+  phone?: string | null;
+  phrase: string;
+  story?: string | null;
+  language?: string | null;
+  recipient?: string | null;
+  occasion?: string | null;
+  tone?: string | null;
+  garment?: string | null;
+  color?: string | null;
+  size?: string | null;
+  quantity: number;
+  placement?: string | null;
+  needed_by?: string | null;
+  notes?: string | null;
+  reference_files?: string[];
+};
+
+function fieldRow(label: string, value: string | number | null | undefined): string {
+  if (value == null || value === "") return "";
+  return `
+    <tr>
+      <td style="padding:6px 0;border-bottom:1px solid ${BORDER};color:${MUTED};font-size:12px;font-family:${LATIN_FONT};white-space:nowrap;vertical-align:top;">${esc(label)}</td>
+      <td align="right" style="padding:6px 0 6px 16px;border-bottom:1px solid ${BORDER};color:${CREAM};font-size:13px;font-family:${LATIN_FONT};word-break:break-word;">${esc(String(value))}</td>
+    </tr>`;
+}
+
+/** Internal notification to the owner's personal design inbox on every
+ *  custom "خربش ع ذوقك" request — he designs each one personally before
+ *  anything goes to the factory. Leads with the phrase (what he has to
+ *  design), then every submitted field. Reference files are NOT embedded
+ *  (base64 data URLs up to ~2MB each) — only the count is noted; the
+ *  files are viewable in the admin panel. */
+export function customRequestNotificationEmail(r: CustomRequestNotification): { subject: string; html: string; text: string } {
+  const lang: "en" | "ar" = "en";
+  const adminUrl = "https://kharbesh961.com/admin/custom-requests";
+  const fileCount = r.reference_files?.length ?? 0;
+
+  const bodyHtml = `
+    <p style="margin:0 0 4px;color:${MUTED};font-size:12px;letter-spacing:0.08em;text-transform:uppercase;">New custom request · طلب خربش ع ذوقك جديد</p>
+    <h1 style="margin:0 0 16px;color:${CREAM};font-size:22px;font-weight:800;">${esc(r.phrase)}</h1>
+    <p style="margin:0 0 16px;color:${CREAM};font-size:14px;line-height:1.6;">
+      From <strong>${esc(r.name)}</strong> — ${esc(r.email)}${r.phone ? ` · ${esc(r.phone)}` : ""}
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+      ${fieldRow("Name", r.name)}
+      ${fieldRow("Email", r.email)}
+      ${fieldRow("Phone", r.phone)}
+      ${fieldRow("Phrase", r.phrase)}
+      ${fieldRow("Story", r.story)}
+      ${fieldRow("Language", r.language)}
+      ${fieldRow("Recipient", r.recipient)}
+      ${fieldRow("Occasion", r.occasion)}
+      ${fieldRow("Tone", r.tone)}
+      ${fieldRow("Garment", r.garment)}
+      ${fieldRow("Color", r.color)}
+      ${fieldRow("Size", r.size)}
+      ${fieldRow("Quantity", r.quantity)}
+      ${fieldRow("Placement", r.placement)}
+      ${fieldRow("Needed by", r.needed_by)}
+      ${fieldRow("Notes", r.notes)}
+      ${fieldRow("Reference files", fileCount === 0 ? "none" : `${fileCount} attached — view in admin`)}
+    </table>
+    <table cellpadding="0" cellspacing="0" role="presentation" style="margin-top:20px;"><tr>
+      <td><a href="${adminUrl}" style="display:inline-block;background:${LIME};color:#15130D;font-weight:700;font-size:13px;padding:12px 20px;border-radius:8px;text-decoration:none;">Open in admin</a></td>
+    </tr></table>
+  `;
+
+  const subject = `طلب خربش ع ذوقك جديد — New custom request from ${r.name}`;
+  const html = layout({
+    lang,
+    preheader: `New custom request: ${r.phrase}`,
+    bodyHtml,
+  });
+  const textLines = [
+    `New custom request (خربش ع ذوقك) from ${r.name} <${r.email}>${r.phone ? ` · ${r.phone}` : ""}`,
+    `Phrase: ${r.phrase}`,
+    r.story ? `Story: ${r.story}` : null,
+    r.language ? `Language: ${r.language}` : null,
+    r.recipient ? `Recipient: ${r.recipient}` : null,
+    r.occasion ? `Occasion: ${r.occasion}` : null,
+    r.tone ? `Tone: ${r.tone}` : null,
+    r.garment ? `Garment: ${r.garment}` : null,
+    r.color ? `Color: ${r.color}` : null,
+    r.size ? `Size: ${r.size}` : null,
+    `Quantity: ${r.quantity}`,
+    r.placement ? `Placement: ${r.placement}` : null,
+    r.needed_by ? `Needed by: ${r.needed_by}` : null,
+    r.notes ? `Notes: ${r.notes}` : null,
+    `Reference files: ${fileCount === 0 ? "none" : `${fileCount} attached — view in admin`}`,
+    `Admin: ${adminUrl}`,
+  ].filter((l): l is string => l != null);
+  return { subject, html, text: textLines.join("\n") };
+}
+
+/** Low blank-stock alert to the ops inbox, fired only when a variant
+ *  CROSSES its threshold (not on every change) so it stays meaningful.
+ *  Lists every newly-low variant — time to reorder blanks from the factory. */
+export function lowStockAlertEmail(
+  variants: { productType: string; color: string; size: string; quantityOnHand: number; lowStockThreshold: number }[],
+): { subject: string; html: string; text: string } {
+  const lang: "en" | "ar" = "en";
+  const adminUrl = "https://kharbesh961.com/admin/inventory";
+
+  const rows = variants
+    .map(
+      (v) => `
+      <tr>
+        <td style="padding:8px 0;border-bottom:1px solid ${BORDER};color:${CREAM};font-size:13px;font-family:${LATIN_FONT};">
+          ${esc(v.productType)} — ${esc(v.color)} · ${esc(v.size)}
+        </td>
+        <td align="right" style="padding:8px 0 8px 16px;border-bottom:1px solid ${BORDER};color:${LIME};font-size:13px;font-family:${LATIN_FONT};white-space:nowrap;">
+          ${v.quantityOnHand} left (alert at ${v.lowStockThreshold})
+        </td>
+      </tr>`,
+    )
+    .join("");
+
+  const bodyHtml = `
+    <p style="margin:0 0 4px;color:${MUTED};font-size:12px;letter-spacing:0.08em;text-transform:uppercase;">Low stock · تنبيه مخزون</p>
+    <h1 style="margin:0 0 16px;color:${CREAM};font-size:22px;font-weight:800;">Time to reorder blanks · وقت تجديد المخزون</h1>
+    <p style="margin:0 0 16px;color:${CREAM};font-size:14px;line-height:1.6;">
+      ${variants.length} blank variant${variants.length === 1 ? "" : "s"} dropped to (or below) the restock threshold — reorder blanks from the factory before print jobs stall.
+      <span style="color:${MUTED};">في قطع سادة قلّت عند المصنع — لازم نجدّد المخزون.</span>
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">${rows}</table>
+    <table cellpadding="0" cellspacing="0" role="presentation" style="margin-top:20px;"><tr>
+      <td><a href="${adminUrl}" style="display:inline-block;background:${LIME};color:#15130D;font-weight:700;font-size:13px;padding:12px 20px;border-radius:8px;text-decoration:none;">Open inventory</a></td>
+    </tr></table>
+  `;
+
+  const subject = "تنبيه مخزون — Low blank stock at factory";
+  const html = layout({
+    lang,
+    preheader: `${variants.length} variant(s) low — reorder blanks from the factory.`,
+    bodyHtml,
+  });
+  const text = [
+    `Low blank stock at the factory — time to reorder. ${variants.length} variant(s) at or below threshold:`,
+    ...variants.map((v) => `- ${v.productType} ${v.color} ${v.size}: ${v.quantityOnHand} left (alert at ${v.lowStockThreshold})`),
+    `Admin: ${adminUrl}`,
+  ].join("\n");
+  return { subject, html, text };
+}
+
 export function otpEmail(code: string, lang: "en" | "ar"): { subject: string; html: string; text: string } {
   const digits = code.split("");
   const chips = digits
@@ -282,5 +431,5 @@ export function otpEmail(code: string, lang: "en" | "ar"): { subject: string; ht
     bodyHtml: lang === "ar" ? bodyAr : bodyEn,
   });
   const text = lang === "ar" ? `رمز الدخول: ${code} (ينتهي بعد 10 دقايق)` : `Your sign-in code: ${code} (expires in 10 minutes)`;
-  return { subject, html, text };
+return { subject, html, text };
 }

@@ -1,6 +1,6 @@
 import { and, eq, gte, lte, ne } from "drizzle-orm";
 import { getDb } from "./connection";
-import { orders, overheadExpenses, products, unitCostSettings, type OrderLineItem } from "@db/schema";
+import { garmentCosts, orders, overheadExpenses, products, unitCostSettings, type GarmentCost, type OrderLineItem } from "@db/schema";
 
 function toUiExpense(e: typeof overheadExpenses.$inferSelect) {
   return {
@@ -36,6 +36,73 @@ export async function getUnitCosts() {
     unit_cost_total: 0,
     updated_date: new Date().toISOString(),
   };
+}
+
+export function toUiGarmentCost(r: GarmentCost) {
+  return {
+    id: String(r.id),
+    product_type: r.productType,
+    label: r.label,
+    cost: r.costCents / 100,
+    updated_date: r.updatedAt.toISOString(),
+  };
+}
+
+/**
+ * Per-garment-type factory blank costs, lazily seeded on first read:
+ * tee inherits the existing global blank-tee setting when it's set (owner
+ * confirmed the tee blank is $13, so 1300 cents otherwise); hoodie and
+ * accessory start at 0 until the owner keys in their real factory prices.
+ * New garment types can be added later via `upsertGarmentCost` — the table
+ * is a varchar-keyed list, not an enum, so no migration is needed.
+ */
+export async function getGarmentCosts() {
+  const db = getDb();
+  let rows = await db.select().from(garmentCosts);
+  if (rows.length === 0) {
+    const [unitRow] = await db.select().from(unitCostSettings).limit(1);
+    const teeCostCents = unitRow && unitRow.blankTeeCostCents > 0 ? unitRow.blankTeeCostCents : 1300;
+    for (const seed of [
+      { productType: "tee", label: "T-Shirt", costCents: teeCostCents },
+      { productType: "hoodie", label: "Hoodie", costCents: 0 },
+      { productType: "accessory", label: "Accessory", costCents: 0 },
+    ]) {
+      await db.insert(garmentCosts).values(seed);
+    }
+    rows = await db.select().from(garmentCosts);
+  }
+  return rows
+    .sort((a, b) => a.productType.localeCompare(b.productType))
+    .map(toUiGarmentCost);
+}
+
+/** Upserts one garment-type blank cost (dollars in, cents stored). */
+export async function upsertGarmentCost(productType: string, cost: number, label?: string) {
+  const db = getDb();
+  const costCents = Math.round(cost * 100);
+  const existing = await db.query.garmentCosts.findFirst({ where: eq(garmentCosts.productType, productType) });
+  if (existing) {
+    await db
+      .update(garmentCosts)
+      .set({ costCents, ...(label !== undefined ? { label } : {}), updatedAt: new Date() })
+      .where(eq(garmentCosts.id, existing.id));
+  } else {
+    await db.insert(garmentCosts).values({ productType, label: label ?? null, costCents });
+  }
+  return getGarmentCosts();
+}
+
+/** Blank cost in cents per garment type for COGS. Types with no row in
+ *  garment_costs (future/unknown types) fall back to the tee cost — most
+ *  of what the factory prints is tees, so that's the safest estimate. */
+async function getGarmentCostMapCents() {
+  const db = getDb();
+  const rows = await db.select().from(garmentCosts);
+  const map = new Map(rows.map((r) => [r.productType, r.costCents]));
+  // The tee row is the universal fallback; if the table hasn't been seeded
+  // yet, mirror getGarmentCosts' default ($13) rather than costing at 0.
+  const fallback = map.get("tee") ?? 1300;
+  return { map, fallback };
 }
 
 export async function updateUnitCosts(data: { blank_tee_cost: number; print_fee: number; packaging_cost: number }) {
@@ -93,13 +160,20 @@ export async function deleteOverheadExpense(id: number) {
 
 /**
  * Computes revenue, COGS, overhead, and net profit for a date range.
- * Revenue = sum of order totals. COGS = unit cost total × total item qty
- * across all orders in range (flat unit cost across colors/product types —
- * v1 approximation). Overhead = sum of logged expenses in range.
+ * Revenue = sum of order totals. COGS per order line item =
+ * qty × (blank cost for that item's garment type + print fee + packaging).
+ * The blank cost comes from garment_costs; an item whose product type has
+ * no row there falls back to the tee cost (most items are tees — see
+ * getGarmentCostMapCents). Overhead = sum of logged expenses in range.
  */
 export async function getFinancialSummary(from?: string, to?: string) {
   const db = getDb();
   const unitCosts = await getUnitCosts();
+  const { map: blankCostByType, fallback: fallbackBlankCost } = await getGarmentCostMapCents();
+  const printFeeCents = Math.round(unitCosts.print_fee * 100);
+  const packagingCostCents = Math.round(unitCosts.packaging_cost * 100);
+  const costForType = (productType: string | undefined) =>
+    (productType != null ? blankCostByType.get(productType) : undefined) ?? fallbackBlankCost;
 
   const conditions = [];
   if (from) conditions.push(gte(orders.createdAt, new Date(from)));
@@ -113,13 +187,14 @@ export async function getFinancialSummary(from?: string, to?: string) {
 
   let revenueCents = 0;
   let unitsCount = 0;
+  let cogsCents = 0;
   for (const o of orderRows) {
     revenueCents += o.totalCents;
     for (const item of o.items as OrderLineItem[]) {
       unitsCount += item.quantity;
+      cogsCents += item.quantity * (costForType(item.productType) + printFeeCents + packagingCostCents);
     }
   }
-  const cogsCents = Math.round(unitCosts.unit_cost_total * 100) * unitsCount;
 
   const expenses = await listOverheadExpenses(from, to);
   const overheadCents = Math.round(expenses.reduce((sum, e) => sum + e.amount, 0) * 100);
