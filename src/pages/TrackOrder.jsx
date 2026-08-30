@@ -13,6 +13,7 @@ const STATUS_LABEL = {
   on_the_way: { en: 'On the way', ar: 'على الطريق' },
   delivered: { en: 'Delivered', ar: 'تم التسليم' },
   needs_attention: { en: 'Needs attention', ar: 'بحاجة انتباه' },
+  cancelled: { en: 'Cancelled', ar: 'ملغي' },
 };
 
 const FLOW = ['order_received', 'preorder_confirmed', 'in_production', 'being_printed', 'preparing_shipment', 'on_the_way', 'delivered'];
@@ -59,6 +60,18 @@ export default function TrackOrder() {
   };
 
   const currentStep = order ? FLOW.indexOf(order.status) : -1;
+  // Statuses outside the happy-path flow (needs_attention, cancelled, or any
+  // future unmapped status) have no step — indexOf returns -1, which used to
+  // break the indicator. Give them a neutral, all-unreached progress state
+  // plus an explicit bilingual note instead.
+  const statusKnown = order ? currentStep >= 0 : true;
+  const statusNote = !order || statusKnown
+    ? null
+    : order.status === 'needs_attention'
+      ? t.track.reviewing
+      : order.status === 'cancelled'
+        ? t.track.cancelled
+        : t.track.unknownStatus;
 
   return (
     <div className="max-w-[700px] mx-auto px-4 sm:px-6 py-16">
@@ -104,16 +117,21 @@ export default function TrackOrder() {
             <span className="kh-eyebrow">{t.confirm.number}</span>
             <span className="font-heading" style={{ fontFamily: 'var(--brand-font-heading)' }}>{order.order_number}</span>
           </div>
+          {!statusKnown && (
+            <div className="mb-6 flex flex-wrap items-center gap-3 bg-muted px-4 py-3 rounded-sm" role="status">
+              <span className="kh-eyebrow !text-[10px]">{STATUS_LABEL[order.status]?.[lang] ?? order.status}</span>
+              <span className="text-sm">{statusNote}</span>
+            </div>
+          )}
           <ol className="space-y-4">
             {FLOW.map((s, i) => {
-              const done = i <= currentStep;
-              const isCurrent = i === currentStep;
+              const done = statusKnown && i <= currentStep;
+              const isCurrent = statusKnown && i === currentStep;
               return (
                 <li key={s} className="flex gap-3 items-start">
                   <span className={`w-7 h-7 inline-flex items-center justify-center rounded-full shrink-0 font-heading text-xs ${done ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`} style={{ fontFamily: 'var(--brand-font-heading)' }}>{i + 1}</span>
                   <div className="pt-1">
                     <span className={`block ${isCurrent ? 'font-bold' : done ? '' : 'text-muted-foreground'}`}>{STATUS_LABEL[s][lang]}</span>
-                    {isCurrent && order.status === 'needs_attention' && <span className="text-destructive text-sm">— {STATUS_LABEL.needs_attention[lang]}</span>}
                   </div>
                 </li>
               );
