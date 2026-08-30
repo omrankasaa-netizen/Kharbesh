@@ -374,7 +374,7 @@ export default function AdminBulkImport() {
           {summary?.error && <span className="text-sm" style={{ color: 'var(--brand-destructive)' }}>{summary.error}</span>}
           {summary && !summary.error && (
             <span className="text-sm" style={{ color: summary.failed ? 'var(--brand-destructive)' : 'var(--brand-accent)' }}>
-              {lang === 'ar' ? `${summary.succeeded} نجح، ${summary.failed} فشل` : `${summary.succeeded} succeeded.failed} failed`}
+              {lang === 'ar' ? `${summary.succeeded} نجح، ${summary.failed} فشل` : `${summary.succeeded} succeeded, ${summary.failed} failed`}
             </span>
           )}
         </div>
