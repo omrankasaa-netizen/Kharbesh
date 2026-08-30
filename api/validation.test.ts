@@ -48,6 +48,34 @@ describe("commerce input validation", () => {
     ).toThrow();
   });
 
+  it("rejects orders with non-E.164 phone numbers", () => {
+    for (const phone of ["70123456", "+961 70 123 456", "+0123", "+96170123456789012345"]) {
+      expect(() =>
+        createOrderSchema.parse({
+          email: "customer@example.com",
+          phone,
+          fullName: "Kharbesh Customer",
+          shippingAddress: "Main street",
+          city: "Beirut",
+          country: "Lebanon",
+          items: [{ productId: "1", size: "M", color: "Black", quantity: 1 }],
+        }),
+      ).toThrow();
+    }
+  });
+
+  it("accepts custom projects with no phone or an E.164 phone, rejects bad ones", () => {
+    const base = {
+      name: "Kharbesh Customer",
+      email: "customer@example.com",
+      phrase: "تمرين ابن Carb",
+      rights_confirmed: true,
+    };
+    expect(customProjectSchema.parse(base).phone).toBeUndefined();
+    expect(customProjectSchema.parse({ ...base, phone: "+971501234567" }).phone).toBe("+971501234567");
+    expect(() => customProjectSchema.parse({ ...base, phone: "0501234567" })).toThrow();
+  });
+
   it("accepts a custom project with rights confirmed", () => {
     const parsed = customProjectSchema.parse({
       name: "Kharbesh Customer",
