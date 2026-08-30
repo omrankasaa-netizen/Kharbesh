@@ -7,6 +7,17 @@ import {
 import { sendEmail } from "./lib/email";
 import { customRequestNotificationEmail } from "./lib/emailTemplates";
 import { env } from "./lib/env";
+import { customRequestLimiter } from "./lib/rateLimit";
+
+/**
+ * Reference files arrive as base64 data URLs stored in a MySQL JSON column
+ * (audit H2), so they must be tightly bounded: only raster images and PDFs,
+ * max 4 files, 2M chars each, and 4M chars combined. (Long-term these
+ * belong in R2 — see api/lib/r2.ts — but that's a separate migration.)
+ */
+const REFERENCE_FILE_PATTERN = /^data:(image\/(png|jpeg|jpg|webp|gif)|application\/pdf);base64,[A-Za-z0-9+/=]+$/;
+const REFERENCE_FILE_MAX_CHARS = 2_000_000;
+const REFERENCE_FILES_MAX_TOTAL_CHARS = 4_000_000;
 
 /** Fire-and-forget: the owner personally designs every custom request, so
  *  each submission emails his design inbox. Never lets an email failure
@@ -48,7 +59,19 @@ export const customProjectSchema = z.object({
   placement: z.string().trim().max(60).optional(),
   needed_by: z.string().trim().max(40).optional(),
   notes: z.string().trim().max(2000).optional(),
-  reference_files: z.array(z.string().trim().max(2_000_000)).max(4).optional(),
+  reference_files: z
+    .array(
+      z
+        .string()
+        .trim()
+        .max(REFERENCE_FILE_MAX_CHARS)
+        .regex(REFERENCE_FILE_PATTERN, "Reference files must be PNG/JPEG/WebP/GIF images or PDFs."),
+    )
+    .max(4)
+    .refine((files) => files.reduce((total, f) => total + f.length, 0) <= REFERENCE_FILES_MAX_TOTAL_CHARS, {
+      message: "Reference files are too large in total.",
+    })
+    .optional(),
   rights_confirmed: z
     .boolean()
     .refine((v) => v === true, {
@@ -61,6 +84,11 @@ export const customRequestRouter = createRouter({
   submit: publicQuery
     .input(customProjectSchema)
     .mutation(async ({ ctx, input }) => {
+      // Per-IP throttle (audit M6): public unauthenticated submissions are
+      // capped at 5/hour so the owner's design inbox can't be flooded.
+      if (!customRequestLimiter.check(ctx.clientIp)) {
+        throw new Error("Too many requests from this connection, please try again later. / يرجى المحاولة لاحقاً");
+      }
       const { needed_by, reference_files, rights_confirmed, ...rest } = input;
       const created = await createCustomRequest({
         ...rest,
