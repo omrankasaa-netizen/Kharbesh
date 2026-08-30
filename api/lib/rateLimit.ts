@@ -61,3 +61,10 @@ export const orderCreateLimiter = createFixedWindowLimiter({ windowMs: 60 * 60 *
 
 /** Custom design requests — same reasoning as order creation (audit M6). */
 export const customRequestLimiter = createFixedWindowLimiter({ windowMs: 60 * 60 * 1000, max: 5 });
+
+/**
+ * Newsletter signup (newsletter.subscribe). Signups are idempotent
+ * server-side, so a generous 10 per hour per IP is enough to stop scripted
+ * list-stuffing without ever tripping a real shopper retrying a typo.
+ */
+export const newsletterLimiter = createFixedWindowLimiter({ windowMs: 60 * 60 * 1000, max: 10 });

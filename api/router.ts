@@ -6,6 +6,7 @@ import { customRequestRouter } from "./custom-request-router";
 import { orderRouter } from "./order-router";
 import { settingsRouter } from "./settings-router";
 import { loyaltyRouter } from "./loyalty-router";
+import { newsletterRouter } from "./newsletter-router";
 import { createRouter, publicQuery } from "./middleware";
 
 export const appRouter = createRouter({
@@ -15,6 +16,7 @@ export const appRouter = createRouter({
   orders: orderRouter,
   customRequests: customRequestRouter,
   contactMessages: contactMessagesRouter,
+  newsletter: newsletterRouter,
   settings: settingsRouter,
   admin: adminRouter,
   loyalty: loyaltyRouter,
