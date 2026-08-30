@@ -1,8 +1,8 @@
 import type { Context } from "hono";
-import { setCookie } from "hono/cookie";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { env } from "../lib/env";
-import { getSessionCookieOptions } from "../lib/cookies";
-import { Session } from "@contracts/constants";
+import { getSessionCookieOptions, getOAuthNonceCookieOptions } from "../lib/cookies";
+import { Paths, Session } from "@contracts/constants";
 import { signSessionToken } from "../kimi/session";
 import { upsertUser, resolveStaffRole } from "../queries/users";
 
@@ -22,14 +22,45 @@ type GoogleUserInfo = {
   picture?: string;
 };
 
+type OAuthFlow = "staff" | "customer";
+
+type GoogleOAuthState = {
+  redirectUri: string;
+  returnTo: string;
+  flow: OAuthFlow;
+  nonce: string;
+};
+
 /**
- * Staff-only Google sign-in. This is intentionally separate from the
- * customer-facing Kimi OAuth flow (api/kimi/auth.ts) — it exists purely so
- * staff can authenticate into /admin/* without a Kimi account, gated by an
- * explicit email allowlist (env.adminAllowedEmails). It reuses the same
- * session cookie/JWT shape (unionId + clientId) so the rest of the app
- * (authedQuery middleware, AdminGuard, findUserByUnionId) needs no changes.
+ * Google sign-in, two flows sharing one callback:
+ *  - "staff": /admin/* access, gated by the staff allowlist
+ *    (resolveStaffRole / env.adminAllowedEmails). Redirects failures back to
+ *    /admin/login?error=…
+ *  - "customer": storefront sign-in (checkout, profile). Any verified Google
+ *    account is accepted; staff emails still resolve to their staff role,
+ *    everyone else becomes role "user". Redirects to `returnTo`.
+ *
+ * Both flows reuse the same session cookie/JWT shape (unionId + clientId) as
+ * the Kimi OAuth flow so the rest of the app (authedQuery middleware,
+ * AdminGuard, findUserByUnionId) needs no changes.
+ *
+ * CSRF: the authorize URL is built server-side by /api/auth/google/start,
+ * which mints a random nonce into a short-lived httpOnly cookie and mirrors
+ * it into the OAuth state; the callback refuses to proceed unless they match.
  */
+
+const NONCE_COOKIE = "kh_google_nonce";
+
+function safeReturnTo(raw: unknown, fallback: string): string {
+  if (
+    typeof raw === "string" &&
+    raw.startsWith("/") &&
+    !raw.startsWith("//")
+  ) {
+    return raw;
+  }
+  return fallback;
+}
 
 async function exchangeGoogleCode(
   code: string,
@@ -71,6 +102,45 @@ async function fetchGoogleUserInfo(
   return resp.json() as Promise<GoogleUserInfo>;
 }
 
+/**
+ * GET /api/auth/google/start?flow=customer&returnTo=/checkout
+ *
+ * Entry point for BOTH Google flows — clients navigate here instead of
+ * building the Google authorize URL themselves, because only the server can
+ * mint and cookie the CSRF nonce that the callback later verifies.
+ */
+export function createGoogleOAuthStartHandler() {
+  return async (c: Context) => {
+    if (!env.googleClientId || !env.googleClientSecret) {
+      return c.json(
+        { error: "Google sign-in is not configured on this server." },
+        503,
+      );
+    }
+
+    const flow: OAuthFlow = c.req.query("flow") === "customer" ? "customer" : "staff";
+    const fallback = flow === "staff" ? "/admin/dashboard" : "/";
+    const returnTo = safeReturnTo(c.req.query("returnTo"), fallback);
+
+    const nonce = crypto.randomUUID();
+    setCookie(c, NONCE_COOKIE, nonce, getOAuthNonceCookieOptions(c.req.raw.headers));
+
+    const redirectUri = new URL(c.req.url).origin + Paths.googleOauthCallback;
+    const state: GoogleOAuthState = { redirectUri, returnTo, flow, nonce };
+
+    const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    url.searchParams.set("client_id", env.googleClientId);
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("scope", "openid email profile");
+    url.searchParams.set("access_type", "online");
+    url.searchParams.set("prompt", "select_account");
+    url.searchParams.set("state", btoa(JSON.stringify(state)));
+
+    return c.redirect(url.toString(), 302);
+  };
+}
+
 export function createGoogleOAuthCallbackHandler() {
   return async (c: Context) => {
     if (!env.googleClientId || !env.googleClientSecret) {
@@ -92,21 +162,41 @@ export function createGoogleOAuthCallbackHandler() {
     }
 
     let redirectUri = "";
+    let flow: OAuthFlow = "staff"; // absent = legacy staff link
+    let nonce = "";
     let returnTo = "/admin/dashboard";
     try {
       const decoded = JSON.parse(atob(state));
       if (typeof decoded.redirectUri === "string") {
         redirectUri = decoded.redirectUri;
       }
-      if (
-        typeof decoded.returnTo === "string" &&
-        decoded.returnTo.startsWith("/") &&
-        !decoded.returnTo.startsWith("//")
-      ) {
-        returnTo = decoded.returnTo;
+      if (decoded.flow === "customer") {
+        flow = "customer";
       }
+      if (typeof decoded.nonce === "string") {
+        nonce = decoded.nonce;
+      }
+      returnTo = safeReturnTo(
+        decoded.returnTo,
+        flow === "staff" ? "/admin/dashboard" : "/",
+      );
     } catch {
       return c.json({ error: "Invalid state" }, 400);
+    }
+
+    const fail = (reason: string) =>
+      c.redirect(
+        flow === "staff" ? `/admin/login?error=${reason}` : `/login?error=${reason}`,
+        302,
+      );
+
+    // CSRF check: the nonce in state must match the cookie /start set. The
+    // cookie is one-shot — cleared regardless of outcome.
+    const cookieNonce = getCookie(c, NONCE_COOKIE);
+    deleteCookie(c, NONCE_COOKIE, { path: "/" });
+    if (!nonce || !cookieNonce || cookieNonce !== nonce) {
+      console.warn("[google-auth] Rejected callback — nonce mismatch.");
+      return fail("state_mismatch");
     }
 
     try {
@@ -118,9 +208,8 @@ export function createGoogleOAuthCallbackHandler() {
         email && profile.email_verified !== false
           ? await resolveStaffRole(email, `google:${profile.sub}`)
           : undefined;
-      const isAllowed = !!resolvedRole;
 
-      if (!isAllowed) {
+      if (flow === "staff" && !resolvedRole) {
         console.warn(
           `[google-auth] Rejected sign-in for ${email ?? "unknown email"} — not on staff allowlist.`,
         );
@@ -135,7 +224,10 @@ export function createGoogleOAuthCallbackHandler() {
         name: profile.name ?? email,
         email,
         avatar: profile.picture,
-        role: resolvedRole,
+        // Customer flow: staff keep their staff role, everyone else stays the
+        // DB default ("user"). Never passed as an explicit "user" so a staff
+        // member signing in via the storefront is never downgraded.
+        ...(resolvedRole ? { role: resolvedRole } : {}),
         lastSignInAt: new Date(),
       });
 
@@ -149,7 +241,7 @@ export function createGoogleOAuthCallbackHandler() {
       return c.redirect(returnTo, 302);
     } catch (err) {
       console.error("[google-auth] Callback failed", err);
-      return c.redirect("/admin/login?error=server_error", 302);
+      return fail("server_error");
     }
   };
 }

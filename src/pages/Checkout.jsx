@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { useCart } from '@/lib/cart';
-import { base44 } from '@/api/khClient';
+import { base44, cachedMe } from '@/api/khClient';
+import PhoneInput from '@/components/PhoneInput';
+import { toE164, getCountry, validatePhone } from '@/lib/phoneCountries';
 import { useSiteSettings } from '@/lib/useCatalog.jsx';
 import { trackPurchase } from '@/lib/analytics';
 
@@ -11,7 +13,11 @@ export default function Checkout() {
   const { items, subtotal, clear } = useCart();
   const navigate = useNavigate();
   const { settings, loading: settingsLoading } = useSiteSettings();
-  const [form, setForm] = useState({ email: '', phone: '', full_name: '', address: '', city: '', country: 'Lebanon', notes: '' });
+  const [form, setForm] = useState({ email: '', full_name: '', address: '', city: '', country: 'Lebanon', notes: '' });
+  const [me, setMe] = useState(null);
+  // Phone is kept as { iso, national } and normalized to E.164 on submit.
+  const [phone, setPhone] = useState({ iso: 'LB', national: '' });
+  const [phoneTouched, setPhoneTouched] = useState(false);
   const [ack, setAck] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
   const [loading, setLoading] = useState(false);
@@ -27,6 +33,30 @@ export default function Checkout() {
   const [loyaltyPreview, setLoyaltyPreview] = useState(null); // { discountCents, discountPercent, freeShippingAvailable, tier }
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const phoneDial = getCountry(phone.iso).dial;
+  const phoneInvalid = !!validatePhone(phone.iso, phoneDial, phone.national, lang);
+  const showPhoneError = phoneTouched && phoneInvalid;
+
+  // If the visitor just signed in (e.g. via the Google button above), prefill
+  // contact details from the session — only into still-empty fields.
+  useEffect(() => {
+    let cancelled = false;
+    cachedMe().then((user) => {
+      if (cancelled || !user) return;
+      setMe(user);
+      setForm((f) => ({
+        ...f,
+        email: f.email || user.email || '',
+        full_name: f.full_name || user.full_name || '',
+      }));
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const googleSignIn = () => {
+    window.location.href = `/api/auth/google/start?flow=customer&returnTo=${encodeURIComponent('/checkout')}`;
+  };
 
   const TIER_LABEL = {
     new_kharboush: { en: 'New Kharboush', ar: 'خربوش جديد' },
@@ -118,6 +148,7 @@ export default function Checkout() {
   const submit = async (e) => {
     e.preventDefault();
     if (!ack) { setError(t.checkout.preorderAck); return; }
+    if (phoneInvalid) { setPhoneTouched(true); setError(t.checkout.phoneInvalid); return; }
     setLoading(true);
     setError('');
     try {
@@ -125,7 +156,7 @@ export default function Checkout() {
       const order = await base44.entities.Order.create({
         order_number: orderNumber,
         email: form.email,
-        phone: form.phone,
+        phone: toE164(phoneDial, phone.national),
         full_name: form.full_name,
         shipping_address: form.address,
         city: form.city,
@@ -166,11 +197,26 @@ export default function Checkout() {
       <h1 className="font-heading text-4xl sm:text-6xl uppercase mb-8" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.checkout.title}</h1>
       <form onSubmit={submit} className="grid gap-10 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-8">
+          {!me && (
+            <section className="rounded-md border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+              <div>
+                <p className="font-medium text-sm">{t.checkout.signInTitle}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t.checkout.signInSub}</p>
+              </div>
+              <button type="button" onClick={googleSignIn} className="kh-btn-secondary !px-4 whitespace-nowrap">
+                {t.checkout.signInGoogle}
+              </button>
+            </section>
+          )}
           <section>
             <h2 className="font-heading text-xl uppercase mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.checkout.contact}</h2>
+            {me?.email && <p className="text-xs text-muted-foreground mb-3">{t.checkout.signedInAs} {me.email}</p>}
             <div className="grid sm:grid-cols-2 gap-4">
               <Field label={t.checkout.email} required><input type="email" required value={form.email} onChange={set('email')} className="kh-input" /></Field>
-              <Field label={t.checkout.phone} required><input type="tel" required value={form.phone} onChange={set('phone')} className="kh-input" /></Field>
+              <Field label={t.checkout.phone} required>
+                <PhoneInput value={phone} onChange={setPhone} onBlur={() => setPhoneTouched(true)} required invalid={showPhoneError} />
+                {showPhoneError && <p className="text-destructive text-xs mt-1">{t.checkout.phoneInvalid}</p>}
+              </Field>
             </div>
           </section>
           <section>

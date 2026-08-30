@@ -1,6 +1,7 @@
 import { getDb } from "./connection";
 import { auditLogs, discounts, orders, products, promoCodes, type Order, type OrderLineItem } from "@db/schema";
-import { and, desc, eq, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { normalizePhoneToE164, phoneLookupVariants } from "../lib/phone";
 import { discountAmountCents, isWithinWindow, matchesDiscount } from "./promotions";
 import { computeShippingCents, getSettings, isPaymentMethodEnabled } from "./settings";
 import { applyLoyaltyToOrder, tierLabel } from "./loyalty";
@@ -257,20 +258,32 @@ export async function getOrderById(id: number, access: OrderAccessContext = {}) 
     return toUiOrder(row);
   }
   const contact = access.contact?.trim();
-  if (contact && (contact.toLowerCase() === row.email.toLowerCase() || contact === row.phone)) {
-    return toUiOrder(row);
+  if (contact) {
+    const normalizedPhone = normalizePhoneToE164(contact);
+    if (
+      contact.toLowerCase() === row.email.toLowerCase() ||
+      contact === row.phone ||
+      (normalizedPhone && normalizedPhone === row.phone)
+    ) {
+      return toUiOrder(row);
+    }
   }
   return null;
 }
 
-/** Guest order tracking: requires order number AND matching email/phone. */
+/** Guest order tracking: requires order number AND matching email/phone.
+ *  Phones are matched against the raw input plus its E.164 normalization so
+ *  both new E.164-stored orders and legacy free-text numbers keep working. */
 export async function trackOrder(orderNumber: string, contact: string) {
   const db = getDb();
   const normalized = contact.trim().toLowerCase();
   const row = await db.query.orders.findFirst({
     where: and(
       eq(orders.orderNumber, orderNumber.trim()),
-      or(eq(sql`lower(${orders.email})`, normalized), eq(orders.phone, contact.trim())),
+      or(
+        eq(sql`lower(${orders.email})`, normalized),
+        inArray(orders.phone, phoneLookupVariants(contact)),
+      ),
     ),
   });
   return row ? toUiOrder(row) : null;

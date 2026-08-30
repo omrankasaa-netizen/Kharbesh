@@ -15,3 +15,19 @@ export function getSessionCookieOptions(headers: Headers): CookieOptions {
     secure: !localhost,
   };
 }
+
+/**
+ * Short-lived OAuth CSRF nonce cookie (Google sign-in). SameSite=Lax is
+ * enough here: the callback is a top-level GET navigation back from Google,
+ * which Lax allows — unlike the session cookie, this one never needs to be
+ * sent cross-site via fetch.
+ */
+export function getOAuthNonceCookieOptions(headers: Headers): CookieOptions {
+  return {
+    httpOnly: true,
+    path: "/",
+    sameSite: "Lax",
+    secure: !isLocalhost(headers),
+    maxAge: 10 * 60, // 10 minutes — long enough for a Google round-trip
+  };
+}

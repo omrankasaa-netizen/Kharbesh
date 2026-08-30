@@ -6,7 +6,7 @@ import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
 import { createOAuthCallbackHandler } from "./kimi/auth";
-import { createGoogleOAuthCallbackHandler } from "./google/auth";
+import { createGoogleOAuthCallbackHandler, createGoogleOAuthStartHandler } from "./google/auth";
 import { createDriveOAuthCallbackHandler } from "./google/driveAuth";
 import { Paths } from "@contracts/constants";
 
@@ -78,6 +78,7 @@ app.use(
   }),
 );
 app.get(Paths.oauthCallback, createOAuthCallbackHandler());
+app.get(Paths.googleOauthStart, createGoogleOAuthStartHandler());
 app.get(Paths.googleOauthCallback, createGoogleOAuthCallbackHandler());
 app.get(Paths.driveOauthCallback, createDriveOAuthCallbackHandler());
 app.use("/api/trpc/*", async (c) => {

@@ -28,7 +28,13 @@ async function notifyOwnerOfCustomRequest(request: Parameters<typeof customReque
 export const customProjectSchema = z.object({
   name: z.string().trim().min(2).max(120),
   email: z.string().trim().email().max(320),
-  phone: z.string().trim().max(40).optional(),
+  // Optional, but when filled it must be E.164 (same rule as checkout).
+  phone: z
+    .string()
+    .trim()
+    .max(40)
+    .optional()
+    .refine((v) => !v || /^\+[1-9]\d{6,14}$/.test(v), { message: "invalid phone" }),
   phrase: z.string().trim().min(2).max(500),
   story: z.string().trim().max(5000).optional(),
   language: z.enum(["en", "ar"]).default("en"),

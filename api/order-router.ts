@@ -38,7 +38,9 @@ async function notifyOrderConfirmed(orderId: number) {
 
 export const createOrderSchema = z.object({
   email: z.string().email().max(320),
-  phone: z.string().min(6).max(40),
+  // Storefront checkout normalizes to E.164 before submitting (see
+  // src/lib/phoneCountries.js) so WhatsApp contact always works.
+  phone: z.string().trim().regex(/^\+[1-9]\d{6,14}$/, "invalid phone"),
   fullName: z.string().min(2).max(160),
   shippingAddress: z.string().min(4).max(255),
   city: z.string().min(1).max(120),

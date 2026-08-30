@@ -3,12 +3,18 @@ import { useI18n } from '@/lib/i18n';
 import { useColors, useGarmentStyles } from '@/lib/useCatalog.jsx';
 import { base44 } from '@/api/khClient';
 import { Scribble } from '@/components/Brand';
+import PhoneInput from '@/components/PhoneInput';
+import { toE164, getCountry, validatePhone } from '@/lib/phoneCountries';
 
 export default function CustomDesign() {
   const { t, lang } = useI18n();
   const colors = useColors();
   const styles = useGarmentStyles();
-  const [form, setForm] = useState({ name: '', email: '', phone: '', phrase: '', story: '', language: '', recipient: '', occasion: '', tone: 'subtle', garment: '', color: '', size: '', quantity: 1, placement: '', needed_by: '', notes: '', rights: false });
+  const [form, setForm] = useState({ name: '', email: '', phrase: '', story: '', language: '', recipient: '', occasion: '', tone: 'subtle', garment: '', color: '', size: '', quantity: 1, placement: '', needed_by: '', notes: '', rights: false });
+  // Optional phone — same international picker as checkout. Stays optional,
+  // but when filled it must validate and is sent as E.164.
+  const [phone, setPhone] = useState({ iso: 'LB', national: '' });
+  const [phoneTouched, setPhoneTouched] = useState(false);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -25,14 +31,21 @@ export default function CustomDesign() {
     setFiles(urls);
   };
 
+  const phoneDial = getCountry(phone.iso).dial;
+  const phoneFilled = !!phone.national.trim();
+  const phoneInvalid = phoneFilled && !!validatePhone(phone.iso, phoneDial, phone.national, lang);
+  const showPhoneError = phoneTouched && phoneInvalid;
+
   const submit = async (e) => {
     e.preventDefault();
     if (!form.rights) { setError(t.custom.rights); return; }
+    if (phoneInvalid) { setPhoneTouched(true); setError(t.checkout.phoneInvalid); return; }
     setLoading(true);
     setError('');
     try {
       await base44.entities.CustomProject.create({
         ...form,
+        phone: phoneFilled ? toE164(phoneDial, phone.national) : undefined,
         quantity: Number(form.quantity) || 1,
         reference_files: files,
         status: 'new_request',
@@ -122,7 +135,10 @@ export default function CustomDesign() {
             <Field label={t.contact.name} required><input required value={form.name} onChange={set('name')} className="kh-input" /></Field>
             <Field label={t.contact.email} required><input type="email" required value={form.email} onChange={set('email')} className="kh-input" /></Field>
           </div>
-          <Field label={t.checkout.phone}><input type="tel" value={form.phone} onChange={set('phone')} className="kh-input" /></Field>
+          <Field label={t.checkout.phone}>
+            <PhoneInput value={phone} onChange={setPhone} onBlur={() => setPhoneTouched(true)} invalid={showPhoneError} />
+            {showPhoneError && <p className="text-destructive text-xs mt-1">{t.checkout.phoneInvalid}</p>}
+          </Field>
         </section>
 
         <label className="flex items-start gap-3 text-sm cursor-pointer">
