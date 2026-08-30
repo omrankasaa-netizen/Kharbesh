@@ -144,6 +144,15 @@ export default function Checkout() {
       });
       trackPurchase({ orderId: order.id, value: total, currency: 'USD', items });
       clear();
+      // The confirmation page reads this back to prove ownership of the
+      // order (the server requires it — order ids alone are no longer
+      // enough to view an order's details).
+      try {
+        sessionStorage.setItem(`kh_order_contact_${order.id}`, form.email);
+      } catch {
+        // Private-mode storage failures are fine — the page falls back to
+        // the track-your-order form.
+      }
       navigate(`/order/${order.id}`);
     } catch (err) {
       setError(err.message || 'Something went wrong. Try again.');

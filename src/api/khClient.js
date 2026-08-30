@@ -174,8 +174,16 @@ export const kh = {
     },
 
     Order: {
-      /** Admin-only: every order. Server enforces the admin role. */
-      list: () => client.admin.orders.query(),
+      /**
+       * Admin-only: paged order list. Server enforces the staff role.
+       * Accepts { limit, offset } and tolerates legacy base44-style
+       * list('-created_date', 200) calls (the number is taken as limit).
+       */
+      list(sortOrOpts, maybeLimit) {
+        const opts = typeof sortOrOpts === 'object' && sortOrOpts !== null ? sortOrOpts : {};
+        const limit = opts.limit ?? (typeof maybeLimit === 'number' ? maybeLimit : undefined);
+        return client.admin.orders.query({ limit, offset: opts.offset });
+      },
 
       /**
        * filter({ order_number, contact }) → guest tracking (server verifies
@@ -193,7 +201,13 @@ export const kh = {
         return client.orders.mine.query();
       },
 
-      get: (id) => client.orders.get.query({ id: String(id) }),
+      /**
+       * Access-gated on the server: staff, the owning session, or a
+       * matching email/phone (`contact` — checkout stashes it in
+       * sessionStorage for the confirmation page).
+       */
+      get: (id, contact) =>
+        client.orders.get.query({ id: String(id), contact: contact || undefined }),
 
       /** Prices, order number and totals are computed server-side. */
       create: (data) =>
