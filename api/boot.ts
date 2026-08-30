@@ -4,6 +4,7 @@ import type { HttpBindings } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
 import { createContext } from "./context";
+import { clientIpFromHeaders } from "./lib/clientIp";
 import { env } from "./lib/env";
 import { createOAuthCallbackHandler } from "./kimi/auth";
 import { createGoogleOAuthCallbackHandler, createGoogleOAuthStartHandler } from "./google/auth";
@@ -16,14 +17,12 @@ const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const RATE_LIMIT_MAX = 300;
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 
-function clientKey(req: Request) {
-  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return req.headers.get("cf-connecting-ip") ?? forwarded ?? "local";
-}
-
 app.use("/api/*", async (c, next) => {
   const now = Date.now();
-  const key = clientKey(c.req.raw);
+  // Rightmost XFF entry (see clientIpFromHeaders) — the previously-used
+  // leftmost entry is client-supplied, which let attackers rotate fake IPs
+  // to dodge this limit (audit M1). Falls back to the node socket address.
+  const key = clientIpFromHeaders(c.req.raw.headers, c.env?.incoming?.socket?.remoteAddress);
   const bucket = rateLimitBuckets.get(key);
   const current = bucket && bucket.resetAt > now
     ? bucket

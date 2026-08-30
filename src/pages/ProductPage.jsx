@@ -54,7 +54,9 @@ export default function ProductPage() {
   const selectedColor = approvedColors.find((c) => c.name_en === colorName) || approvedColors[0];
   const hex = selectedColor?.hex || '#F0E9D6';
   const ink = contrastInk(hex);
-  const canAdd = colorName && size;
+  // `is_sold_out` is a server-computed boolean — the public catalog no
+  // longer exposes raw units_sold/preorder_capacity (audit M4).
+  const canAdd = colorName && size && !product?.is_sold_out;
   const activeColorPhotos = colorImages[selectedColor?.name_en] || null;
   // One photo per color — front and back are shot combined into a single
   // image. Prefer the real per-color photo, else fall back to the standard
@@ -86,10 +88,12 @@ export default function ProductPage() {
     setTimeout(() => navigate('/cart'), 500);
   };
 
+  // Raw capacity/units-sold numbers are no longer public (audit M4) — the
+  // label carries the same meaning without exposing stock internals.
   const preorderLabel = {
     open_until: `${t.product.closes} ${product.preorder_close_date}`,
-    quantity_target: `${t.product.target} ${product.preorder_capacity} · ${product.units_sold || 0} ${t.product.sold}`,
-    limited_quantity: `${t.product.limited} ${product.preorder_capacity} · ${product.units_sold || 0} ${t.product.sold}`,
+    quantity_target: t.product.batchTarget,
+    limited_quantity: product.is_sold_out ? t.product.soldOut : t.product.limitedRun,
     always_on: t.product.alwaysOn,
   }[product.preorder_type];
 

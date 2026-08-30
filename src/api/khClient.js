@@ -101,7 +101,10 @@ function canvasHasRealTransparency(ctx, width, height) {
  * several times larger than a JPEG at the same dimensions, which is what
  * was pushing single-image uploads past the server's body-size limit.
  */
-async function fileToDataUrl(file, maxDim = 1400, quality = 0.85) {
+/** Exported for the CustomDesign form, which needs guaranteed data-URL
+ *  output (its server schema only accepts image/PDF data URLs — the R2
+ *  fallback path in UploadFile would return an https URL for staff). */
+export async function fileToDataUrl(file, maxDim = 1400, quality = 0.85) {
   const readAs = (f) =>
     new Promise((resolve, reject) => {
       const r = new FileReader();
@@ -228,6 +231,9 @@ export const kh = {
             quantity: i.quantity,
           })),
           promoCode: empty(data.promo_code),
+          // Honeypot — humans never fill this hidden field; the server
+          // fake-succeeds without creating an order when it's set.
+          company: empty(data.company),
         }),
 
       update: (id, data) =>
@@ -390,8 +396,10 @@ export const kh = {
     },
 
     Loyalty: {
-      /** Tier + perks for one email — used by the Profile page and the Checkout preview. */
-      myStatus: (email) => client.loyalty.myStatus.query({ email }),
+      /** Tier + perks for the signed-in user (Profile page). Server-side the
+       *  lookup is authenticated and scoped to the session email — the
+       *  argument is ignored (kept for the Profile call site's signature). */
+      myStatus: (_email) => client.loyalty.myStatus.query(),
       /** Read-only: what THIS order's net subtotal (post automatic-discount, in dollars) would get under the current tier. No DB writes. */
       preview: (email, netSubtotal) => client.orders.previewLoyalty.query({ email, netSubtotal }),
       admin: {

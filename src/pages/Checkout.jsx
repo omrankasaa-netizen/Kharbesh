@@ -23,6 +23,10 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [promoInput, setPromoInput] = useState('');
+  // Honeypot: rendered hidden + tab-unreachable below; only bots filling
+  // every form field will complete it. Server fake-succeeds without
+  // creating an order when it's set.
+  const [company, setCompany] = useState('');
   const [promo, setPromo] = useState(null); // { code, type, value, discount_cents, discount }
   const [promoApplying, setPromoApplying] = useState(false);
   const [promoError, setPromoError] = useState('');
@@ -172,6 +176,7 @@ export default function Checkout() {
         payment_method: paymentMethod,
         language: lang,
         is_guest: true,
+        company,
       });
       trackPurchase({ orderId: order.id, value: total, currency: 'USD', items });
       clear();
@@ -274,6 +279,21 @@ export default function Checkout() {
               <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="mt-1 w-5 h-5 accent-[--brand-accent]" />
               <span>{t.checkout.preorderAck}</span>
             </label>
+
+            {/* Honeypot — invisible and unreachable by keyboard; humans leave
+                it empty, bots fill it. Server-side it's a fake-success trap. */}
+            <div className="hidden" aria-hidden="true">
+              <label>
+                Company
+                <input
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                />
+              </label>
+            </div>
           </section>
         </div>
 

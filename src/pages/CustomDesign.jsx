@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useI18n } from '@/lib/i18n';
 import { useColors, useGarmentStyles } from '@/lib/useCatalog.jsx';
-import { base44 } from '@/api/khClient';
+import { base44, fileToDataUrl } from '@/api/khClient';
 import { Scribble } from '@/components/Brand';
 import PhoneInput from '@/components/PhoneInput';
 import { toE164, getCountry, validatePhone } from '@/lib/phoneCountries';
@@ -23,12 +23,33 @@ export default function CustomDesign() {
 
   const onFiles = async (e) => {
     const list = Array.from(e.target.files || []);
-    const urls = [];
-    for (const f of list) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: f });
-      urls.push(file_url);
+    setError('');
+    // Server only accepts these MIME types as base64 data URLs (audit H2) —
+    // reject anything else here with a bilingual error instead of sending a
+    // request that's guaranteed to fail validation.
+    const ALLOWED = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf'];
+    if (list.some((f) => !ALLOWED.includes(f.type))) {
+      setError(lang === 'ar'
+        ? 'الملفات المسموحة: صور (PNG, JPG, WebP, GIF) أو PDF فقط.'
+        : 'Only images (PNG, JPG, WebP, GIF) or PDF files are allowed.');
+      e.target.value = '';
+      return;
     }
-    setFiles(urls);
+    if (list.length > 4) {
+      setError(lang === 'ar' ? 'أقصى عدد هو ٤ ملفات.' : 'You can attach up to 4 files.');
+      e.target.value = '';
+      return;
+    }
+    try {
+      // Always send data URLs (never R2 links) so the server's data-URL
+      // schema accepts them for every visitor, signed-in staff included.
+      const urls = [];
+      for (const f of list) urls.push(await fileToDataUrl(f));
+      setFiles(urls);
+    } catch (err) {
+      setError(err?.message || (lang === 'ar' ? 'تعذّرت قراءة الملف.' : 'Could not read that file.'));
+      e.target.value = '';
+    }
   };
 
   const phoneDial = getCountry(phone.iso).dial;
@@ -126,7 +147,7 @@ export default function CustomDesign() {
         <section className="grid gap-4">
           <Field label={t.custom.notes}><textarea rows={3} value={form.notes} onChange={set('notes')} className="kh-input" /></Field>
           <Field label="Reference files">
-            <input type="file" multiple onChange={onFiles} accept="image/*,.pdf" className="text-sm" />
+            <input type="file" multiple onChange={onFiles} accept="image/png,image/jpeg,image/webp,image/gif,application/pdf" className="text-sm" />
           </Field>
         </section>
 
