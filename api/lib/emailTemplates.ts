@@ -431,5 +431,5 @@ export function otpEmail(code: string, lang: "en" | "ar"): { subject: string; ht
     bodyHtml: lang === "ar" ? bodyAr : bodyEn,
   });
   const text = lang === "ar" ? `رمز الدخول: ${code} (ينتهي بعد 10 دقايق)` : `Your sign-in code: ${code} (expires in 10 minutes)`;
-return { subject, html, text };
+  return { subject, html, text };
 }
