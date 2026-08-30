@@ -100,11 +100,10 @@ function canvasHasRealTransparency(ctx, width, height) {
  * contain real transparency — a PNG re-encode of an opaque photo can be
  * several times larger than a JPEG at the same dimensions, which is what
  * was pushing single-image uploads past the server's body-size limit.
- *
- * Exported for the CustomDesign form, which needs guaranteed data-URL
- * output (its server schema only accepts image/PDF data URLs — the R2
- * fallback path in UploadFile would return an https URL for staff).
  */
+/** Exported for the CustomDesign form, which needs guaranteed data-URL
+ *  output (its server schema only accepts image/PDF data URLs — the R2
+ *  fallback path in UploadFile would return an https URL for staff). */
 export async function fileToDataUrl(file, maxDim = 1400, quality = 0.85) {
   const readAs = (f) =>
     new Promise((resolve, reject) => {
