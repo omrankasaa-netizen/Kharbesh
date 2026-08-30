@@ -4,6 +4,21 @@ import {
   createCustomRequest,
   listCustomRequestsForUser,
 } from "./queries/customRequests";
+import { sendEmail } from "./lib/email";
+import { customRequestNotificationEmail } from "./lib/emailTemplates";
+import { env } from "./lib/env";
+
+/** Fire-and-forget: the owner personally designs every custom request, so
+ *  each submission emails his design inbox. Never lets an email failure
+ *  affect the submit response the customer is waiting on. */
+async function notifyOwnerOfCustomRequest(request: Parameters<typeof customRequestNotificationEmail>[0]) {
+  try {
+    const { subject, html, text } = customRequestNotificationEmail(request);
+    await sendEmail({ to: env.customRequestNotifyEmail, subject, html, text });
+  } catch (err) {
+    console.error("[custom-request] owner notification email failed", err);
+  }
+}
 
 /**
  * The Base44 CustomProject form. All user-supplied text is length-capped;
@@ -41,13 +56,21 @@ export const customRequestRouter = createRouter({
     .input(customProjectSchema)
     .mutation(async ({ ctx, input }) => {
       const { needed_by, reference_files, rights_confirmed, ...rest } = input;
-      return createCustomRequest({
+      const created = await createCustomRequest({
         ...rest,
         neededBy: needed_by,
         referenceFiles: reference_files ?? [],
         rightsConfirmed: rights_confirmed,
         userId: ctx.user?.id ?? undefined,
       });
+      // Email the owner after the row is saved — the validated input (not
+      // the possibly-null row) already has every field the template needs.
+      void notifyOwnerOfCustomRequest({
+        ...rest,
+        needed_by,
+        reference_files: reference_files ?? [],
+      });
+      return created;
     }),
 
   /** Authed: the caller's own custom projects, resolved by session email. */

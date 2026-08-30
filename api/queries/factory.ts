@@ -11,6 +11,7 @@ import {
   type FactoryOrder,
   type FactoryOrderItem,
 } from "@db/schema";
+import { crossedIntoLow, notifyLowStock, type LowStockVariant } from "./inventory";
 
 function toUiItem(i: FactoryOrderItem) {
   return {
@@ -217,7 +218,11 @@ export async function markFactoryOrderSent(id: number, actorUserId: number) {
  */
 export async function markFactoryOrderFulfilled(id: number, actorUserId: number) {
   const db = getDb();
-  return db.transaction(async (tx) => {
+  // Variants that cross INTO low stock during this fulfillment — alerted
+  // after the transaction commits, so an email failure can never roll back
+  // stock changes.
+  const crossedVariants: LowStockVariant[] = [];
+  const result = await db.transaction(async (tx) => {
     const [order] = await tx.select().from(factoryOrders).where(eq(factoryOrders.id, id)).for("update");
     if (!order) throw new Error("FACTORY_ORDER_NOT_FOUND");
     if (order.status === "fulfilled") return toUiFactoryOrder(order);
@@ -242,6 +247,18 @@ export async function markFactoryOrderFulfilled(id: number, actorUserId: number)
       if (stock) {
         const nextQty = Math.max(0, stock.quantityOnHand + delta);
         await tx.update(blankStock).set({ quantityOnHand: nextQty, updatedAt: new Date() }).where(eq(blankStock.id, stock.id));
+        if (crossedIntoLow(
+          { quantityOnHand: stock.quantityOnHand, lowStockThreshold: stock.lowStockThreshold },
+          { quantityOnHand: nextQty, lowStockThreshold: stock.lowStockThreshold },
+        )) {
+          crossedVariants.push({
+            productType: stock.productType,
+            color: stock.color,
+            size: stock.size,
+            quantityOnHand: nextQty,
+            lowStockThreshold: stock.lowStockThreshold,
+          });
+        }
         await tx.insert(stockMovements).values({
           stockId: stock.id,
           type: order.type === "restock" ? "restock" : "consumed",
@@ -285,6 +302,8 @@ export async function markFactoryOrderFulfilled(id: number, actorUserId: number)
     const [row] = await tx.select().from(factoryOrders).where(eq(factoryOrders.id, id));
     return toUiFactoryOrder(row);
   });
+  notifyLowStock(crossedVariants);
+  return result;
 }
 
 export async function cancelFactoryOrder(id: number, actorUserId: number) {

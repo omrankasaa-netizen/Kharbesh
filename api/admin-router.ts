@@ -52,6 +52,8 @@ import {
 import {
   getUnitCosts,
   updateUnitCosts,
+  getGarmentCosts,
+  upsertGarmentCost,
   listOverheadExpenses,
   addOverheadExpense,
   deleteOverheadExpense,
@@ -576,6 +578,27 @@ export const adminRouter = createRouter({
       }),
     )
     .mutation(({ input }) => updateUnitCosts(input)),
+
+  /** Per-garment-type factory blank costs (tee/hoodie/accessory, extensible). */
+  garmentCosts: superAdminQuery.query(() => getGarmentCosts()),
+
+  updateGarmentCost: superAdminQuery
+    .input(
+      z.object({
+        // Slug-like free text (not the productType enum) so future garment
+        // types can be costed without a schema migration.
+        product_type: z.string().trim().min(1).max(40).regex(/^[a-z0-9_-]+$/),
+        cost: z.number().min(0).max(10_000),
+        label: z.string().trim().max(80).optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      try {
+        return await upsertGarmentCost(input.product_type, input.cost, input.label);
+      } catch (err) {
+        rethrowFriendly(err);
+      }
+    }),
 
   overheadExpenses: superAdminQuery
     .input(z.object({ from: z.string().max(10).optional(), to: z.string().max(10).optional() }).optional())

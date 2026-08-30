@@ -57,6 +57,13 @@
       "when": 1787773479847,
       "tag": "0007_add_cancelled_order_status",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1788116498223,
+      "tag": "0008_add_garment_costs",
+      "breakpoints": true
     }
   ]
 }

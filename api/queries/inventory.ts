@@ -1,6 +1,44 @@
 import { and, asc, eq } from "drizzle-orm";
 import { getDb } from "./connection";
 import { auditLogs, blankStock, stockMovements } from "@db/schema";
+import { sendEmail } from "../lib/email";
+import { lowStockAlertEmail } from "../lib/emailTemplates";
+import { env } from "../lib/env";
+
+export type LowStockVariant = {
+  productType: string;
+  color: string;
+  size: string;
+  quantityOnHand: number;
+  lowStockThreshold: number;
+};
+
+/** True when the change moves the variant from OK into low stock — the
+ *  only transition that should trigger an alert email (edits that keep an
+ *  already-low variant low must not re-notify). */
+export function crossedIntoLow(
+  prev: { quantityOnHand: number; lowStockThreshold: number },
+  next: { quantityOnHand: number; lowStockThreshold: number },
+) {
+  const wasLow = prev.quantityOnHand <= prev.lowStockThreshold;
+  const isLow = next.quantityOnHand <= next.lowStockThreshold;
+  return !wasLow && isLow;
+}
+
+/** Fire-and-forget low-stock alert to the ops inbox. Email is best-effort
+ *  and must never roll back or fail a stock change, so callers run this
+ *  AFTER the stock transaction commits. */
+export function notifyLowStock(variants: LowStockVariant[]) {
+  if (variants.length === 0) return;
+  void (async () => {
+    try {
+      const { subject, html, text } = lowStockAlertEmail(variants);
+      await sendEmail({ to: env.adminNotificationEmail, subject, html, text });
+    } catch (err) {
+      console.error("[inventory] low-stock alert email failed", err);
+    }
+  })();
+}
 
 export function toUiStock(s: typeof blankStock.$inferSelect) {
   return {
@@ -49,6 +87,21 @@ export async function upsertStockVariant(
     if (data.quantity_on_hand !== undefined) patch.quantityOnHand = data.quantity_on_hand;
     await db.update(blankStock).set(patch).where(eq(blankStock.id, existing.id));
     const [row] = await db.select().from(blankStock).where(eq(blankStock.id, existing.id));
+    // Alert only when this edit crosses the variant INTO low stock.
+    if (
+      crossedIntoLow(
+        { quantityOnHand: existing.quantityOnHand, lowStockThreshold: existing.lowStockThreshold },
+        { quantityOnHand: row.quantityOnHand, lowStockThreshold: row.lowStockThreshold },
+      )
+    ) {
+      notifyLowStock([{
+        productType: row.productType,
+        color: row.color,
+        size: row.size,
+        quantityOnHand: row.quantityOnHand,
+        lowStockThreshold: row.lowStockThreshold,
+      }]);
+    }
     return toUiStock(row);
   }
 
@@ -84,7 +137,8 @@ export async function adjustStock(
   actorUserId: number,
 ) {
   const db = getDb();
-  return db.transaction(async (tx) => {
+  let crossed: LowStockVariant | null = null;
+  const result = await db.transaction(async (tx) => {
     const [row] = await tx.select().from(blankStock).where(eq(blankStock.id, input.id)).for("update");
     if (!row) throw new Error("STOCK_NOT_FOUND");
 
@@ -102,9 +156,26 @@ export async function adjustStock(
       actorUserId,
     });
 
+    if (crossedIntoLow(
+      { quantityOnHand: row.quantityOnHand, lowStockThreshold: row.lowStockThreshold },
+      { quantityOnHand: nextQty, lowStockThreshold: row.lowStockThreshold },
+    )) {
+      crossed = {
+        productType: row.productType,
+        color: row.color,
+        size: row.size,
+        quantityOnHand: nextQty,
+        lowStockThreshold: row.lowStockThreshold,
+      };
+    }
+
     const [updated] = await tx.select().from(blankStock).where(eq(blankStock.id, input.id));
     return toUiStock(updated);
   });
+  // Email only after the transaction committed — an email failure must
+  // never roll back a stock change.
+  if (crossed) notifyLowStock([crossed]);
+  return result;
 }
 
 export async function listStockMovements(stockId?: number, limit = 100) {

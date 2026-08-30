@@ -40,4 +40,8 @@ export const env = {
   // instruction (2026-08-26) is to use kharbesh961@gmail.com for all
   // Kharbesh-side notifications. Overridable via env if that ever changes.
   adminNotificationEmail: process.env.ADMIN_NOTIFICATION_EMAIL ?? "kharbesh961@gmail.com",
+  // The owner's personal design inbox — every custom "خربش ع ذوقك" request
+  // is designed by him before it goes to the factory, so each submission
+  // emails him directly. Distinct from adminNotificationEmail (ops inbox).
+  customRequestNotifyEmail: process.env.CUSTOM_REQUEST_NOTIFY_EMAIL ?? "kassaa.omran@gmail.com",
 };

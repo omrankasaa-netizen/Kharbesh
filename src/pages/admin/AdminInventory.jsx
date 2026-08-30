@@ -3,6 +3,7 @@ import { base44 } from '@/api/khClient';
 import { useColors, useGarmentStyles } from '@/lib/useCatalog.jsx';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
+import { toast } from '@/components/ui/use-toast';
 
 const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
@@ -17,6 +18,8 @@ export default function AdminInventory() {
   const [adjusting, setAdjusting] = useState(null);
   const [adjustQty, setAdjustQty] = useState('');
   const [movements, setMovements] = useState({});
+  const [thresholdDrafts, setThresholdDrafts] = useState({}); // { [stockId]: string }
+  const [savingThresholdId, setSavingThresholdId] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -50,6 +53,36 @@ export default function AdminInventory() {
     setAdjustQty('');
   };
 
+  // Inline threshold edit: saves on blur or Enter via the existing upsert
+  // endpoint (it keys on product_type+color+size, so no separate endpoint).
+  // Optimistic — rolls back with a toast if the save fails.
+  const saveThreshold = async (row) => {
+    const draft = thresholdDrafts[row.id];
+    if (draft === undefined) return;
+    const value = Math.max(0, Math.floor(Number(draft)));
+    if (Number.isNaN(value) || value === row.low_stock_threshold) {
+      setThresholdDrafts((d) => { const next = { ...d }; delete next[row.id]; return next; });
+      return;
+    }
+    const prev = row.low_stock_threshold;
+    setStock((s) => s.map((x) => (x.id === row.id ? { ...x, low_stock_threshold: value, is_low: x.quantity_on_hand <= value } : x)));
+    setThresholdDrafts((d) => { const next = { ...d }; delete next[row.id]; return next; });
+    setSavingThresholdId(row.id);
+    try {
+      const updated = await base44.entities.BlankStock.upsertVariant({
+        product_type: row.product_type,
+        color: row.color,
+        size: row.size,
+        low_stock_threshold: value,
+      });
+      setStock((s) => s.map((x) => (x.id === row.id ? updated : x)));
+      toast({ title: lang === 'ar' ? 'تحدّث حد التنبيه ✓' : 'Alert threshold saved ✓' });
+    } catch (err) {
+      setStock((s) => s.map((x) => (x.id === row.id ? { ...x, low_stock_threshold: prev, is_low: x.quantity_on_hand <= prev } : x)));
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نحدّث حد التنبيه' : 'Could not save threshold'), variant: 'destructive' });
+    } finally { setSavingThresholdId(null); }
+  };
+
   const toggleMovements = async (row) => {
     if (movements[row.id]) {
       setMovements((m) => { const next = { ...m }; delete next[row.id]; return next; });
@@ -65,7 +98,9 @@ export default function AdminInventory() {
 
       {lowStockCount > 0 && (
         <div className="mt-6 border rounded-md px-4 py-3 text-sm" style={{ borderColor: 'var(--brand-accent)', color: 'var(--brand-accent)', background: 'color-mix(in srgb, var(--brand-accent) 8%, transparent)' }}>
-          {lang === 'ar' ? `تنبيه: ${lowStockCount} متغيّر وصل لحد إعادة التعبئة` : `Low stock alert: ${lowStockCount} variant${lowStockCount > 1 ? 's' : ''} at or below the restock threshold.`}
+          {lang === 'ar'
+            ? `${lowStockCount} قطع قليلة — وقت تجديد المخزون من المصنع`
+            : `${lowStockCount} variant${lowStockCount > 1 ? 's' : ''} low — time to reorder from the factory`}
         </div>
       )}
 
@@ -133,7 +168,16 @@ export default function AdminInventory() {
                     <td className="py-3 pr-3">{s.color}</td>
                     <td className="py-3 pr-3">{s.size}</td>
                     <td className="py-3 pr-3 font-semibold" style={{ color: s.is_low ? 'var(--brand-accent)' : undefined }}>{s.quantity_on_hand}</td>
-                    <td className="py-3 pr-3">{s.low_stock_threshold}</td>
+                    <td className="py-3 pr-3">
+                      <input
+                        type="number" min="0" className="kh-input !h-8 !py-0 max-w-[80px]"
+                        value={thresholdDrafts[s.id] ?? s.low_stock_threshold}
+                        disabled={savingThresholdId === s.id}
+                        onChange={(e) => setThresholdDrafts((d) => ({ ...d, [s.id]: e.target.value }))}
+                        onBlur={() => saveThreshold(s)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                      />
+                    </td>
                     <td className="py-3 pr-3 text-right whitespace-nowrap">
                       {adjusting === s.id ? (
                         <span className="inline-flex items-center gap-2">

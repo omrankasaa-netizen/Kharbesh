@@ -413,6 +413,25 @@ export const unitCostSettings = mysqlTable("unit_cost_settings", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
+// Per-garment-type factory blank cost (what the owner pays per blank piece).
+// Deliberately a varchar, NOT a mysqlEnum like products.productType — costs
+// for future garment types must be addable from the admin UI without a
+// schema migration; the COGS lookup falls back to the tee cost for any
+// type with no row here.
+export const garmentCosts = mysqlTable(
+  "garment_costs",
+  {
+    id: serial("id").primaryKey(),
+    productType: varchar("productType", { length: 40 }).notNull(),
+    label: varchar("label", { length: 80 }),
+    costCents: int("costCents").default(0).notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  (t) => ({
+    typeIdx: uniqueIndex("garment_costs_type_idx").on(t.productType),
+  }),
+);
+
 export const overheadExpenses = mysqlTable(
   "overhead_expenses",
   {
@@ -530,6 +549,7 @@ export type StockMovement = typeof stockMovements.$inferSelect;
 export type FactoryOrder = typeof factoryOrders.$inferSelect;
 export type FactoryOrderItem = typeof factoryOrderItems.$inferSelect;
 export type UnitCostSettings = typeof unitCostSettings.$inferSelect;
+export type GarmentCost = typeof garmentCosts.$inferSelect;
 export type OverheadExpense = typeof overheadExpenses.$inferSelect;
 export type ProductColorImages = typeof productColorImages.$inferSelect;
 export type PromoCode = typeof promoCodes.$inferSelect;

@@ -258,6 +258,8 @@ export const kh = {
     CustomProject: {
       /** Admin-only list. */
       list: () => client.admin.customRequests.query(),
+      /** Staff-only status change for a custom request. */
+      updateStatus: (id, status) => client.admin.updateCustomRequestStatus.mutate({ id: String(id), status }),
       create: (data) =>
         client.customRequests.submit.mutate({
           name: data.name,
@@ -338,6 +340,8 @@ export const kh = {
     Financials: {
       getUnitCosts: () => client.admin.unitCosts.query(),
       updateUnitCosts: (data) => client.admin.updateUnitCosts.mutate(data),
+      getGarmentCosts: () => client.admin.garmentCosts.query(),
+      updateGarmentCost: (data) => client.admin.updateGarmentCost.mutate(data),
       listExpenses: (from, to) => client.admin.overheadExpenses.query({ from, to }),
       addExpense: (data) => client.admin.addOverheadExpense.mutate(data),
       deleteExpense: (id) => client.admin.deleteOverheadExpense.mutate({ id: String(id) }),
