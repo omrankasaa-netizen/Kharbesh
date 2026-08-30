@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { base44 } from '@/api/khClient';
 import PageHeader from '@/components/PageHeader';
 import { useI18n } from '@/lib/i18n';
+import { toast } from '@/components/ui/use-toast';
 
 const OVERHEAD_CATEGORIES = ['ads', 'courier', 'packaging', 'misc'];
 
@@ -22,21 +23,27 @@ export default function AdminFinancials() {
   const [margins, setMargins] = useState([]);
   const [costDrafts, setCostDrafts] = useState({});
   const [savingCostId, setSavingCostId] = useState(null);
+  const [garmentCosts, setGarmentCosts] = useState([]);
+  const [garmentDrafts, setGarmentDrafts] = useState({}); // { [product_type]: { cost, label } }
+  const [savingGarmentType, setSavingGarmentType] = useState(null);
+  const [newGarment, setNewGarment] = useState({ product_type: '', label: '', cost: '' });
 
   const loadAll = async (from, to) => {
     setLoading(true);
     try {
-      const [uc, exp, sum, marg] = await Promise.all([
+      const [uc, exp, sum, marg, gc] = await Promise.all([
         base44.entities.Financials.getUnitCosts(),
         base44.entities.Financials.listExpenses(from || undefined, to || undefined),
         base44.entities.Financials.getSummary(from || undefined, to || undefined),
         base44.entities.Financials.listMargins(),
+        base44.entities.Financials.getGarmentCosts(),
       ]);
       setUnitCosts(uc);
       setUnitForm({ blank_tee_cost: uc.blank_tee_cost, print_fee: uc.print_fee, packaging_cost: uc.packaging_cost });
       setExpenses(exp || []);
       setSummary(sum);
       setMargins(marg || []);
+      setGarmentCosts(gc || []);
     } finally { setLoading(false); }
   };
   useEffect(() => { loadAll(); }, []);
@@ -51,6 +58,39 @@ export default function AdminFinancials() {
       setMargins(marg || []);
       setCostDrafts((d) => { const next = { ...d }; delete next[productId]; return next; });
     } finally { setSavingCostId(null); }
+  };
+
+  const saveGarmentCost = async (productType) => {
+    const draft = garmentDrafts[productType];
+    if (!draft) return;
+    const cost = Number(draft.cost);
+    if (Number.isNaN(cost) || cost < 0) return;
+    setSavingGarmentType(productType);
+    try {
+      const updated = await base44.entities.Financials.updateGarmentCost({ product_type: productType, cost, label: draft.label?.trim() || undefined });
+      setGarmentCosts(updated || []);
+      setGarmentDrafts((d) => { const next = { ...d }; delete next[productType]; return next; });
+      toast({ title: lang === 'ar' ? 'انحفظت الكلفة ✓' : 'Garment cost saved ✓' });
+      loadAll(range.from, range.to);
+    } catch (err) {
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نحفظ' : 'Could not save'), variant: 'destructive' });
+    } finally { setSavingGarmentType(null); }
+  };
+
+  const addGarmentType = async () => {
+    const product_type = newGarment.product_type.trim().toLowerCase();
+    const cost = Number(newGarment.cost);
+    if (!product_type || Number.isNaN(cost) || cost < 0) return;
+    setSavingGarmentType('__new__');
+    try {
+      const updated = await base44.entities.Financials.updateGarmentCost({ product_type, cost, label: newGarment.label.trim() || undefined });
+      setGarmentCosts(updated || []);
+      setNewGarment({ product_type: '', label: '', cost: '' });
+      toast({ title: lang === 'ar' ? 'انضاف نوع جديد ✓' : 'Garment type added ✓' });
+      loadAll(range.from, range.to);
+    } catch (err) {
+      toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نضيف' : 'Could not add garment type'), variant: 'destructive' });
+    } finally { setSavingGarmentType(null); }
   };
 
   const applyRange = () => loadAll(range.from, range.to);
@@ -127,6 +167,70 @@ export default function AdminFinancials() {
                 <label className="block"><span className="text-xs uppercase text-muted-foreground block mb-1">Packaging cost ($)</span><input type="number" step="0.01" className="kh-input" value={unitForm.packaging_cost} onChange={(e) => setUnitForm((f) => ({ ...f, packaging_cost: e.target.value }))} /></label>
                 <div className="text-sm text-muted-foreground">Total per unit: <span style={{ color: 'var(--brand-accent)' }}>{money((Number(unitForm.blank_tee_cost) || 0) + (Number(unitForm.print_fee) || 0) + (Number(unitForm.packaging_cost) || 0))}</span></div>
                 <button onClick={saveUnitCosts} disabled={savingCosts} className="kh-btn-primary">{savingCosts ? 'Saving…' : 'Save'}</button>
+              </div>
+            </section>
+
+            <section className="bg-card border border-border rounded-md p-5">
+              <h2 className="font-heading text-lg uppercase mb-1" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'كلفة القطع السادة' : 'Blank garment costs'}</h2>
+              <p className="text-xs text-muted-foreground mb-4">
+                {lang === 'ar'
+                  ? 'شو بندفع للمصنع عالقطعة السادة، حسب نوعها. النوع يلي مالو كلفة بينحسب بسعر التيشيرت.'
+                  : 'What the factory charges per blank, per garment type. Types without a cost row are priced as tees in COGS.'}
+              </p>
+              <div className="space-y-3">
+                {garmentCosts.map((g) => {
+                  const draft = garmentDrafts[g.product_type];
+                  const costValue = draft?.cost ?? g.cost;
+                  const labelValue = draft?.label ?? (g.label ?? '');
+                  return (
+                    <div key={g.product_type} className="flex flex-wrap items-end gap-2">
+                      <div className="text-xs uppercase text-muted-foreground min-w-[90px]">
+                        {g.product_type}
+                        <div className="normal-case text-[11px] opacity-70">{g.label || '—'}</div>
+                      </div>
+                      <input
+                        type="text" placeholder={lang === 'ar' ? 'الاسم' : 'Label'} className="kh-input !h-9 !py-1 max-w-[120px]"
+                        value={labelValue}
+                        onChange={(e) => setGarmentDrafts((d) => ({ ...d, [g.product_type]: { cost: String(d[g.product_type]?.cost ?? g.cost), label: e.target.value } }))}
+                      />
+                      <input
+                        type="number" step="0.01" className="kh-input !h-9 !py-1 max-w-[100px]"
+                        value={costValue}
+                        onChange={(e) => setGarmentDrafts((d) => ({ ...d, [g.product_type]: { cost: e.target.value, label: d[g.product_type]?.label ?? (g.label ?? '') } }))}
+                      />
+                      <button
+                        onClick={() => saveGarmentCost(g.product_type)}
+                        disabled={!draft || savingGarmentType === g.product_type}
+                        className="kh-btn-text text-xs disabled:opacity-50"
+                      >
+                        {savingGarmentType === g.product_type ? 'Saving…' : (lang === 'ar' ? 'حفظ' : 'Save')}
+                      </button>
+                    </div>
+                  );
+                })}
+                <div className="pt-3 border-t border-border">
+                  <div className="text-xs uppercase text-muted-foreground mb-2">{lang === 'ar' ? 'إضافة نوع قطعة' : 'Add garment type'}</div>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <input
+                      type="text" placeholder="slug (e.g. tank)" className="kh-input !h-9 !py-1 max-w-[130px]"
+                      value={newGarment.product_type}
+                      onChange={(e) => setNewGarment((v) => ({ ...v, product_type: e.target.value }))}
+                    />
+                    <input
+                      type="text" placeholder={lang === 'ar' ? 'الاسم' : 'Label'} className="kh-input !h-9 !py-1 max-w-[120px]"
+                      value={newGarment.label}
+                      onChange={(e) => setNewGarment((v) => ({ ...v, label: e.target.value }))}
+                    />
+                    <input
+                      type="number" step="0.01" placeholder="Cost ($)" className="kh-input !h-9 !py-1 max-w-[100px]"
+                      value={newGarment.cost}
+                      onChange={(e) => setNewGarment((v) => ({ ...v, cost: e.target.value }))}
+                    />
+                    <button onClick={addGarmentType} disabled={savingGarmentType === '__new__'} className="kh-btn-secondary !py-2 !px-4 text-sm">
+                      {savingGarmentType === '__new__' ? 'Saving…' : (lang === 'ar' ? 'إضافة' : 'Add')}
+                    </button>
+                  </div>
+                </div>
               </div>
             </section>
 
