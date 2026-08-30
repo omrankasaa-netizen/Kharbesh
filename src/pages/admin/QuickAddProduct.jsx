@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/khClient';
-
-const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
-const SIZE_OPTIONS = ['S', 'M', 'L', 'XL', 'XXL'];
-const DEFAULT_PRICE_BY_TYPE = { tee: 35, hoodie: 35, accessory: 35 };
+import { PRODUCT_TYPES, SIZE_OPTIONS, DEFAULT_PRICE_BY_TYPE } from '@/lib/productFormShared';
 
 function SizePills({ selected, onChange }) {
   return (
