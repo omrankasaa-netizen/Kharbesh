@@ -29,6 +29,12 @@ export default function ProductPage() {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [colorImages, setColorImages] = useState({});
+  const [saved, setSaved] = useState(false);
+
+  // Sync the wishlist heart once the product resolves (products load async).
+  useEffect(() => {
+    if (product) setSaved(isSaved(product.id));
+  }, [product?.id]);
 
   useEffect(() => {
     if (!product) return;
