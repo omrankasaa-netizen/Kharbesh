@@ -169,7 +169,7 @@ export const productColorImages = mysqlTable(
     images: json("images").$type<string[]>().notNull(),
     sortOrder: int("sortOrder").default(0).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().notNull().onUpdateNow(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
   (t) => ({
     variantIdx: uniqueIndex("product_color_images_variant_idx").on(t.productId, t.colorName),
