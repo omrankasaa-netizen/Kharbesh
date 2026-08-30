@@ -51,6 +51,25 @@ export function toUiProduct(p: Product) {
   };
 }
 
+/**
+ * Public storefront serializer (audit M4). The full `toUiProduct` carries
+ * ops/factory-only fields that must never reach anonymous shoppers:
+ * `print_file_url` (factory artwork), `units_sold`, and `preorder_capacity`
+ * (internal sales/stock numbers). The product page only needs to know
+ * whether a limited run is sold out, so that's exposed as a boolean.
+ * Staff/admin endpoints keep using the full `toUiProduct` above.
+ */
+export function toUiPublicProduct(p: Product) {
+  const { print_file_url: _artwork, units_sold: _sold, preorder_capacity: _capacity, ...publicFields } = toUiProduct(p);
+  return {
+    ...publicFields,
+    is_sold_out:
+      p.preorderType === "limited_quantity" &&
+      p.preorderCapacity != null &&
+      p.unitsSold >= p.preorderCapacity,
+  };
+}
+
 export async function listCollections() {
   const rows = await getDb().select().from(collections).orderBy(asc(collections.sortOrder));
   return rows.map((c) => ({
@@ -228,14 +247,15 @@ export async function deleteGarmentStyle(id: number) {
   return { success: true };
 }
 
-/** Public catalog: everything except drafts. */
+/** Public catalog: everything except drafts, serialized WITHOUT the
+ *  ops/factory-only fields (see toUiPublicProduct — audit M4). */
 export async function listProducts() {
   const rows = await getDb()
     .select()
     .from(products)
     .where(ne(products.status, "draft"))
     .orderBy(asc(products.sortOrder));
-  return rows.map(toUiProduct);
+  return rows.map(toUiPublicProduct);
 }
 
 /** Admin catalog: includes drafts. */
