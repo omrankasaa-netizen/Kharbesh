@@ -169,7 +169,7 @@ export const productColorImages = mysqlTable(
     images: json("images").$type<string[]>().notNull(),
     sortOrder: int("sortOrder").default(0).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull().onUpdateNow(),
   },
   (t) => ({
     variantIdx: uniqueIndex("product_color_images_variant_idx").on(t.productId, t.colorName),
@@ -515,7 +515,6 @@ export const discounts = mysqlTable("discounts", {
   active: boolean("active").default(true).notNull(),
   startsAt: timestamp("startsAt"),
   expiresAt: timestamp("expiresAt"),
-  createdByUserId: bigint("createdByUserId", { mode: "number", unsigned: true }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
