@@ -22,7 +22,7 @@ const dictionaries = {
       newDropSub: 'El preorder bisakker Sep 15. Shipping mnehzar akher September.',
       noDropEyebrow: 'Kharbesh Drops',
       noDropTitle: 'Nothing\u2019s brewing right now',
-      noDropSub: 'Ma3na hala2 bein jomlatein. Tab3ouna — awwal wahad y3allek byakhod awwal fatra 3al jayye.',
+      noDropSub: 'Ma3na hala2 bein jomlatein. Tab3ouna \u2014 awwal wahad y3allek byakhod awwal fatra 3al jayye.',
       customEyebrow: '3a Zaw2ak',
       customTitle: 'Your line. Our pens. Zero spoilers.',
       customSub: 'Eb3atelna el jomle yalli 3ayltak ma 3am touwaf 3an ta2olha — ma3 el 2isse yalli warraha. Menhawelha 2it3et Kharbesh, w inte bteshou3 3al design 2abel el tibi3.',
