@@ -232,6 +232,12 @@ export const orders = mysqlTable(
     ]).default("order_received").notNull(),
     internalStatus: varchar("internalStatus", { length: 60 }).default("payment_pending").notNull(),
     paymentMethod: mysqlEnum("paymentMethod", ["cash_on_delivery", "whish"]).default("cash_on_delivery").notNull(),
+    // Courier handoff + COD cash collection: staff hand orders to a courier
+    // company, which collects cash from the customer and settles with us
+    // later — so 'delivered' must NOT be conflated with 'cash received'.
+    courierName: varchar("courierName", { length: 120 }),
+    handedToCourierAt: timestamp("handedToCourierAt"),
+    cashCollectedAt: timestamp("cashCollectedAt"),
     language: mysqlEnum("language", ["en", "ar"]).default("en").notNull(),
     isGuest: boolean("isGuest").default(true).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -448,6 +454,35 @@ export const overheadExpenses = mysqlTable(
   }),
 );
 
+// Single-row partner profit-split settings (super_admin). The empty default
+// lives in the app layer (lazy create) because MySQL JSON column defaults are
+// version-sensitive and drizzle can't emit one portably.
+export const profitSplitSettings = mysqlTable("profit_split_settings", {
+  id: serial("id").primaryKey(),
+  shares: json("shares").$type<{ name: string; percent: number }[]>().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// Payments made TO the factory, logged by the super_admin. The factory
+// payable ledger is computed as (consumed blanks + print fees) minus the sum
+// of these payments.
+export const factoryPayments = mysqlTable(
+  "factory_payments",
+  {
+    id: serial("id").primaryKey(),
+    amountCents: int("amountCents").notNull(),
+    // YYYY-MM-DD like overhead_expenses.expenseDate — a plain business date,
+    // not a moment in time.
+    paymentDate: varchar("paymentDate", { length: 10 }).notNull(),
+    note: varchar("note", { length: 500 }),
+    createdByUserId: bigint("createdByUserId", { mode: "number", unsigned: true }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => ({
+    dateIdx: index("factory_payments_date_idx").on(t.paymentDate),
+  }),
+);
+
 // ── Promotions: discounts, promo codes, homepage campaigns ───────────────────
 // Code-based discounts a shopper types at checkout. Value is a percent
 // (1-100) when type is "percent", or cents when type is "fixed".
@@ -480,6 +515,7 @@ export const discounts = mysqlTable("discounts", {
   active: boolean("active").default(true).notNull(),
   startsAt: timestamp("startsAt"),
   expiresAt: timestamp("expiresAt"),
+  createdByUserId: bigint("createdByUserId", { mode: "number", unsigned: true }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -551,6 +587,8 @@ export type FactoryOrderItem = typeof factoryOrderItems.$inferSelect;
 export type UnitCostSettings = typeof unitCostSettings.$inferSelect;
 export type GarmentCost = typeof garmentCosts.$inferSelect;
 export type OverheadExpense = typeof overheadExpenses.$inferSelect;
+export type ProfitSplitSettings = typeof profitSplitSettings.$inferSelect;
+export type FactoryPayment = typeof factoryPayments.$inferSelect;
 export type ProductColorImages = typeof productColorImages.$inferSelect;
 export type PromoCode = typeof promoCodes.$inferSelect;
 export type Discount = typeof discounts.$inferSelect;
