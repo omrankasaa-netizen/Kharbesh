@@ -114,6 +114,16 @@ export async function updatePromoCode(id: number, data: PromoCodeWritableFields)
   if (data.active !== undefined) patch.active = data.active;
   if (data.starts_at !== undefined) patch.startsAt = data.starts_at ? new Date(data.starts_at) : null;
   if (data.expires_at !== undefined) patch.expiresAt = data.expires_at ? new Date(data.expires_at) : null;
+  // Type and value can arrive in separate patches — validate the MERGED
+  // result so "percent + 150" can't slip through a two-step edit.
+  if (patch.type !== undefined || patch.value !== undefined) {
+    const [existing] = await db.select().from(promoCodes).where(eq(promoCodes.id, id)).limit(1);
+    if (existing) {
+      const mergedType = (patch.type as string) ?? existing.type;
+      const mergedValue = (patch.value as number) ?? existing.value;
+      if (mergedType === "percent" && mergedValue > 100) throw new Error("PERCENT_TOO_HIGH");
+    }
+  }
   await db.update(promoCodes).set(patch).where(eq(promoCodes.id, id));
   const [row] = await db.select().from(promoCodes).where(eq(promoCodes.id, id)).limit(1);
   return row ? toUiPromoCode(row) : null;
@@ -177,6 +187,14 @@ export async function updateDiscount(id: number, data: DiscountWritableFields) {
   if (data.active !== undefined) patch.active = data.active;
   if (data.starts_at !== undefined) patch.startsAt = data.starts_at ? new Date(data.starts_at) : null;
   if (data.expires_at !== undefined) patch.expiresAt = data.expires_at ? new Date(data.expires_at) : null;
+  if (patch.type !== undefined || patch.value !== undefined) {
+    const [existing] = await db.select().from(discounts).where(eq(discounts.id, id)).limit(1);
+    if (existing) {
+      const mergedType = (patch.type as string) ?? existing.type;
+      const mergedValue = (patch.value as number) ?? existing.value;
+      if (mergedType === "percent" && mergedValue > 100) throw new Error("PERCENT_TOO_HIGH");
+    }
+  }
   await db.update(discounts).set(patch).where(eq(discounts.id, id));
   const [row] = await db.select().from(discounts).where(eq(discounts.id, id)).limit(1);
   return row ? toUiDiscount(row) : null;

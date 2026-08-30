@@ -78,6 +78,34 @@ const idParam = z.string().regex(/^\d+$/, "Invalid id");
 const productType = z.enum(["tee", "hoodie", "accessory"]);
 const discountValueType = z.enum(["percent", "fixed"]);
 
+/** A percent discount above 100% would pay the customer to order — capped
+ *  here on create (type+value are both present) and again in the query
+ *  layer on update, where type/value can arrive in separate patches. */
+const percentWithin100 = (data: { type?: string; value?: number }, ctx: z.RefinementCtx) => {
+  if (data.type === "percent" && data.value != null && data.value > 100) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["value"],
+      message: "Percent discounts can't exceed 100.",
+    });
+  }
+};
+
+/** Maps query-layer business errors to messages that survive tRPC's
+ *  production error masking. */
+const FRIENDLY_ERRORS: Record<string, string> = {
+  PERCENT_TOO_HIGH: "Percent discounts can't exceed 100.",
+  NO_ORDERS_FOUND: "No orders matched that selection.",
+  ALL_ORDERS_ALREADY_QUEUED: "Every selected order is already in a print job.",
+};
+
+function rethrowFriendly(err: unknown): never {
+  if (err instanceof Error && FRIENDLY_ERRORS[err.message]) {
+    throw new Error(FRIENDLY_ERRORS[err.message]);
+  }
+  throw err;
+}
+
 const promoCodeFields = {
   code: z.string().min(1).max(40),
   type: discountValueType,
@@ -242,7 +270,16 @@ export const adminRouter = createRouter({
       return { url: url ?? input.dataUrl };
     }),
 
-  orders: staffQuery.query(() => listAllOrders()),
+  orders: staffQuery
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(200).optional(),
+          offset: z.number().int().min(0).optional(),
+        })
+        .optional(),
+    )
+    .query(({ input }) => listAllOrders(input?.limit, input?.offset)),
 
   updateOrderStatus: staffQuery
     .input(
@@ -257,6 +294,7 @@ export const adminRouter = createRouter({
           "on_the_way",
           "delivered",
           "needs_attention",
+          "cancelled",
         ]),
       }),
     )
@@ -348,9 +386,13 @@ export const adminRouter = createRouter({
 
   generatePrintJob: staffQuery
     .input(z.object({ orderIds: z.array(idParam).min(1) }))
-    .mutation(({ ctx, input }) =>
-      generatePrintJobFromOrders(input.orderIds.map(Number), ctx.user.id),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await generatePrintJobFromOrders(input.orderIds.map(Number), ctx.user.id);
+      } catch (err) {
+        rethrowFriendly(err);
+      }
+    }),
 
   createRestockRequest: staffQuery
     .input(
@@ -430,12 +472,18 @@ export const adminRouter = createRouter({
   promoCodes: adminQuery.query(() => listPromoCodes()),
 
   createPromoCode: adminQuery
-    .input(z.object(promoCodeFields).required({ code: true, type: true, value: true }))
+    .input(z.object(promoCodeFields).required({ code: true, type: true, value: true }).superRefine(percentWithin100))
     .mutation(({ ctx, input }) => createPromoCode(input, ctx.user.id)),
 
   updatePromoCode: adminQuery
     .input(z.object({ id: idParam, data: z.object(promoCodeFields).partial() }))
-    .mutation(({ input }) => updatePromoCode(Number(input.id), input.data)),
+    .mutation(async ({ input }) => {
+      try {
+        return await updatePromoCode(Number(input.id), input.data);
+      } catch (err) {
+        rethrowFriendly(err);
+      }
+    }),
 
   deletePromoCode: adminQuery
     .input(z.object({ id: idParam }))
@@ -444,12 +492,18 @@ export const adminRouter = createRouter({
   discounts: adminQuery.query(() => listDiscounts()),
 
   createDiscount: adminQuery
-    .input(z.object(discountFields).required({ name_en: true, type: true, value: true }))
+    .input(z.object(discountFields).required({ name_en: true, type: true, value: true }).superRefine(percentWithin100))
     .mutation(({ input }) => createDiscount(input)),
 
   updateDiscount: adminQuery
     .input(z.object({ id: idParam, data: z.object(discountFields).partial() }))
-    .mutation(({ input }) => updateDiscount(Number(input.id), input.data)),
+    .mutation(async ({ input }) => {
+      try {
+        return await updateDiscount(Number(input.id), input.data);
+      } catch (err) {
+        rethrowFriendly(err);
+      }
+    }),
 
   deleteDiscount: adminQuery
     .input(z.object({ id: idParam }))

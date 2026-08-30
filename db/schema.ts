@@ -228,6 +228,7 @@ export const orders = mysqlTable(
       "on_the_way",
       "delivered",
       "needs_attention",
+      "cancelled",
     ]).default("order_received").notNull(),
     internalStatus: varchar("internalStatus", { length: 60 }).default("payment_pending").notNull(),
     paymentMethod: mysqlEnum("paymentMethod", ["cash_on_delivery", "whish"]).default("cash_on_delivery").notNull(),
