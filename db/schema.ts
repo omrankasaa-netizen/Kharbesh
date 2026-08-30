@@ -480,7 +480,6 @@ export const discounts = mysqlTable("discounts", {
   active: boolean("active").default(true).notNull(),
   startsAt: timestamp("startsAt"),
   expiresAt: timestamp("expiresAt"),
-  createdByUserId: bigint("createdByUserId", { mode: "number", unsigned: true }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
