@@ -360,7 +360,7 @@ export default function AdminProducts() {
   const isSuperAdmin = hasRole(user, 'super_admin');
   const colors = useColors();
   const styles = useGarmentStyles();
-  const collections = useCollections();
+  const { collections } = useCollections();
   // Existing collection names for the datalist/quick-assign dropdown. Includes
   // any free-typed collection names already on products that aren't formal
   // collection records yet, so nothing looks "lost" in the dropdown.

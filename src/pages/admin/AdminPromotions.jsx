@@ -251,7 +251,7 @@ function DiscountsTab({ lang }) {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyDiscount);
-  const collections = useCollections();
+  const { collections } = useCollections();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
