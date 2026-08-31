@@ -3,6 +3,7 @@ import { authRouter } from "./auth-router";
 import { catalogRouter } from "./catalog-router";
 import { contactMessagesRouter } from "./contact-router";
 import { customRequestRouter } from "./custom-request-router";
+import { metaRouter } from "./meta-router";
 import { orderRouter } from "./order-router";
 import { settingsRouter } from "./settings-router";
 import { loyaltyRouter } from "./loyalty-router";
@@ -20,6 +21,7 @@ export const appRouter = createRouter({
   settings: settingsRouter,
   admin: adminRouter,
   loyalty: loyaltyRouter,
+  meta: metaRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -44,4 +44,11 @@ export const env = {
   // is designed by him before it goes to the factory, so each submission
   // emails him directly. Distinct from adminNotificationEmail (ops inbox).
   customRequestNotifyEmail: process.env.CUSTOM_REQUEST_NOTIFY_EMAIL ?? "kassaa.omran@gmail.com",
+  // Meta Conversions API. All optional — when the token is unset every CAPI
+  // send silently no-ops so the site runs with zero Meta config. The pixel id
+  // is non-secret (it's public in the browser bundle too via VITE_META_PIXEL_ID;
+  // keep the two in sync when wiring the live pixel).
+  metaPixelId: process.env.KHARBESH_META_PIXEL_ID ?? "",
+  metaCapiAccessToken: process.env.KHARBESH_META_CAPI_ACCESS_TOKEN ?? "",
+  metaTestEventCode: process.env.KHARBESH_META_TEST_EVENT_CODE ?? "",
 };
