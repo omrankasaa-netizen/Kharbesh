@@ -51,6 +51,24 @@ type GoogleOAuthState = {
 
 const NONCE_COOKIE = "kh_google_nonce";
 
+/**
+ * Public origin of this deployment. Behind Railway/Cloudflare the app sees
+ * the internal http:// request, so `new URL(c.req.url).origin` produces
+ * http://… — which Google rejects as an unregistered redirect_uri (it only
+ * allows https for non-localhost). Trust x-forwarded-proto from the edge
+ * instead, and force https for any non-localhost host regardless.
+ */
+function publicOrigin(headers: Headers, reqUrl: string): string {
+  const url = new URL(reqUrl);
+  const host = headers.get("x-forwarded-host")?.split(",")[0]?.trim() || url.host;
+  const localhost =
+    host.startsWith("localhost:") || host.startsWith("127.0.0.1:");
+  const proto = localhost
+    ? "http"
+    : headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || "https";
+  return `${proto}://${host}`;
+}
+
 function safeReturnTo(raw: unknown, fallback: string): string {
   if (
     typeof raw === "string" &&
@@ -125,7 +143,8 @@ export function createGoogleOAuthStartHandler() {
     const nonce = crypto.randomUUID();
     setCookie(c, NONCE_COOKIE, nonce, getOAuthNonceCookieOptions(c.req.raw.headers));
 
-    const redirectUri = new URL(c.req.url).origin + Paths.googleOauthCallback;
+    const redirectUri =
+      publicOrigin(c.req.raw.headers, c.req.url) + Paths.googleOauthCallback;
     const state: GoogleOAuthState = { redirectUri, returnTo, flow, nonce };
 
     const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
