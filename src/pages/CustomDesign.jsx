@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { useI18n } from '@/lib/i18n';
-import { useColors, useGarmentStyles } from '@/lib/useCatalog.jsx';
+import { useColors, useGarmentStyles, useSiteSettings } from '@/lib/useCatalog.jsx';
 import { base44, fileToDataUrl } from '@/api/khClient';
 import { Scribble } from '@/components/Brand';
 import PhoneInput from '@/components/PhoneInput';
 import { toE164, getCountry, validatePhone } from '@/lib/phoneCountries';
+import { whatsappLink } from '@/lib/whatsapp';
 
 export default function CustomDesign() {
   const { t, lang } = useI18n();
   const colors = useColors();
   const styles = useGarmentStyles();
+  const { settings } = useSiteSettings();
   const [form, setForm] = useState({ name: '', email: '', phrase: '', story: '', language: '', recipient: '', occasion: '', tone: 'subtle', garment: '', color: '', size: '', quantity: 1, placement: '', needed_by: '', notes: '', rights: false });
   // Optional phone — same international picker as checkout. Stays optional,
   // but when filled it must validate and is sent as E.164.
@@ -78,6 +80,33 @@ export default function CustomDesign() {
       setLoading(false);
     }
   };
+
+  // Feature flag (Site Settings): 3a Zaw2ak paused — show a card with a
+  // WhatsApp CTA instead of the form. The server rejects submits too.
+  if (settings?.customRequestsEnabled === false) {
+    return (
+      <div className="max-w-[700px] mx-auto px-4 sm:px-6 py-20 text-center">
+        <span className="kh-eyebrow">{t.custom.title}</span>
+        <h1 className="mt-3 font-heading text-4xl sm:text-5xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>
+          {lang === 'ar' ? 'طلبات التصميم واقفة هالفترة' : 'Custom requests are paused'}
+        </h1>
+        <Scribble className="mx-auto mt-6" width={120} />
+        <p className="mt-6 text-muted-foreground">
+          {lang === 'ar'
+            ? 'منرجع قريب — راسلنا واتساب ومنضيفك على اللائحة ومنخبرك أول ما نفتح.'
+            : "We'll be back soon — message us on WhatsApp and we'll add you to the list and tell you the moment we reopen."}
+        </p>
+        <a
+          href={whatsappLink(settings?.contact?.whatsappNumber, lang === 'ar' ? 'هاي! بدي أعرف لما ترجع طلبات التصميم (خربش ع ذوقك).' : "Hi! Let me know when custom requests (Kharbesh 3a Zaw2ak) are back.")}
+          target="_blank"
+          rel="noreferrer"
+          className="kh-btn-scribble inline-flex items-center gap-2 mt-8"
+        >
+          {lang === 'ar' ? 'راسلنا واتساب' : 'Message us on WhatsApp'}
+        </a>
+      </div>
+    );
+  }
 
   if (done) {
     return (

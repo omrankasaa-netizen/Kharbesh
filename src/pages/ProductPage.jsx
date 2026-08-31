@@ -64,7 +64,10 @@ export default function ProductPage() {
   const ink = contrastInk(hex);
   // `is_sold_out` is a server-computed boolean — the public catalog no
   // longer exposes raw units_sold/preorder_capacity (audit M4).
-  const canAdd = colorName && size && !product?.is_sold_out;
+  // Feature flag (Site Settings): when preorders are paused, preorder pieces
+  // are filtered out of the catalog — this blocks direct links to them.
+  const preorderPaused = settings?.preordersEnabled === false && product?.preorder_type !== 'always_on';
+  const canAdd = colorName && size && !product?.is_sold_out && !preorderPaused;
   const activeColorPhotos = colorImages[selectedColor?.name_en] || null;
   // One photo per color — front and back are shot combined into a single
   // image. Prefer the real per-color photo, else fall back to the standard
@@ -244,7 +247,14 @@ export default function ProductPage() {
               <button onClick={handleShare} className="kh-btn-icon" aria-label="Share"><IconShare size={20} /></button>
             </div>
           </div>
-          {!canAdd && <p className="text-xs text-muted-foreground mt-3">{t.product.preorderNote}</p>}
+          {preorderPaused && (
+            <p className="text-xs text-muted-foreground mt-3">
+              {lang === 'ar'
+                ? 'الطلبات المسبقة واقفة هالفترة — راسلنا واتساب ومنخبرك أول ما نرجع.'
+                : "Preorders are paused right now — message us on WhatsApp and we'll tell you when we're back."}
+            </p>
+          )}
+          {!canAdd && !preorderPaused && <p className="text-xs text-muted-foreground mt-3">{t.product.preorderNote}</p>}
 
           <a
             href={whatsappLink(

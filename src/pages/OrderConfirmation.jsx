@@ -4,11 +4,13 @@ import { useI18n } from '@/lib/i18n';
 import { base44 } from '@/api/khClient';
 import { Scribble } from '@/components/Brand';
 import { useSiteSettings } from '@/lib/useCatalog.jsx';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function OrderConfirmation() {
   const { id } = useParams();
   const { t, lang } = useI18n();
   const { settings } = useSiteSettings();
+  const { user } = useAuth();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -90,6 +92,30 @@ export default function OrderConfirmation() {
           ))}
         </ol>
       </div>
+
+      {!user && (
+        <div className="mt-10 rounded-md p-6 text-center" style={{ border: '2px dashed var(--brand-accent)' }}>
+          <span className="kh-eyebrow">{lang === 'ar' ? 'برنامج الولاء' : 'Loyalty program'}</span>
+          <h2 className="mt-2 font-heading text-2xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>
+            {lang === 'ar' ? 'صير خربوش' : 'Become a Kharboush'}
+          </h2>
+          <p className="mt-3 text-sm text-muted-foreground max-w-md mx-auto">
+            {lang === 'ar'
+              ? 'سجّل بكبسة واحدة بحساب Google وبلّش تجمع نقاط على كل طلب. الطلبات اللي عملتها بهالإيميل محسوبة إلك.'
+              : 'One tap with Google and you start collecting points on every order. Orders you already placed with this email count too.'}
+          </p>
+          <a
+            href="/api/auth/google/start?flow=customer&returnTo=/profile"
+            className="kh-btn-scribble inline-block mt-5"
+          >
+            {lang === 'ar' ? 'سجّل بـ Google' : 'Sign up with Google'}
+          </a>
+          <p className="mt-3 text-xs text-muted-foreground">
+            {lang === 'ar' ? 'اختياري — طلبك تمام من دون حساب.' : 'Optional — your order is fine without an account.'}
+          </p>
+        </div>
+      )}
+
       <div className="mt-10 flex flex-wrap gap-3">
         <Link to="/track" className="kh-btn-scribble">{t.confirm.track}</Link>
         <Link to="/shop" className="kh-btn-outline">{t.confirm.continue}</Link>
