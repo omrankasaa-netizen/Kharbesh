@@ -91,7 +91,6 @@ export default function SiteSettings() {
     { key: 'bannerEnabled', label_en: 'Announcement banner', label_ar: 'شريط الإعلان' },
     { key: 'preordersEnabled', label_en: 'Preorders', label_ar: 'الطلبات المسبقة' },
     { key: 'customRequestsEnabled', label_en: 'Custom design requests', label_ar: 'طلبات التصميم' },
-    { key: 'guestCheckoutEnabled', label_en: 'Guest checkout', label_ar: 'دفع كضيف' },
     { key: 'maintenance', label_en: 'Maintenance mode', label_ar: 'صيانة' },
   ];
 
@@ -177,8 +176,8 @@ export default function SiteSettings() {
           </div>
           <p className="text-xs text-muted-foreground mt-3">
             {lang === 'ar'
-              ? 'ملاحظة: "الطلبات المسبقة" و"دفع كضيف" محفوظين هون بس مش مفعّلين تقنياً بعد بباقي الموقع.'
-              : 'Note: "Preorders" and "Guest checkout" are saved here but not yet enforced elsewhere on the site.'}
+              ? 'ملاحظة: الدفع كضيف دايماً مفعّل — الزبون بيطلب بلا حساب، وتسجيل Google اختياري بكبسة واحدة ليصير خربوش.'
+              : 'Note: guest checkout always stays on — customers can order without an account; Google sign-in is an optional one-tap step to become a Kharboush.'}
           </p>
         </section>
 

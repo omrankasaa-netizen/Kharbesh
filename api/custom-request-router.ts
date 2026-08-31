@@ -8,6 +8,7 @@ import { sendEmail } from "./lib/email";
 import { customRequestNotificationEmail } from "./lib/emailTemplates";
 import { env } from "./lib/env";
 import { customRequestLimiter } from "./lib/rateLimit";
+import { getSettings } from "./queries/settings";
 
 /**
  * Reference files arrive as base64 data URLs stored in a MySQL JSON column
@@ -88,6 +89,16 @@ export const customRequestRouter = createRouter({
       // capped at 5/hour so the owner's design inbox can't be flooded.
       if (!customRequestLimiter.check(ctx.clientIp)) {
         throw new Error("Too many requests from this connection, please try again later. / يرجى المحاولة لاحقاً");
+      }
+      // Feature flag (Site Settings): the 3a Zaw2ak form can be paused —
+      // the storefront shows a paused card, this is the server-side backstop.
+      const settings = await getSettings();
+      if (!settings.customRequestsEnabled) {
+        throw new Error(
+          input.language === "ar"
+            ? "طلبات التصميم واقفة هالفترة — راسلنا واتساب ومنخبرك أول ما نرجع."
+            : "Custom requests are paused right now — message us on WhatsApp and we'll tell you when we're back.",
+        );
       }
       const { needed_by, reference_files, rights_confirmed, ...rest } = input;
       const created = await createCustomRequest({

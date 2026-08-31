@@ -1,4 +1,5 @@
 import { getDb } from "./connection";
+import { getSettings } from "./settings";
 import {
   collections,
   garmentColors,
@@ -255,7 +256,14 @@ export async function listProducts() {
     .from(products)
     .where(ne(products.status, "draft"))
     .orderBy(asc(products.sortOrder));
-  return rows.map(toUiPublicProduct);
+  // Feature flag (Site Settings): when preorders are paused, preorder pieces
+  // disappear from the storefront; always_on pieces stay visible. Admin
+  // catalog (listAllProducts) is untouched.
+  const settings = await getSettings();
+  const visible = settings.preordersEnabled
+    ? rows
+    : rows.filter((row) => row.preorderType === "always_on");
+  return visible.map(toUiPublicProduct);
 }
 
 /** Admin catalog: includes drafts. */
