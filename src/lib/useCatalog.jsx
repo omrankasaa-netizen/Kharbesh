@@ -71,6 +71,7 @@ export const resolveColor = (name, colors) => colors.find((c) => c.name_en === n
 export function useProducts({ collectionSlug, search, dropOnly, productType } = {}) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { collections } = useContext(CatalogContext);
   useEffect(() => {
     let active = true;
     (async () => {
@@ -82,8 +83,21 @@ export function useProducts({ collectionSlug, search, dropOnly, productType } = 
         if (dropOnly) list = list.filter((p) => p.preorder_type !== 'always_on' && p.drop_name && p.drop_name !== 'Always-on');
         if (productType) list = list.filter((p) => p.product_type === productType);
         if (collectionSlug) {
-          const nameMap = { politics: 'Kharbesh Politics', quotes: 'Kharbesh Quotes', rahbaniet: 'Kharbesh Rahbaniet' };
-          list = list.filter((p) => (p.collection_name || '') === nameMap[collectionSlug]);
+          // Resolve the slug against the live collections list (works for any
+          // collection created in Site Settings); the hardcoded map only
+          // survives as a fallback for legacy slugs. Before this, a slug not
+          // in the map resolved to `undefined` and filtered out EVERYTHING —
+          // products assigned to new collections never showed up.
+          const legacyMap = { politics: 'Kharbesh Politics', quotes: 'Kharbesh Quotes', rahbaniet: 'Kharbesh Rahbaniet' };
+          const resolvedName =
+            collections.find((c) => c.slug === collectionSlug)?.name_en ||
+            legacyMap[collectionSlug];
+          if (resolvedName) {
+            list = list.filter((p) => (p.collection_name || '') === resolvedName);
+          } else {
+            // Unknown collection — nothing can match.
+            list = [];
+          }
         }
         if (search) {
           const s = search.toLowerCase();
@@ -100,7 +114,8 @@ export function useProducts({ collectionSlug, search, dropOnly, productType } = 
       finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
-  }, [collectionSlug, search, dropOnly, productType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collectionSlug, search, dropOnly, productType, collections]);
   return { products, loading };
 }
 
