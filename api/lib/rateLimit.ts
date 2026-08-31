@@ -68,3 +68,8 @@ export const customRequestLimiter = createFixedWindowLimiter({ windowMs: 60 * 60
  * list-stuffing without ever tripping a real shopper retrying a typo.
  */
 export const newsletterLimiter = createFixedWindowLimiter({ windowMs: 60 * 60 * 1000, max: 10 });
+
+// Meta CAPI endpoints: generous (every page view posts a track event) but
+// bounded so a hostile client can't burn the Meta event quota.
+export const metaTrackLimiter = createFixedWindowLimiter({ windowMs: 60 * 1000, max: 120 });
+export const metaPurchaseLimiter = createFixedWindowLimiter({ windowMs: 10 * 60 * 1000, max: 20 });

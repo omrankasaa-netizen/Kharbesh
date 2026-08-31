@@ -3,6 +3,8 @@ import { Outlet, useLocation } from 'react-router';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import WhatsAppButton from '@/components/WhatsAppButton';
+import ConsentBanner from '@/components/ConsentBanner';
+import { trackPageView } from '@/lib/metaPixel';
 import { CatalogProvider, useSiteSettings } from '@/lib/useCatalog.jsx';
 import { useI18n } from '@/lib/i18n';
 import { Scribble } from '@/components/Brand';
@@ -41,6 +43,16 @@ function MaintenanceGate({ children }) {
   return children;
 }
 
+/** Fires a deduplicated Meta PageView (browser + CAPI twin) on every
+ * client-side route change — Meta requires PageView on every page. */
+function RoutePageViewTracker() {
+  const { pathname } = useLocation();
+  React.useEffect(() => {
+    trackPageView();
+  }, [pathname]);
+  return null;
+}
+
 export default function Layout() {
   return (
     <CatalogProvider>
@@ -53,6 +65,8 @@ export default function Layout() {
           </main>
           <Footer />
           <WhatsAppButton />
+          <ConsentBanner />
+          <RoutePageViewTracker />
         </div>
       </MaintenanceGate>
     </CatalogProvider>

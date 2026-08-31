@@ -7,6 +7,13 @@ import PhoneInput from '@/components/PhoneInput';
 import { toE164, getCountry, validatePhone } from '@/lib/phoneCountries';
 import { useSiteSettings } from '@/lib/useCatalog.jsx';
 import { trackPurchase } from '@/lib/analytics';
+import {
+  trackInitiateCheckout,
+  trackPurchasePixel,
+  notifyPurchase,
+  updateAdvancedMatching,
+  genEventId,
+} from '@/lib/metaPixel';
 
 export default function Checkout() {
   const { t, lang } = useI18n();
@@ -94,6 +101,15 @@ export default function Checkout() {
   const shipping = (loyaltyFreeShipping || Math.round(subtotal * 100) >= freeShippingThresholdCents) ? 0 : shippingFeeCents / 100;
   const total = Math.max(0, netAfterLoyalty - discountAmount) + shipping;
 
+  // Meta InitiateCheckout — once per checkout session (deduped browser + CAPI twin).
+  const firedInitiate = React.useRef(false);
+  useEffect(() => {
+    if (firedInitiate.current || !items.length) return;
+    firedInitiate.current = true;
+    trackInitiateCheckout({ items, value: subtotal });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length]);
+
   // Debounced loyalty preview — refetches whenever the email or the
   // post-automatic-discount subtotal changes. Read-only: no credits are
   // consumed and no tier progression happens until the order is placed.
@@ -179,6 +195,28 @@ export default function Checkout() {
         company,
       });
       trackPurchase({ orderId: order.id, value: total, currency: 'USD', items });
+      // Meta Purchase: shared event_id dedups the browser Pixel hit against
+      // the server CAPI hit (server rebuilds value/currency/contents from the
+      // trusted order row — the browser only supplies order_id + event_id).
+      // Advanced matching is enriched from the checkout form first so the
+      // browser event carries max EMQ; CAPI merges the same hashed params.
+      try {
+        const e164 = toE164(phoneDial, phone.national);
+        const nameParts = String(form.full_name || '').trim().split(/\s+/);
+        await updateAdvancedMatching({
+          email: form.email,
+          phone: e164,
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          city: form.city,
+          country: form.country,
+        });
+        const metaEventId = genEventId();
+        trackPurchasePixel({ eventId: metaEventId, value: total, currency: 'USD', items });
+        notifyPurchase({ orderId: order.id, eventId: metaEventId });
+      } catch {
+        // Tracking must never block order confirmation.
+      }
       clear();
       // The confirmation page reads this back to prove ownership of the
       // order (the server requires it — order ids alone are no longer

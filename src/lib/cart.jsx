@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { trackAddToCart } from '@/lib/metaPixel';
 
 const CartContext = createContext();
 
@@ -48,6 +49,12 @@ export const CartProvider = ({ children }) => {
   }, [items]);
 
   const addItem = (item) => {
+    // Meta AddToCart (deduped browser + CAPI twin) — fire-and-forget.
+    try {
+      trackAddToCart(item);
+    } catch {
+      /* tracking must never break the cart */
+    }
     setItems((prev) => {
       const key = `${item.productId}|${item.color}|${item.size}`;
       const existing = prev.find((p) => p.key === key);
