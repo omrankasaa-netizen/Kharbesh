@@ -11,6 +11,7 @@ import { IconHeart, IconShare, IconCotton, IconNoSweat, IconNoWrinkle, IconFit, 
 import { STANDARD_FRONT_BY_COLOR } from '@/lib/standardPhotos';
 import { useSiteSettings } from '@/lib/useCatalog.jsx';
 import { whatsappLink } from '@/lib/whatsapp';
+import { trackViewContent } from '@/lib/metaPixel';
 import { IconWhatsApp } from '@/components/Brand';
 
 export default function ProductPage() {
@@ -34,6 +35,11 @@ export default function ProductPage() {
   // Sync the wishlist heart once the product resolves (products load async).
   useEffect(() => {
     if (product) setSaved(isSaved(product.id));
+  }, [product?.id]);
+
+  // Meta ViewContent once the product resolves (deduped browser + CAPI twin).
+  useEffect(() => {
+    if (product) trackViewContent(product);
   }, [product?.id]);
 
   useEffect(() => {
