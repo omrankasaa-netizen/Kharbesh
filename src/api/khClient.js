@@ -262,6 +262,10 @@ export const kh = {
         const rows = await client.catalog.collections.query();
         return (rows || []).map((c) => ({ ...c, cover_image: resolveAssetUrl(c.cover_image) }));
       },
+      create: (data) => client.admin.createCollection.mutate(data),
+      update: (id, data) => client.admin.updateCollection.mutate({ id: String(id), ...data }),
+      remove: (id) => client.admin.deleteCollection.mutate({ id: String(id) }),
+      reorder: (ids) => client.admin.reorderCollections.mutate({ ids: ids.map(String) }),
     },
     GarmentColor: { list: () => client.catalog.garmentColors.query() },
     GarmentStyle: { list: () => client.catalog.garmentStyles.query() },
@@ -483,5 +487,5 @@ export const kh = {
   },
 };
 
-// The ported UI imports `{ base44 }` — keep that name working 1:1.
+// The UI imports `{ base44 }` — keep that name working 1:1.
 export const base44 = kh;

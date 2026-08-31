@@ -18,6 +18,10 @@ import { getDriveConnectionStatus, disconnectDrive } from "./queries/driveConnec
 import { scanDriveFolder, commitDriveImport } from "./queries/driveImport";
 import {
   listAllProducts,
+  createCollection,
+  updateCollection,
+  deleteCollection,
+  reorderCollections,
   createGarmentColor,
   updateGarmentColor,
   deleteGarmentColor,
@@ -482,6 +486,45 @@ export const adminRouter = createRouter({
   reorderGarmentColors: adminQuery
     .input(z.object({ ids: z.array(idParam) }))
     .mutation(({ input }) => reorderGarmentColors(input.ids.map(Number))),
+
+  // ── Collections CRUD — names/slugs/accents shown on the storefront
+  // Collections pages and the Products quick-assign dropdown. Deleting is
+  // blocked while products still carry the collection name (server-side).
+  createCollection: adminQuery
+    .input(z.object({
+      name_en: z.string().min(1).max(160),
+      name_ar: z.string().max(160).nullable().optional(),
+      slug: z.string().max(160).optional(),
+      description_en: z.string().max(2000).nullable().optional(),
+      description_ar: z.string().max(2000).nullable().optional(),
+      accent: z.string().max(20).nullable().optional(),
+      cover_image: z.string().max(2000).nullable().optional(),
+    }))
+    .mutation(({ input }) => createCollection(input)),
+
+  updateCollection: adminQuery
+    .input(z.object({
+      id: idParam,
+      name_en: z.string().min(1).max(160).optional(),
+      name_ar: z.string().max(160).nullable().optional(),
+      slug: z.string().max(160).optional(),
+      description_en: z.string().max(2000).nullable().optional(),
+      description_ar: z.string().max(2000).nullable().optional(),
+      accent: z.string().max(20).nullable().optional(),
+      cover_image: z.string().max(2000).nullable().optional(),
+    }))
+    .mutation(({ input }) => {
+      const { id, ...data } = input;
+      return updateCollection(Number(id), data);
+    }),
+
+  deleteCollection: adminQuery
+    .input(z.object({ id: idParam }))
+    .mutation(({ input }) => deleteCollection(Number(input.id))),
+
+  reorderCollections: adminQuery
+    .input(z.object({ ids: z.array(idParam) }))
+    .mutation(({ input }) => reorderCollections(input.ids.map(Number))),
 
   createGarmentStyle: adminQuery
     .input(z.object({

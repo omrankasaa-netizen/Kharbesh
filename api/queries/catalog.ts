@@ -71,9 +71,8 @@ export function toUiPublicProduct(p: Product) {
   };
 }
 
-export async function listCollections() {
-  const rows = await getDb().select().from(collections).orderBy(asc(collections.sortOrder));
-  return rows.map((c) => ({
+function toUiCollection(c: typeof collections.$inferSelect) {
+  return {
     id: String(c.id),
     name_en: c.nameEn,
     name_ar: c.nameAr,
@@ -83,7 +82,139 @@ export async function listCollections() {
     accent: c.accent,
     cover_image: c.coverImage,
     sort_order: c.sortOrder,
-  }));
+  };
+}
+
+export async function listCollections() {
+  const rows = await getDb().select().from(collections).orderBy(asc(collections.sortOrder));
+  return rows.map(toUiCollection);
+}
+
+/** Slugs are the public URL key (/collections/:slug) — normalize the EN
+ *  name when the caller doesn't supply one, and keep it URL-safe. */
+export function slugifyCollection(name: string) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/['\u2019]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/** Admin CRUD for collections — the list drives the storefront Collections
+ *  page, the per-collection pages, and the quick-assign dropdown on the
+ *  admin Products page. */
+export async function createCollection(data: {
+  name_en: string;
+  name_ar?: string | null;
+  slug?: string;
+  description_en?: string | null;
+  description_ar?: string | null;
+  accent?: string | null;
+  cover_image?: string | null;
+}) {
+  const db = getDb();
+  const slug = slugifyCollection(data.slug || data.name_en);
+  if (!slug) throw new Error("Collection needs a URL slug (letters or numbers).");
+  const [dup] = await db.select({ id: collections.id }).from(collections).where(eq(collections.slug, slug)).limit(1);
+  if (dup) throw new Error(`Another collection already uses the slug "${slug}".`);
+  const existing = await db
+    .select({ maxSort: collections.sortOrder })
+    .from(collections)
+    .orderBy(desc(collections.sortOrder))
+    .limit(1);
+  const nextSort = (existing[0]?.maxSort ?? -1) + 1;
+  const [{ id }] = await db
+    .insert(collections)
+    .values({
+      nameEn: data.name_en.trim(),
+      nameAr: data.name_ar?.trim() || null,
+      slug,
+      descriptionEn: data.description_en?.trim() || null,
+      descriptionAr: data.description_ar?.trim() || null,
+      accent: data.accent?.trim() || null,
+      coverImage: data.cover_image?.trim() || null,
+      sortOrder: nextSort,
+    })
+    .$returningId();
+  const [row] = await db.select().from(collections).where(eq(collections.id, id)).limit(1);
+  return toUiCollection(row);
+}
+
+/** Renaming a collection also retags every product that carries the old
+ *  collection_name, so the quick-assign dropdown and the storefront never
+ *  drift apart. */
+export async function updateCollection(
+  id: number,
+  data: {
+    name_en?: string;
+    name_ar?: string | null;
+    slug?: string;
+    description_en?: string | null;
+    description_ar?: string | null;
+    accent?: string | null;
+    cover_image?: string | null;
+    sort_order?: number;
+  },
+) {
+  const db = getDb();
+  const [prev] = await db.select().from(collections).where(eq(collections.id, id)).limit(1);
+  if (!prev) return null;
+  const patch: Record<string, unknown> = {};
+  if (data.name_en !== undefined) patch.nameEn = data.name_en.trim();
+  if (data.name_ar !== undefined) patch.nameAr = data.name_ar?.trim() || null;
+  if (data.description_en !== undefined) patch.descriptionEn = data.description_en?.trim() || null;
+  if (data.description_ar !== undefined) patch.descriptionAr = data.description_ar?.trim() || null;
+  if (data.accent !== undefined) patch.accent = data.accent?.trim() || null;
+  if (data.cover_image !== undefined) patch.coverImage = data.cover_image?.trim() || null;
+  if (data.sort_order !== undefined) patch.sortOrder = data.sort_order;
+  if (data.slug !== undefined) {
+    const slug = slugifyCollection(data.slug);
+    if (!slug) throw new Error("Collection needs a URL slug (letters or numbers).");
+    const [dup] = await db
+      .select({ id: collections.id })
+      .from(collections)
+      .where(and(eq(collections.slug, slug), ne(collections.id, id)))
+      .limit(1);
+    if (dup) throw new Error(`Another collection already uses the slug "${slug}".`);
+    patch.slug = slug;
+  }
+  await db.update(collections).set(patch).where(eq(collections.id, id));
+  const newName = (patch.nameEn as string | undefined) ?? prev.nameEn;
+  if (newName !== prev.nameEn) {
+    await db.update(products).set({ collectionName: newName }).where(eq(products.collectionName, prev.nameEn));
+  }
+  const [row] = await db.select().from(collections).where(eq(collections.id, id)).limit(1);
+  return toUiCollection(row);
+}
+
+/** Refuses to delete a collection that still has products assigned —
+ *  reassign them from the Products page first. */
+export async function deleteCollection(id: number) {
+  const db = getDb();
+  const [collection] = await db.select().from(collections).where(eq(collections.id, id)).limit(1);
+  if (!collection) return { success: true };
+
+  const inUse = await db
+    .select({ id: products.id, nameEn: products.nameEn })
+    .from(products)
+    .where(eq(products.collectionName, collection.nameEn));
+  if (inUse.length > 0) {
+    throw new Error(
+      `"${collection.nameEn}" still has ${inUse.length} product${inUse.length > 1 ? 's' : ''} (${inUse
+        .map((p) => p.nameEn)
+        .join(', ')}). Reassign them first.`,
+    );
+  }
+
+  await db.delete(collections).where(eq(collections.id, id));
+  return { success: true };
+}
+
+export async function reorderCollections(orderedIds: number[]) {
+  const db = getDb();
+  await Promise.all(orderedIds.map((id, index) => db.update(collections).set({ sortOrder: index }).where(eq(collections.id, id))));
+  return listCollections();
 }
 
 function toUiColor(c: typeof garmentColors.$inferSelect) {
