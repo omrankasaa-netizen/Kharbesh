@@ -1,12 +1,19 @@
-// Marketing pixel scaffolding — Meta Pixel, TikTok Pixel, and Google
-// Analytics 4. Every pixel is OFF by default and only loads if its env var
-// is set, so a store with none configured pays zero extra network cost —
-// important given the "must stay lightning fast on weak 4G" requirement.
+// Marketing pixel scaffolding — TikTok Pixel and Google Analytics 4, plus
+// the boot hook for the Meta Pixel. Every pixel is OFF by default and only
+// loads if its env var is set, so a store with none configured pays zero
+// extra network cost — important given the "must stay lightning fast on
+// weak 4G" requirement.
+//
+// Meta lives in src/lib/metaPixel.js: the full recommended setup (browser
+// Pixel + server CAPI twins with dedup event_ids, hashed Advanced Matching,
+// external_id, implied opt-out consent). This module just boots it.
 //
 // Env vars (set in Railway / .env, never hardcoded):
 //   VITE_META_PIXEL_ID   — Meta/Facebook Pixel ID
 //   VITE_TIKTOK_PIXEL_ID — TikTok Pixel ID
 //   VITE_GA_ID           — Google Analytics 4 measurement ID (G-XXXXXXX)
+
+import { initMetaPixel } from '@/lib/metaPixel';
 
 const META_PIXEL_ID = import.meta.env.VITE_META_PIXEL_ID;
 const TIKTOK_PIXEL_ID = import.meta.env.VITE_TIKTOK_PIXEL_ID;
@@ -21,28 +28,10 @@ export function initAnalytics() {
   if (initialized || typeof window === 'undefined') return;
   initialized = true;
 
-  if (META_PIXEL_ID) {
-    /* eslint-disable */
-    !(function (f, b, e, v, n, t, s) {
-      if (f.fbq) return;
-      n = f.fbq = function () {
-        n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
-      };
-      if (!f._fbq) f._fbq = n;
-      n.push = n;
-      n.loaded = !0;
-      n.version = '2.0';
-      n.queue = [];
-      t = b.createElement(e);
-      t.async = !0;
-      t.src = v;
-      s = b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t, s);
-    })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
-    /* eslint-enable */
-    window.fbq('init', META_PIXEL_ID);
-    window.fbq('track', 'PageView');
-  }
+  // Meta: boot the pixel (implied-consent default-ON; explicit decline only).
+  // PageView fires per route from the Layout tracker, not here, so SPA
+  // navigations are covered and there is no double-count on first load.
+  if (META_PIXEL_ID) initMetaPixel();
 
   if (TIKTOK_PIXEL_ID) {
     /* eslint-disable */
@@ -97,9 +86,9 @@ export function initAnalytics() {
 export function trackPurchase({ orderId, value, currency = 'USD', items = [] } = {}) {
   if (typeof window === 'undefined') return;
   try {
-    if (META_PIXEL_ID && window.fbq) {
-      window.fbq('track', 'Purchase', { value, currency, content_ids: items.map((i) => i.productId), num_items: items.length });
-    }
+    // Meta's Purchase is fired separately by the checkout via
+    // metaPixel.trackPurchasePixel + notifyPurchase (shared event_id so the
+    // browser Pixel and server CAPI dedup into one conversion).
     if (TIKTOK_PIXEL_ID && window.ttq) {
       window.ttq.track('CompletePayment', { value, currency, content_id: orderId });
     }
