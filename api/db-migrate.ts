@@ -302,3 +302,94 @@ export async function repairSwappedWhiteGreyPhotos(
   }
   console.log(`[db] color-swap repair: done, ${repairedCount} product(s) repaired this run`);
 }
+
+/**
+ * One-time data repair for the "Botox Bel sayfyeh w detox bel shatwyeh"
+ * product, which exists as 4 near-duplicate rows (ids 1, 2, 3, 4) created
+ * within an hour of each other on 2026-08-21 — almost certainly repeated
+ * re-uploads of the same design. On the storefront grid, `ProductCard`
+ * shows only `images[0]` as the card thumbnail; 3 of the 4 rows had the
+ * generic blank front-shirt placeholder (`/assets/brand/standard-front-black.jpg`)
+ * as `images[0]`, so the same design appeared to show up 4 times with only
+ * a plain front photo instead of the real printed design.
+ *
+ * Fix: keep id 1 (the most complete record — full Arabic name/phrase, all
+ * 5 sizes), reorder its `images` so the real back-print design photo shows
+ * first, and archive (`status = 'archived'`, same as the admin panel's
+ * `deleteProduct`) ids 2, 3, and 4 so they disappear from `useProducts`'
+ * `status === 'active'` filter. Nothing is hard-deleted. Idempotent via a
+ * marker table, same pattern as `repairSwappedWhiteGreyPhotos` above.
+ */
+export async function repairBotoxSayfyehDuplicates(
+  db: MySql2Database<Record<string, unknown>>,
+) {
+  await db.execute(
+    sql.raw(
+      "create table if not exists `botox_sayfyeh_dedupe_repair` (`id` bigint unsigned primary key, `appliedAt` timestamp not null default (now()))",
+    ),
+  );
+
+  const alreadyApplied = (await db.execute(
+    sql.raw("select id from `botox_sayfyeh_dedupe_repair` where id = 1"),
+  )) as unknown as [unknown[]];
+  if ((alreadyApplied[0] ?? []).length > 0) {
+    console.log("[db] botox/sayfyeh dedupe repair: already applied, skipping");
+    return;
+  }
+
+  const rows = (await db.execute(
+    sql.raw("select id, nameEn, status, images from `products` where id in (1,2,3,4)"),
+  )) as unknown as [{ id: number; nameEn: string; status: string; images: unknown }[]];
+  const byId = new Map((rows[0] ?? []).map((r) => [r.id, r]));
+
+  // Guard: only proceed if the 4 rows still look like the diagnosed cluster
+  // (all still named/phrased around "botox"/"sayfyeh" and still active).
+  // If the data has already changed (e.g. manually fixed), skip safely.
+  const expectedIds = [1, 2, 3, 4];
+  const allPresentAndActive = expectedIds.every((id) => {
+    const row = byId.get(id);
+    return (
+      row &&
+      row.status === "active" &&
+      /botox|sayfyeh/i.test(row.nameEn || "")
+    );
+  });
+  if (!allPresentAndActive) {
+    console.log(
+      "[db] botox/sayfyeh dedupe repair: rows 1-4 no longer match expected cluster, skipping",
+    );
+    return;
+  }
+
+  try {
+    const newImages = JSON.stringify([
+      "https://img.kharbesh961.com/products/f05cb114a6a2ec957a9f39ef5f1219cf.webp",
+      "https://img.kharbesh961.com/products/8b0e3bb208cc5ea2caa50535f7007908.webp",
+    ]).replace(/'/g, "''");
+
+    await db.execute(
+      sql.raw(`update \`products\` set images = '${newImages}', updatedAt = NOW() where id = 1`),
+    );
+    await db.execute(
+      sql.raw("update `products` set status = 'archived', updatedAt = NOW() where id in (2,3,4)"),
+    );
+    await db.execute(
+      sql.raw(
+        "insert into `audit_logs` (action, entity, entityId, detail, createdAt) values ('product.updated', 'product', '1', '{\"reason\":\"dedupe botox/sayfyeh duplicates\",\"via\":\"db-migrate repair\"}', NOW())",
+      ),
+    );
+    for (const id of [2, 3, 4]) {
+      await db.execute(
+        sql.raw(
+          `insert into \`audit_logs\` (action, entity, entityId, detail, createdAt) values ('product.archived', 'product', '${id}', '{"reason":"dedupe botox/sayfyeh duplicates","via":"db-migrate repair"}', NOW())`,
+        ),
+      );
+    }
+    await db.execute(sql.raw("insert into `botox_sayfyeh_dedupe_repair` (id) values (1)"));
+    console.log(
+      "[db] botox/sayfyeh dedupe repair: fixed id 1 images, archived ids 2,3,4",
+    );
+  } catch (error) {
+    console.error("[db] botox/sayfyeh dedupe repair FAILED:", error);
+  }
+}

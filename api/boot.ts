@@ -142,6 +142,20 @@ if (env.isProduction) {
     console.error("[db] White/Grey photo swap repair step failed:", error);
   }
 
+  // Runs unconditionally, independent of the steps above: one-time dedupe
+  // fix for the "Botox Bel sayfyeh w detox bel shatwyeh" product, which
+  // existed as 4 near-duplicate rows showing the same design 4 times on
+  // the storefront grid with a generic placeholder thumbnail. See
+  // repairBotoxSayfyehDuplicates for full detail; idempotent and safe to
+  // run on every boot.
+  try {
+    const { getDb } = await import("./queries/connection");
+    const { repairBotoxSayfyehDuplicates } = await import("./db-migrate");
+    await repairBotoxSayfyehDuplicates(getDb());
+  } catch (error) {
+    console.error("[db] botox/sayfyeh dedupe repair step failed:", error);
+  }
+
   serveStaticFiles(app);
 
   const port = parseInt(process.env.PORT || "3000");
