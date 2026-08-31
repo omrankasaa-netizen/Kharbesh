@@ -1,11 +1,12 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { base44 } from '@/api/khClient';
 
-const CatalogContext = createContext({ colors: [], styles: [], settings: null, settingsLoading: true, refreshStyles: async () => {}, refreshColors: async () => {}, refreshSettings: async () => {} });
+const CatalogContext = createContext({ colors: [], styles: [], collections: [], settings: null, settingsLoading: true, refreshStyles: async () => {}, refreshColors: async () => {}, refreshCollections: async () => {}, refreshSettings: async () => {} });
 
 export const CatalogProvider = ({ children }) => {
   const [colors, setColors] = useState([]);
   const [styles, setStyles] = useState([]);
+  const [collections, setCollections] = useState([]);
   const [settings, setSettings] = useState(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
 
@@ -23,31 +24,37 @@ export const CatalogProvider = ({ children }) => {
     try { setStyles((await base44.entities.GarmentStyle.list('sort_order', 50)) || []); }
     catch { /* keep previous list on failure */ }
   };
+  const refreshCollections = async () => {
+    try { setCollections((await base44.entities.Collection.list('sort_order', 50)) || []); }
+    catch { /* keep previous list on failure */ }
+  };
 
   useEffect(() => {
     (async () => {
       try {
-        const [c, s] = await Promise.all([
+        const [c, s, col] = await Promise.all([
           base44.entities.GarmentColor.list('sort_order', 50),
           base44.entities.GarmentStyle.list('sort_order', 50),
+          base44.entities.Collection.list('sort_order', 50),
         ]);
         setColors(c || []);
         setStyles(s || []);
+        setCollections(col || []);
       } catch {
-        setColors([]); setStyles([]);
+        setColors([]); setStyles([]); setCollections([]);
       }
     })();
     refreshSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return <CatalogContext.Provider value={{ colors, styles, settings, settingsLoading, refreshColors, refreshStyles, refreshSettings }}>{children}</CatalogContext.Provider>;
+  return <CatalogContext.Provider value={{ colors, styles, collections, settings, settingsLoading, refreshColors, refreshStyles, refreshCollections, refreshSettings }}>{children}</CatalogContext.Provider>;
 };
 
 export const useColors = () => useContext(CatalogContext).colors;
 export const useGarmentStyles = () => useContext(CatalogContext).styles;
 export const useCatalogRefresh = () => {
-  const { refreshColors, refreshStyles } = useContext(CatalogContext);
-  return { refreshColors, refreshStyles };
+  const { refreshColors, refreshStyles, refreshCollections } = useContext(CatalogContext);
+  return { refreshColors, refreshStyles, refreshCollections };
 };
 
 /** Store config (banner, feature toggles, payment methods). `settings` is
@@ -97,19 +104,10 @@ export function useProducts({ collectionSlug, search, dropOnly, productType } = 
   return { products, loading };
 }
 
+/** Collections live in the shared catalog context so a collection created
+ *  in Site Settings (CollectionManager) shows up immediately in the
+ *  Products page quick-assign dropdown — no reload needed. */
 export function useCollections() {
-  const [collections, setCollections] = useState([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const list = await base44.entities.Collection.list('sort_order', 50);
-        if (active) setCollections(list || []);
-      } catch { if (active) setCollections([]); }
-      finally { if (active) setLoading(false); }
-    })();
-    return () => { active = false; };
-  }, []);
-  return { collections, loading };
+  const { collections } = useContext(CatalogContext);
+  return { collections, loading: false };
 }
