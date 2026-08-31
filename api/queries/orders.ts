@@ -106,6 +106,16 @@ export async function createOrder(input: CreateOrderInput) {
       if (!product || product.status !== "active") {
         throw new Error("PRODUCT_UNAVAILABLE");
       }
+      // Feature flag (Site Settings): while preorders are paused, preorder
+      // pieces are hidden from the storefront — this is the server-side
+      // backstop for anyone holding a stale page or calling the API.
+      if (!settings.preordersEnabled && product.preorderType !== "always_on") {
+        throw new Error(
+          input.language === "ar"
+            ? "الطلبات المسبقة واقفة هالفترة — جرّب قطعة ثانية أو راسلنا واتساب."
+            : "Preorders are paused right now — try another piece or message us on WhatsApp.",
+        );
+      }
       if (!product.approvedColors.includes(item.color)) {
         throw new Error("COLOR_UNAVAILABLE");
       }
