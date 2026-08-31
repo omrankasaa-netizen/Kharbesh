@@ -4,6 +4,7 @@ import { useI18n } from '@/lib/i18n';
 import { base44 } from '@/api/khClient';
 import { useSiteSettings } from '@/lib/useCatalog.jsx';
 import ColorManager from '@/components/ColorManager';
+import CollectionManager from '@/components/CollectionManager';
 import StyleManager from '@/components/StyleManager';
 
 export default function SiteSettings() {
@@ -283,6 +284,7 @@ export default function SiteSettings() {
         </div>
       </form>
 
+      <CollectionManager lang={lang} />
       <ColorManager lang={lang} />
       <StyleManager lang={lang} />
     </div>
