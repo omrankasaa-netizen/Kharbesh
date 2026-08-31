@@ -478,6 +478,13 @@ export const kh = {
     },
   },
 
+  /** Meta Pixel/CAPI helpers (see src/lib/metaPixel.js). Fire-and-forget
+      marketing endpoints — both safe no-ops when CAPI isn't configured. */
+  meta: {
+    track: (data) => client.meta.track.mutate(data),
+    purchase: (data) => client.meta.purchase.mutate(data),
+  },
+
   /** Import from Drive admin tool: one-time Drive connect + folder scan/commit. */
   driveImport: {
     status: () => client.admin.driveStatus.query(),
