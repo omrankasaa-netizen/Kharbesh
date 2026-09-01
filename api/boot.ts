@@ -181,6 +181,34 @@ if (env.isProduction) {
     console.error("[db] Antracid -> Dark Charcoal rename step failed:", error);
   }
 
+  // Runs unconditionally, independent of the steps above: one-time fix for
+  // products 49-64, which were correctly imported on 2026-08-31 and then
+  // incorrectly flipped by the (now scope-guarded) legacy
+  // repairSwappedWhiteGreyPhotos repair on the next boot. See
+  // restoreMisappliedWhiteGreySwap for full detail; must run before the
+  // product 57 crop repair below so the crop reads the correct photo
+  // under each color; idempotent and safe to run on every boot.
+  try {
+    const { getDb } = await import("./queries/connection");
+    const { restoreMisappliedWhiteGreySwap } = await import("./db-migrate");
+    await restoreMisappliedWhiteGreySwap(getDb());
+  } catch (error) {
+    console.error("[db] misapplied White/Grey restore step failed:", error);
+  }
+
+  // Runs unconditionally, independent of the steps above: one-time fix for
+  // product 57's photos, which render at 1400x788 instead of the catalog's
+  // usual ~1024x1024 square, causing a bad crop in the customer-facing
+  // gallery. See cropProduct57PhotosToSquare for full detail; idempotent
+  // and safe to run on every boot.
+  try {
+    const { getDb } = await import("./queries/connection");
+    const { cropProduct57PhotosToSquare } = await import("./db-migrate");
+    await cropProduct57PhotosToSquare(getDb());
+  } catch (error) {
+    console.error("[db] product 57 square-crop repair step failed:", error);
+  }
+
   serveStaticFiles(app);
 
   const port = parseInt(process.env.PORT || "3000");

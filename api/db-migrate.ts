@@ -237,7 +237,25 @@ export async function repairMigration0002Gaps(
  * row). Idempotency is tracked with a small marker table — Railway can
  * restart the app without a new deploy, and swapping the same pair twice
  * would just swap it back, so each productId is only ever repaired once.
+ *
+ * SCOPE GUARD (added after an incident on 2026-09-01): this repair was
+ * written as a one-time catalog-wide fix diagnosed against the products
+ * that existed on 2026-08-28 (ids 1-48). It has no way to tell "still
+ * swapped from the original bug" apart from "legitimately correct and
+ * just hasn't been through this repair yet" — it always swaps whatever
+ * it finds. That's fine for the original cohort (which really was
+ * swapped), but on 2026-08-31 it silently caught products 49-64 the
+ * first time the app rebooted after they were correctly imported,
+ * flipping their White/Grey photos from correct to wrong. To make sure
+ * this legacy one-time repair can never again misfire on a brand-new,
+ * correctly-imported product, it is hard-capped to only ever consider
+ * `productId <= LEGACY_WHITE_GREY_REPAIR_MAX_ID` (the last id that
+ * existed before the 2026-08-28 fix went live). Do not raise this
+ * constant — any product created after that date must never be touched
+ * by this function again.
  */
+const LEGACY_WHITE_GREY_REPAIR_MAX_ID = 48;
+
 export async function repairSwappedWhiteGreyPhotos(
   db: MySql2Database<Record<string, unknown>>,
 ) {
@@ -254,7 +272,7 @@ export async function repairSwappedWhiteGreyPhotos(
 
   const rows = (await db.execute(
     sql.raw(
-      "select id, productId, colorName, images from `product_color_images` where colorName in ('White', 'Grey')",
+      `select id, productId, colorName, images from \`product_color_images\` where colorName in ('White', 'Grey') and productId <= ${LEGACY_WHITE_GREY_REPAIR_MAX_ID}`,
     ),
   )) as unknown as [{ id: number; productId: number; colorName: string; images: unknown }[]];
 
@@ -548,4 +566,207 @@ export async function renameAntracidToDarkCharcoal(
   } catch (error) {
     console.error("[db] Antracid -> Dark Charcoal rename FAILED:", error);
   }
+}
+
+/**
+ * One-time repair for a specific, known incident: on 2026-08-31, products
+ * 49-64 were correctly imported (their `product_color_images` "White" row
+ * genuinely held the white-garment photo and "Grey" held the grey-garment
+ * photo). The very next boot after that import ran the legacy
+ * `repairSwappedWhiteGreyPhotos` repair above, which — before its
+ * `LEGACY_WHITE_GREY_REPAIR_MAX_ID` scope guard existed — blindly swapped
+ * the White/Grey images for *every* product not yet in its marker table,
+ * including these 16 brand-new, already-correct ones. That flipped their
+ * White/Grey photos from correct to wrong (confirmed both by direct pixel
+ * inspection and by the classifier's own cost function, which independently
+ * picks the *original* pairing as lower-cost/correct).
+ *
+ * Fix: swap the `images` back for exactly these 16 known-affected products.
+ * This mirrors `repairSwappedWhiteGreyPhotos`'s swap logic exactly (same
+ * "swap only `images`, keep colorName/sortOrder" approach) but is scoped to
+ * this one incident via an explicit id list, not a heuristic, and tracked
+ * with its own marker table so it can only ever run once per product.
+ */
+const MISAPPLIED_WHITE_GREY_PRODUCT_IDS = [
+  49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
+];
+
+export async function restoreMisappliedWhiteGreySwap(
+  db: MySql2Database<Record<string, unknown>>,
+) {
+  await db.execute(
+    sql.raw(
+      "create table if not exists `white_grey_misapply_repairs` (`productId` bigint unsigned primary key, `appliedAt` timestamp not null default (now()))",
+    ),
+  );
+
+  const alreadyApplied = (await db.execute(
+    sql.raw("select productId from `white_grey_misapply_repairs`"),
+  )) as unknown as [{ productId: number }[]];
+  const appliedSet = new Set((alreadyApplied[0] ?? []).map((r) => r.productId));
+
+  const idList = MISAPPLIED_WHITE_GREY_PRODUCT_IDS.filter((id) => !appliedSet.has(id));
+  if (idList.length === 0) {
+    console.log("[db] misapplied White/Grey restore: already applied, skipping");
+    return;
+  }
+
+  const rows = (await db.execute(
+    sql.raw(
+      `select id, productId, colorName, images from \`product_color_images\` where colorName in ('White', 'Grey') and productId in (${idList.join(",")})`,
+    ),
+  )) as unknown as [{ id: number; productId: number; colorName: string; images: unknown }[]];
+
+  const byProduct = new Map<number, { white?: { id: number; images: unknown }; grey?: { id: number; images: unknown } }>();
+  for (const row of rows[0] ?? []) {
+    const entry = byProduct.get(row.productId) ?? {};
+    if (row.colorName === "White") entry.white = { id: row.id, images: row.images };
+    if (row.colorName === "Grey") entry.grey = { id: row.id, images: row.images };
+    byProduct.set(row.productId, entry);
+  }
+
+  let repairedCount = 0;
+  for (const productId of idList) {
+    const entry = byProduct.get(productId);
+    const white = entry?.white;
+    const grey = entry?.grey;
+    if (!white || !grey) {
+      console.log(
+        `[db] misapplied White/Grey restore: product ${productId} missing a White or Grey row — skipping`,
+      );
+      continue;
+    }
+    try {
+      const whiteImagesJson = JSON.stringify(white.images ?? []).replace(/'/g, "''");
+      const greyImagesJson = JSON.stringify(grey.images ?? []).replace(/'/g, "''");
+
+      await db.execute(
+        sql.raw(
+          `update \`product_color_images\` set images = '${greyImagesJson}', updatedAt = NOW() where id = ${white.id}`,
+        ),
+      );
+      await db.execute(
+        sql.raw(
+          `update \`product_color_images\` set images = '${whiteImagesJson}', updatedAt = NOW() where id = ${grey.id}`,
+        ),
+      );
+      await db.execute(
+        sql.raw(
+          `insert into \`white_grey_misapply_repairs\` (productId) values (${productId})`,
+        ),
+      );
+      repairedCount++;
+      console.log(`[db] misapplied White/Grey restore: restored product ${productId}`);
+    } catch (error) {
+      console.error(`[db] misapplied White/Grey restore FAILED for product ${productId}:`, error);
+    }
+  }
+  console.log(`[db] misapplied White/Grey restore: done, ${repairedCount} product(s) restored this run`);
+}
+
+/**
+ * One-time repair for product 57's photos specifically. Its four
+ * `product_color_images` photos render at 1400x788 (landscape), while every
+ * other product in the catalog uses a ~1024x1024 square composite. The
+ * customer-facing gallery (`ProductPage.jsx`) displays photos in a 4:5
+ * portrait box with `object-cover`, so product 57's wide landscape photos
+ * get cropped hard on both left and right, cutting into the front/back
+ * model shots and producing the broken-looking crop the customer reported.
+ *
+ * Fix: center-crop each of product 57's 4 photos to a square (cropping
+ * width down to match height, i.e. removing equal margins from both
+ * sides — verified by visual inspection to keep both the front and back
+ * shots fully in frame), re-encode via the same R2/WebP pipeline used
+ * everywhere else, and update the 4 `product_color_images` rows in place.
+ * Only touches product 57; does not change any other product's photos or
+ * any shared display component. Idempotent via a marker table.
+ */
+export async function cropProduct57PhotosToSquare(
+  db: MySql2Database<Record<string, unknown>>,
+) {
+  await db.execute(
+    sql.raw(
+      "create table if not exists `product57_crop_repair` (`id` bigint unsigned primary key, `appliedAt` timestamp not null default (now()))",
+    ),
+  );
+
+  const alreadyApplied = (await db.execute(
+    sql.raw("select id from `product57_crop_repair` where id = 1"),
+  )) as unknown as [unknown[]];
+  if ((alreadyApplied[0] ?? []).length > 0) {
+    console.log("[db] product 57 square-crop repair: already applied, skipping");
+    return;
+  }
+
+  const { isR2Configured, uploadDataUrlToR2 } = await import("./lib/r2");
+  if (!isR2Configured()) {
+    console.log("[db] product 57 square-crop repair: R2 not configured, skipping");
+    return;
+  }
+
+  const rows = (await db.execute(
+    sql.raw(
+      "select id, colorName, images from `product_color_images` where productId = 57",
+    ),
+  )) as unknown as [{ id: number; colorName: string; images: unknown }[]];
+
+  if ((rows[0] ?? []).length === 0) {
+    console.log("[db] product 57 square-crop repair: no rows found, skipping");
+    return;
+  }
+
+  const sharp = (await import("sharp")).default;
+
+  let croppedCount = 0;
+  for (const row of rows[0] ?? []) {
+    const images = Array.isArray(row.images) ? (row.images as string[]) : [];
+    if (images.length === 0) continue;
+    try {
+      const newImages: string[] = [];
+      for (const url of images) {
+        if (typeof url !== "string" || !/^https?:\/\//.test(url)) {
+          newImages.push(url);
+          continue;
+        }
+        const res = await fetch(url);
+        if (!res.ok) {
+          console.error(`[db] product 57 square-crop repair: fetch failed for ${url} (${res.status})`);
+          newImages.push(url);
+          continue;
+        }
+        const sourceBuffer = Buffer.from(await res.arrayBuffer());
+        const meta = await sharp(sourceBuffer).metadata();
+        const w = meta.width ?? 0;
+        const h = meta.height ?? 0;
+        if (!w || !h || w === h) {
+          // Already square (or unreadable) — leave untouched.
+          newImages.push(url);
+          continue;
+        }
+        const side = Math.min(w, h);
+        const left = Math.floor((w - side) / 2);
+        const top = Math.floor((h - side) / 2);
+        const croppedBuffer = await sharp(sourceBuffer)
+          .extract({ left, top, width: side, height: side })
+          .webp({ quality: 90 })
+          .toBuffer();
+        const dataUrl = `data:image/webp;base64,${croppedBuffer.toString("base64")}`;
+        const newUrl = await uploadDataUrlToR2(dataUrl, "products");
+        newImages.push(newUrl ?? url);
+      }
+      const newImagesJson = JSON.stringify(newImages).replace(/'/g, "''");
+      await db.execute(
+        sql.raw(
+          `update \`product_color_images\` set images = '${newImagesJson}', updatedAt = NOW() where id = ${row.id}`,
+        ),
+      );
+      croppedCount++;
+      console.log(`[db] product 57 square-crop repair: re-cropped ${row.colorName} photo`);
+    } catch (error) {
+      console.error(`[db] product 57 square-crop repair FAILED for color ${row.colorName}:`, error);
+    }
+  }
+
+  await db.execute(sql.raw("insert into `product57_crop_repair` (id) values (1)"));
+  console.log(`[db] product 57 square-crop repair: done, ${croppedCount} photo(s) re-cropped`);
 }

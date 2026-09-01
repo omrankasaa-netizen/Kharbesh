@@ -96,6 +96,7 @@ async function classifyAndAssign(files) {
         file,
         thumbUrl: URL.createObjectURL(file),
         distances: guess.distances,
+        luminance: guess.luminance,
         bestGuess: guess.colorName,
         confident: guess.confident,
       });
@@ -114,7 +115,7 @@ async function classifyAndAssign(files) {
   });
 
   const assignment = bestColorAssignment(
-    candidates.map((c) => ({ id: c.id, distances: c.distances })),
+    candidates.map((c) => ({ id: c.id, distances: c.distances, luminance: c.luminance })),
     COLOR_NAMES,
   );
   const colorMatches = {};

@@ -63,7 +63,7 @@ export async function scanDriveFolder(folderLinkOrId: string): Promise<{
       const files = await listDriveChildren(folder.id, accessToken);
       const images = files.filter((f) => f.mimeType.startsWith(IMAGE_MIME_PREFIX));
 
-      const candidates: Array<{ image: ScannedImage; distances: Record<string, number> | null }> = [];
+      const candidates: Array<{ image: ScannedImage; distances: Record<string, number> | null; luminance: number | null }> = [];
       for (const file of images) {
         try {
           const { buffer } = await downloadDriveFile(file.id, accessToken);
@@ -80,6 +80,7 @@ export async function scanDriveFolder(folderLinkOrId: string): Promise<{
               confident: guess.confident,
             },
             distances: guess.distances,
+            luminance: guess.luminance,
           });
         } catch (err) {
           candidates.push({
@@ -91,6 +92,7 @@ export async function scanDriveFolder(folderLinkOrId: string): Promise<{
               confident: false,
             },
             distances: null,
+            luminance: null,
           });
           console.error(`[drive-import] Failed to read ${file.name} in ${folder.name}:`, err);
         }
@@ -106,7 +108,7 @@ export async function scanDriveFolder(folderLinkOrId: string): Promise<{
       const colorNames = GARMENT_COLOR_ANCHORS.map((a) => a.name);
       const confidentCandidates = candidates.filter((c) => c.image.guessedColor);
       const assignment = bestColorAssignment(
-        confidentCandidates.map((c) => ({ id: c.image.fileId, distances: c.distances })),
+        confidentCandidates.map((c) => ({ id: c.image.fileId, distances: c.distances, luminance: c.luminance ?? undefined })),
         colorNames,
       );
       const colorMatches: Record<string, ScannedImage> = {};

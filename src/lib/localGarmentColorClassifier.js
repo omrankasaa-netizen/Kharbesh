@@ -121,7 +121,62 @@ export async function classifyGarmentColor(file) {
       best = anchor;
     }
   }
-  return { colorName: best.name, confident: bestDist <= CONFIDENT_MAX_DISTANCE, distance: bestDist, distances };
+  // Perceived brightness (0-255) of the sampled fabric, independent of any
+  // anchor. Used by `bestColorAssignment` to sanity-check the White/Grey
+  // pair specifically — see the relative-luminance correction there.
+  const luminance = 0.299 * avg[0] + 0.587 * avg[1] + 0.114 * avg[2];
+  return { colorName: best.name, confident: bestDist <= CONFIDENT_MAX_DISTANCE, distance: bestDist, distances, luminance };
+}
+
+/**
+ * White and Grey anchors (242 vs 207) sit only 35 RGB units apart, so a
+ * whole photo batch shot under different exposure/lighting than the
+ * anchors assume can read both true-white and true-grey fabric darker (or
+ * lighter) than expected — close enough that the ABSOLUTE min-cost match
+ * above can confidently assign them to the wrong anchor, in the wrong
+ * order, even though it found the lowest total distance. That's a
+ * structural blind spot in absolute-anchor matching, not a one-off bad
+ * photo: it reproduces the real swap seen across an entire 16-product
+ * import batch that was captured under one shifted lighting setup.
+ *
+ * The fix relies on a fact that doesn't depend on lighting at all: within
+ * the SAME shoot, white fabric always reflects more light than grey
+ * fabric, so its sampled luminance is always higher. After the anchor-cost
+ * assignment picks which two photos are "the White one" and "the Grey
+ * one", this checks only their relative order — if the photo assigned
+ * White is actually the darker of the pair, the two are almost certainly
+ * swapped, so their color labels (and the reported distance, refreshed
+ * against the corrected anchor) are exchanged. Black and Dark Charcoal are
+ * never touched — they sit far enough from White/Grey on both channels
+ * and luminance that this ambiguity doesn't apply to them.
+ *
+ * @param {Array<{id: string, color: string, distance: number}>} pairs
+ * @param {Map<string, {id: string, distances: Record<string, number>|null, luminance?: number}>} usableById
+ */
+function correctWhiteGreyByLuminance(pairs, usableById) {
+  const whiteIdx = pairs.findIndex((p) => p.color === 'White');
+  const greyIdx = pairs.findIndex((p) => p.color === 'Grey');
+  if (whiteIdx === -1 || greyIdx === -1) return pairs;
+
+  const whiteItem = usableById.get(pairs[whiteIdx].id);
+  const greyItem = usableById.get(pairs[greyIdx].id);
+  if (whiteItem?.luminance == null || greyItem?.luminance == null) return pairs;
+
+  if (whiteItem.luminance < greyItem.luminance) {
+    const corrected = [...pairs];
+    corrected[whiteIdx] = {
+      ...pairs[whiteIdx],
+      color: 'Grey',
+      distance: whiteItem.distances?.['Grey'] ?? pairs[whiteIdx].distance,
+    };
+    corrected[greyIdx] = {
+      ...pairs[greyIdx],
+      color: 'White',
+      distance: greyItem.distances?.['White'] ?? pairs[greyIdx].distance,
+    };
+    return corrected;
+  }
+  return pairs;
 }
 
 /**
@@ -155,6 +210,7 @@ export function bestColorAssignment(items, colorNames) {
       .slice(0, MAX_CANDIDATES);
   }
   const n = usable.length;
+  const usableById = new Map(usable.map((it) => [it.id, it]));
 
   let bestPairs = [];
   let bestCost = Infinity;
@@ -208,5 +264,5 @@ export function bestColorAssignment(items, colorNames) {
       }
     });
   }
-  return bestPairs;
+  return correctWhiteGreyByLuminance(bestPairs, usableById);
 }
