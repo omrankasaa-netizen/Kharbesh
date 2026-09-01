@@ -14,4 +14,5 @@ export const Paths = {
   googleOauthStart: "/api/auth/google/start",
   googleOauthCallback: "/api/auth/google/callback",
   driveOauthCallback: "/api/admin/drive/callback",
+  metaFeed: "/meta-feed.csv",
 } as const;

@@ -9,6 +9,7 @@ import { env } from "./lib/env";
 import { createOAuthCallbackHandler } from "./kimi/auth";
 import { createGoogleOAuthCallbackHandler, createGoogleOAuthStartHandler } from "./google/auth";
 import { createDriveOAuthCallbackHandler } from "./google/driveAuth";
+import { createMetaFeedHandler } from "./metaFeed";
 import { Paths } from "@contracts/constants";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
@@ -80,6 +81,10 @@ app.get(Paths.oauthCallback, createOAuthCallbackHandler());
 app.get(Paths.googleOauthStart, createGoogleOAuthStartHandler());
 app.get(Paths.googleOauthCallback, createGoogleOAuthCallbackHandler());
 app.get(Paths.driveOauthCallback, createDriveOAuthCallbackHandler());
+// Public product feed for Meta Commerce Manager (and any other CSV-feed
+// consumer, e.g. Google Merchant Center). Registered before the static-file
+// wildcard below so it's never shadowed by the SPA fallback.
+app.get(Paths.metaFeed, createMetaFeedHandler());
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
     endpoint: "/api/trpc",

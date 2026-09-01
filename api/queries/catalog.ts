@@ -397,6 +397,122 @@ export async function listProducts() {
   return visible.map(toUiPublicProduct);
 }
 
+// ── Meta Commerce Manager product feed ──────────────────────────────────────
+// One row per (product, color) — the storefront sells by color with size
+// picked at checkout, so color-level rows are the natural granularity here.
+// Only `status === "active"` products are eligible (drafts and archived
+// pieces are excluded, unlike listProducts() which still shows archived
+// items on the storefront's Archive/sold-out page). Preorder visibility
+// follows the same `preordersEnabled` site setting the storefront itself
+// respects, so the feed never advertises something shoppers can't actually
+// buy right now.
+export type MetaFeedRow = {
+  id: string;
+  title: string;
+  description: string;
+  availability: "in stock" | "out of stock" | "preorder";
+  condition: "new";
+  price: string;
+  sale_price: string | null;
+  link: string;
+  image_link: string;
+  additional_image_link: string | null;
+  brand: string;
+  color: string;
+  gender: "unisex";
+  age_group: "adult";
+  item_group_id: string;
+  product_type: string;
+};
+
+const FEED_SITE_URL = "https://kharbesh961.com";
+const PRODUCT_TYPE_LABELS: Record<string, string> = {
+  tee: "Tee",
+  hoodie: "Hoodie",
+  accessory: "Accessory",
+};
+
+function cleanFeedText(value: string | null | undefined, fallback: string): string {
+  const text = (value ?? "").replace(/\s+/g, " ").trim();
+  return text || fallback;
+}
+
+export async function listMetaFeedRows(): Promise<MetaFeedRow[]> {
+  const db = getDb();
+  const [productRows, colorImageRows, settings] = await Promise.all([
+    db.select().from(products).where(eq(products.status, "active")).orderBy(asc(products.sortOrder)),
+    db.select().from(productColorImages),
+    getSettings(),
+  ]);
+
+  const imagesByProduct = new Map<number, (typeof colorImageRows)[number][]>();
+  for (const row of colorImageRows) {
+    const list = imagesByProduct.get(row.productId) ?? [];
+    list.push(row);
+    imagesByProduct.set(row.productId, list);
+  }
+
+  const rows: MetaFeedRow[] = [];
+
+  for (const p of productRows) {
+    // Preorder pieces disappear from the storefront entirely when preorders
+    // are paused (same rule as listProducts()) — keep them out of the feed too.
+    if (!settings.preordersEnabled && p.preorderType !== "always_on") continue;
+
+    const isSoldOut =
+      p.preorderType === "limited_quantity" &&
+      p.preorderCapacity != null &&
+      p.unitsSold >= p.preorderCapacity;
+    const availability: MetaFeedRow["availability"] = isSoldOut
+      ? "out of stock"
+      : p.preorderType !== "always_on"
+        ? "preorder"
+        : "in stock";
+    if (availability === "out of stock") continue; // Meta excludes these from ads anyway; keep the feed lean.
+
+    const priceDollars = p.priceCents / 100;
+    const compareDollars = p.compareAtPriceCents != null ? p.compareAtPriceCents / 100 : null;
+    const onSale = compareDollars != null && compareDollars > priceDollars;
+    const price = `${(onSale ? compareDollars! : priceDollars).toFixed(2)} USD`;
+    const salePrice = onSale ? `${priceDollars.toFixed(2)} USD` : null;
+
+    const productTypeLabel = PRODUCT_TYPE_LABELS[p.productType] ?? p.productType;
+    const productType = p.collectionName ? `${p.collectionName} > ${productTypeLabel}` : productTypeLabel;
+    const description = cleanFeedText(p.descriptionEn, cleanFeedText(p.payoffEn, p.nameEn));
+
+    const colorRows = imagesByProduct.get(p.id) ?? [];
+    const colors = p.approvedColors.length > 0 ? p.approvedColors : colorRows.map((c) => c.colorName);
+
+    for (const colorName of colors) {
+      const colorRow = colorRows.find((c) => c.colorName === colorName);
+      const images = colorRow?.images?.length ? colorRow.images : p.images;
+      if (!images?.length) continue; // Meta rejects rows with no image_link.
+
+      const colorSlug = colorName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      rows.push({
+        id: `${p.id}-${colorSlug}`,
+        title: `${p.nameEn} — ${colorName}`,
+        description,
+        availability,
+        condition: "new",
+        price,
+        sale_price: salePrice,
+        link: `${FEED_SITE_URL}/product/${p.id}`,
+        image_link: images[0],
+        additional_image_link: images.length > 1 ? images.slice(1).join(",") : null,
+        brand: "Kharbesh",
+        color: colorName,
+        gender: "unisex",
+        age_group: "adult",
+        item_group_id: String(p.id),
+        product_type: productType,
+      });
+    }
+  }
+
+  return rows;
+}
+
 /** Admin catalog: includes drafts. */
 export async function listAllProducts() {
   const rows = await getDb().select().from(products).orderBy(asc(products.sortOrder));
