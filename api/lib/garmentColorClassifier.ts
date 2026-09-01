@@ -3,7 +3,7 @@ import sharp from "sharp";
 /**
  * Heuristic color classifier for the "Import from Drive" tool. Guesses
  * which of the four current storefront garment colors (Black / White /
- * Grey / Antracid) a mockup photo shows, purely from average pixel color —
+ * Grey / Dark Charcoal) a mockup photo shows, purely from average pixel color —
  * no external AI call, no network round-trip, cheap enough to run on every
  * file in a scan. This is a first guess only: the admin review UI always
  * shows the guess with an editable dropdown, so a wrong or low-confidence
@@ -24,7 +24,7 @@ export const GARMENT_COLOR_ANCHORS: GarmentColorAnchor[] = [
   { name: "Black", rgb: [0, 0, 0] },
   { name: "White", rgb: [242, 242, 242] },
   { name: "Grey", rgb: [207, 207, 207] },
-  { name: "Antracid", rgb: [80, 87, 109] },
+  { name: "Dark Charcoal", rgb: [80, 87, 109] },
 ];
 
 // Above this distance, the average color doesn't look like any of the
@@ -36,8 +36,8 @@ const CONFIDENT_MAX_DISTANCE = 70;
 
 function distance(a: [number, number, number], b: [number, number, number]): number {
   // Weight luminance (perceived brightness) more than raw channel
-  // difference — that's what actually separates Black/Grey/White/Antracid,
-  // since Antracid and Grey share a similar mid-tone lightness but differ
+  // difference — that's what actually separates Black/Grey/White/Dark Charcoal,
+  // since Dark Charcoal and Grey share a similar mid-tone lightness but differ
   // in hue (blue-grey vs neutral grey).
   const dr = a[0] - b[0];
   const dg = a[1] - b[1];
@@ -52,7 +52,7 @@ function distance(a: [number, number, number], b: [number, number, number]): num
  * the center-chest band where a printed graphic almost always sits.
  * Averaging the full center-torso region (the old approach) let bold dark
  * print text drag a genuinely white/light shirt's average color toward a
- * darker anchor (observed misclassifying white shirts as "Antracid").
+ * darker anchor (observed misclassifying white shirts as "Dark Charcoal").
  * Side strips, just inside the arm seam, stay plain fabric on virtually
  * every mockup style, and using the per-channel MEDIAN (not mean) across
  * those pixels means even a stray print pixel or shadow can't skew the

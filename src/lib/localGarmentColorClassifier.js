@@ -11,7 +11,7 @@ export const GARMENT_COLOR_ANCHORS = [
   { name: 'Black', rgb: [0, 0, 0] },
   { name: 'White', rgb: [242, 242, 242] },
   { name: 'Grey', rgb: [207, 207, 207] },
-  { name: 'Antracid', rgb: [80, 87, 109] },
+  { name: 'Dark Charcoal', rgb: [80, 87, 109] },
 ];
 
 const CONFIDENT_MAX_DISTANCE = 70;
@@ -56,7 +56,7 @@ async function loadDrawable(file) {
  * sampling strategy exactly. Deliberately avoids the center-chest band
  * where a printed graphic almost always sits: averaging that band let
  * bold dark print text drag a genuinely white shirt's color toward a
- * darker anchor (observed misclassifying white shirts as "Antracid").
+ * darker anchor (observed misclassifying white shirts as "Dark Charcoal").
  * Side strips stay plain fabric on virtually every mockup style, and the
  * per-channel MEDIAN (not mean) means a stray print/shadow pixel can't
  * skew the result unless it covers most of the sampled area. */

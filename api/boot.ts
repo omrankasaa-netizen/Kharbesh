@@ -156,6 +156,31 @@ if (env.isProduction) {
     console.error("[db] botox/sayfyeh dedupe repair step failed:", error);
   }
 
+  // Runs unconditionally, independent of the steps above: one-time fix for
+  // a customer-visible Black/Antracid photo mixup found on product #24 and
+  // confirmed on two more products (8, 39) after a full catalog audit. See
+  // repairSwappedBlackAntracidPhotos for full detail; idempotent and safe
+  // to run on every boot.
+  try {
+    const { getDb } = await import("./queries/connection");
+    const { repairSwappedBlackAntracidPhotos } = await import("./db-migrate");
+    await repairSwappedBlackAntracidPhotos(getDb());
+  } catch (error) {
+    console.error("[db] Black/Antracid photo swap repair step failed:", error);
+  }
+
+  // Runs unconditionally, independent of the steps above: one-time rename
+  // of the garment color "Antracid" to "Dark Charcoal" to match the
+  // factory's own naming. See renameAntracidToDarkCharcoal for full detail;
+  // idempotent and safe to run on every boot.
+  try {
+    const { getDb } = await import("./queries/connection");
+    const { renameAntracidToDarkCharcoal } = await import("./db-migrate");
+    await renameAntracidToDarkCharcoal(getDb());
+  } catch (error) {
+    console.error("[db] Antracid -> Dark Charcoal rename step failed:", error);
+  }
+
   serveStaticFiles(app);
 
   const port = parseInt(process.env.PORT || "3000");

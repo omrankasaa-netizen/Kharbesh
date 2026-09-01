@@ -301,8 +301,8 @@ export default function AdminDriveImport() {
       <PageHeader eyebrow="Admin" title={lang === 'ar' ? 'استيراد من Drive' : 'Import from Drive'} />
       <p className="text-sm text-muted-foreground mt-3 max-w-2xl">
         {lang === 'ar'
-          ? 'لكل تصميم مجلد فيه 4 صور (أسود، أبيض، غري، أنتراسيد). لصق رابط المجلد الأم (اللي فيه كل المجلدات الفرعية)، وحنا نحاول نعرف لون كل صورة تلقائياً — وبعدين راجع/صحح قبل الاستيراد.'
-          : "Each design lives in its own subfolder with the 4 color mockup photos (Black, White, Grey, Antracid). Paste the link to the parent folder (the one containing all those subfolders) and we'll guess each photo's color automatically \u2014 review and fix anything wrong before importing."}
+          ? 'لكل تصميم مجلد فيه 4 صور (أسود، أبيض، غري، رمادي حديدي). لصق رابط المجلد الأم (اللي فيه كل المجلدات الفرعية)، وحنا نحاول نعرف لون كل صورة تلقائياً — وبعدين راجع/صحح قبل الاستيراد.'
+          : "Each design lives in its own subfolder with the 4 color mockup photos (Black, White, Grey, Dark Charcoal). Paste the link to the parent folder (the one containing all those subfolders) and we'll guess each photo's color automatically \u2014 review and fix anything wrong before importing."}
       </p>
 
       {statusError && <p className="text-sm mt-4" style={{ color: 'var(--brand-destructive)' }}>{statusError}</p>}

@@ -366,8 +366,8 @@ export default function AdminLocalImport() {
       <PageHeader eyebrow="Admin" title={lang === 'ar' ? 'استيراد من مجلد محلي' : 'Import from Local Folder'} />
       <p className="text-sm text-muted-foreground mt-3 max-w-2xl">
         {lang === 'ar'
-          ? 'كل تصميم بمجلده الخاص فيه لـ 4 صور (أسود، أبيض، غري، أنتراسيد). اختار المجلد الأم من جهازك (اللي فيه كل مجلدات التصاميم)، وحنا منحاول نعرف لون كل صورة تلقائياً — راجع/صحح قبل الاستيراد. ما في ولا خطوة ربط أو صلاحيات، كل شي عم يصير محلياً بالمتصفح.'
-          : "Each design lives in its own subfolder with the 4 color mockup photos (Black, White, Grey, Antracid). Pick the parent folder on your computer (the one containing all the design subfolders) and we'll guess each photo's color automatically \u2014 review and fix anything wrong before importing. No connection step, no permissions \u2014 everything runs locally in your browser."}
+          ? 'كل تصميم بمجلده الخاص فيه لـ 4 صور (أسود، أبيض، غري، رمادي حديدي). اختار المجلد الأم من جهازك (اللي فيه كل مجلدات التصاميم)، وحنا منحاول نعرف لون كل صورة تلقائياً — راجع/صحح قبل الاستيراد. ما في ولا خطوة ربط أو صلاحيات، كل شي عم يصير محلياً بالمتصفح.'
+          : "Each design lives in its own subfolder with the 4 color mockup photos (Black, White, Grey, Dark Charcoal). Pick the parent folder on your computer (the one containing all the design subfolders) and we'll guess each photo's color automatically \u2014 review and fix anything wrong before importing. No connection step, no permissions \u2014 everything runs locally in your browser."}
       </p>
 
       <div className="flex flex-wrap items-center gap-3 mt-6">

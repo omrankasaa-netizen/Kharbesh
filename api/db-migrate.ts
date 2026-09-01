@@ -393,3 +393,159 @@ export async function repairBotoxSayfyehDuplicates(
     console.error("[db] botox/sayfyeh dedupe repair FAILED:", error);
   }
 }
+
+/**
+ * One-time data repair for a per-product Black/Antracid photo swap found
+ * while investigating product #24 (a customer-visible mixup: selecting
+ * "Black" showed the dark-charcoal garment and vice versa). A full visual
+ * audit of every product with both a Black and an Antracid
+ * `product_color_images` row (60 of the 64 catalog products; the other 4
+ * are the archived/legacy "Botox/Sayfyeh" duplicates handled by
+ * `repairBotoxSayfyehDuplicates`) confirmed the same swap on exactly three
+ * products: 8, 24, and 39. Every other product's Black/Antracid pair was
+ * visually verified as correctly assigned.
+ *
+ * Fix: swap only the `images` JSON between the Black and Antracid rows for
+ * products 8, 24, and 39. Idempotent via a marker table, same pattern as
+ * `repairSwappedWhiteGreyPhotos`.
+ */
+export async function repairSwappedBlackAntracidPhotos(
+  db: MySql2Database<Record<string, unknown>>,
+) {
+  const affectedProductIds = [8, 24, 39];
+
+  await db.execute(
+    sql.raw(
+      "create table if not exists `black_antracid_swap_repairs` (`productId` bigint unsigned primary key, `appliedAt` timestamp not null default (now()))",
+    ),
+  );
+
+  const alreadyApplied = (await db.execute(
+    sql.raw("select productId from `black_antracid_swap_repairs`"),
+  )) as unknown as [{ productId: number }[]];
+  const appliedSet = new Set((alreadyApplied[0] ?? []).map((r) => r.productId));
+
+  const rows = (await db.execute(
+    sql.raw(
+      `select id, productId, colorName, images from \`product_color_images\` where productId in (${affectedProductIds.join(",")}) and colorName in ('Black', 'Antracid')`,
+    ),
+  )) as unknown as [{ id: number; productId: number; colorName: string; images: unknown }[]];
+
+  const byProduct = new Map<number, { black?: { id: number; images: unknown }; antracid?: { id: number; images: unknown } }>();
+  for (const row of rows[0] ?? []) {
+    const entry = byProduct.get(row.productId) ?? {};
+    if (row.colorName === "Black") entry.black = { id: row.id, images: row.images };
+    if (row.colorName === "Antracid") entry.antracid = { id: row.id, images: row.images };
+    byProduct.set(row.productId, entry);
+  }
+
+  let repairedCount = 0;
+  for (const productId of affectedProductIds) {
+    if (appliedSet.has(productId)) continue;
+    const entry = byProduct.get(productId);
+    if (!entry?.black || !entry?.antracid) {
+      console.log(
+        `[db] Black/Antracid swap repair: product ${productId} missing a Black or Antracid row — skipping`,
+      );
+      continue;
+    }
+    try {
+      const blackImagesJson = JSON.stringify(entry.black.images ?? []).replace(/'/g, "''");
+      const antracidImagesJson = JSON.stringify(entry.antracid.images ?? []).replace(/'/g, "''");
+
+      await db.execute(
+        sql.raw(
+          `update \`product_color_images\` set images = '${antracidImagesJson}', updatedAt = NOW() where id = ${entry.black.id}`,
+        ),
+      );
+      await db.execute(
+        sql.raw(
+          `update \`product_color_images\` set images = '${blackImagesJson}', updatedAt = NOW() where id = ${entry.antracid.id}`,
+        ),
+      );
+      await db.execute(
+        sql.raw(
+          `insert into \`black_antracid_swap_repairs\` (productId) values (${productId})`,
+        ),
+      );
+      repairedCount++;
+      console.log(`[db] Black/Antracid swap repair: swapped photos for product ${productId}`);
+    } catch (error) {
+      console.error(`[db] Black/Antracid swap repair FAILED for product ${productId}:`, error);
+    }
+  }
+  console.log(`[db] Black/Antracid swap repair: done, ${repairedCount} product(s) repaired this run`);
+}
+
+/**
+ * One-time rename of the garment color "Antracid" to "Dark Charcoal" to
+ * match the factory's own naming. The Arabic label ("\u0631\u0645\u0627\u062f\u064a \u062d\u062f\u064a\u062f\u064a") is
+ * intentionally left unchanged — it already reads as a sensible
+ * description independent of the old English name.
+ *
+ * The color name is duplicated as a plain string in three places (no
+ * foreign key), so all three must be updated together or the storefront's
+ * `resolveColor()` lookup (which matches by exact `name_en`) would stop
+ * finding the color for any product still holding the old string:
+ *  - `garment_colors.nameEn` (the canonical color list)
+ *  - `products.approvedColors` (a JSON string array per product)
+ *  - `product_color_images.colorName` (per-color photo rows)
+ *
+ * Idempotent via a marker row in a dedicated `antracid_rename_repair`
+ * table, same pattern as the other repairs above; safe to run on every boot.
+ */
+export async function renameAntracidToDarkCharcoal(
+  db: MySql2Database<Record<string, unknown>>,
+) {
+  await db.execute(
+    sql.raw(
+      "create table if not exists `antracid_rename_repair` (`id` bigint unsigned primary key, `appliedAt` timestamp not null default (now()))",
+    ),
+  );
+
+  const alreadyApplied = (await db.execute(
+    sql.raw("select id from `antracid_rename_repair` where id = 1"),
+  )) as unknown as [unknown[]];
+  if ((alreadyApplied[0] ?? []).length > 0) {
+    console.log("[db] Antracid -> Dark Charcoal rename: already applied, skipping");
+    return;
+  }
+
+  try {
+    await db.execute(
+      sql.raw(
+        "update `garment_colors` set nameEn = 'Dark Charcoal' where nameEn = 'Antracid'",
+      ),
+    );
+
+    await db.execute(
+      sql.raw(
+        "update `product_color_images` set colorName = 'Dark Charcoal', updatedAt = NOW() where colorName = 'Antracid'",
+      ),
+    );
+
+    const productRows = (await db.execute(
+      sql.raw(
+        "select id, approvedColors from `products` where JSON_CONTAINS(approvedColors, '\"Antracid\"')",
+      ),
+    )) as unknown as [{ id: number; approvedColors: unknown }[]];
+
+    for (const row of productRows[0] ?? []) {
+      const colors = Array.isArray(row.approvedColors) ? (row.approvedColors as string[]) : [];
+      const updated = colors.map((c) => (c === "Antracid" ? "Dark Charcoal" : c));
+      const updatedJson = JSON.stringify(updated).replace(/'/g, "''");
+      await db.execute(
+        sql.raw(
+          `update \`products\` set approvedColors = '${updatedJson}', updatedAt = NOW() where id = ${row.id}`,
+        ),
+      );
+    }
+
+    await db.execute(sql.raw("insert into `antracid_rename_repair` (id) values (1)"));
+    console.log(
+      `[db] Antracid -> Dark Charcoal rename: done (garment_colors, ${(productRows[0] ?? []).length} product(s), product_color_images all updated)`,
+    );
+  } catch (error) {
+    console.error("[db] Antracid -> Dark Charcoal rename FAILED:", error);
+  }
+}
