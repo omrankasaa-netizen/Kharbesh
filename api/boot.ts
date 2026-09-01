@@ -209,6 +209,22 @@ if (env.isProduction) {
     console.error("[db] product 57 square-crop repair step failed:", error);
   }
 
+  // Runs unconditionally, independent of the steps above: follow-up fix for
+  // product 57, superseding the square-crop above. The square crop still
+  // left the gallery box re-cropping down to a ~630px-wide window that cut
+  // into the back-panel design; this replaces all 4 photos with final
+  // 630x788 crops (exact 4:5 match, so the box performs zero further
+  // cropping) biased toward the design per explicit user direction. See
+  // repairProduct57DesignCrop for full detail; idempotent and safe to run
+  // on every boot.
+  try {
+    const { getDb } = await import("./queries/connection");
+    const { repairProduct57DesignCrop } = await import("./db-migrate");
+    await repairProduct57DesignCrop(getDb());
+  } catch (error) {
+    console.error("[db] product 57 design-crop repair step failed:", error);
+  }
+
   serveStaticFiles(app);
 
   const port = parseInt(process.env.PORT || "3000");

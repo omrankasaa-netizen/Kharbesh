@@ -770,3 +770,111 @@ export async function cropProduct57PhotosToSquare(
   await db.execute(sql.raw("insert into `product57_crop_repair` (id) values (1)"));
   console.log(`[db] product 57 square-crop repair: done, ${croppedCount} photo(s) re-cropped`);
 }
+
+/**
+ * Follow-up repair for product 57, superseding the square-crop above. The
+ * square crop (cropProduct57PhotosToSquare) was mathematically the loosest
+ * possible square crop of the 1400x788 original, but the customer-facing
+ * gallery box (`ProductPage.jsx`, `aspect-[4/5]` + `object-cover`) still
+ * re-crops ANY square photo down to its center ~63% of width to fit the
+ * 4:5 box — so even the squared photo only ever showed a ~630px-wide
+ * window of the original 1400px-wide composite, cutting into the design
+ * on the back-panel photos.
+ *
+ * The two panels (front/face around original x[0,712), back/design around
+ * x[712,1400)) are ~700px apart at native resolution — farther apart than
+ * the 630px window the display box can ever show, so no single crop can
+ * keep both a recognizable face and the full back-panel design in frame.
+ * Per explicit user direction, this repair biases every crop toward
+ * protecting the design/back-panel artwork (the print is the product),
+ * accepting that the front-panel face is mostly or fully out of frame.
+ *
+ * Rather than re-deriving another crop window at runtime, this uses four
+ * final 630x788 images (exactly matching the display box's 4:5 aspect, so
+ * the box performs zero further cropping) that were hand-verified against
+ * the true original artwork bounding box for each color. They ship in the
+ * repo at `assets/p57-recrop/` (copied into the runtime image by the
+ * Dockerfile) because Black/Dark Charcoal's true 1400x788 pre-crop
+ * originals are not recoverable from the currently-live (already-cropped)
+ * URLs alone. Idempotent via its own marker table; only touches product 57.
+ */
+export async function repairProduct57DesignCrop(
+  db: MySql2Database<Record<string, unknown>>,
+) {
+  await db.execute(
+    sql.raw(
+      "create table if not exists `product57_design_crop_repair` (`id` bigint unsigned primary key, `appliedAt` timestamp not null default (now()))",
+    ),
+  );
+
+  const alreadyApplied = (await db.execute(
+    sql.raw("select id from `product57_design_crop_repair` where id = 1"),
+  )) as unknown as [unknown[]];
+  if ((alreadyApplied[0] ?? []).length > 0) {
+    console.log("[db] product 57 design-crop repair: already applied, skipping");
+    return;
+  }
+
+  const { isR2Configured, uploadDataUrlToR2 } = await import("./lib/r2");
+  if (!isR2Configured()) {
+    console.log("[db] product 57 design-crop repair: R2 not configured, skipping");
+    return;
+  }
+
+  const rows = (await db.execute(
+    sql.raw(
+      "select id, colorName, images from `product_color_images` where productId = 57",
+    ),
+  )) as unknown as [{ id: number; colorName: string; images: unknown }[]];
+
+  if ((rows[0] ?? []).length === 0) {
+    console.log("[db] product 57 design-crop repair: no rows found, skipping");
+    return;
+  }
+
+  const ASSET_BY_COLOR: Record<string, string> = {
+    White: "white.webp",
+    Black: "black.webp",
+    Grey: "grey.webp",
+    "Dark Charcoal": "dark-charcoal.webp",
+  };
+  const assetsDir = path.join(process.cwd(), "assets", "p57-recrop");
+
+  let repairedCount = 0;
+  for (const row of rows[0] ?? []) {
+    const filename = ASSET_BY_COLOR[row.colorName];
+    if (!filename) {
+      console.log(`[db] product 57 design-crop repair: no local asset mapped for color "${row.colorName}", skipping`);
+      continue;
+    }
+    const assetPath = path.join(assetsDir, filename);
+    if (!fs.existsSync(assetPath)) {
+      console.error(`[db] product 57 design-crop repair: missing asset file ${assetPath}, skipping ${row.colorName}`);
+      continue;
+    }
+    try {
+      const buffer = fs.readFileSync(assetPath);
+      const dataUrl = `data:image/webp;base64,${buffer.toString("base64")}`;
+      const newUrl = await uploadDataUrlToR2(dataUrl, "products");
+      if (!newUrl) {
+        console.error(`[db] product 57 design-crop repair: upload failed for ${row.colorName}, skipping`);
+        continue;
+      }
+      const existingImages = Array.isArray(row.images) ? (row.images as string[]) : [];
+      const newImages = existingImages.length > 0 ? [newUrl, ...existingImages.slice(1)] : [newUrl];
+      const newImagesJson = JSON.stringify(newImages).replace(/'/g, "''");
+      await db.execute(
+        sql.raw(
+          `update \`product_color_images\` set images = '${newImagesJson}', updatedAt = NOW() where id = ${row.id}`,
+        ),
+      );
+      repairedCount++;
+      console.log(`[db] product 57 design-crop repair: repaired ${row.colorName} photo`);
+    } catch (error) {
+      console.error(`[db] product 57 design-crop repair FAILED for color ${row.colorName}:`, error);
+    }
+  }
+
+  await db.execute(sql.raw("insert into `product57_design_crop_repair` (id) values (1)"));
+  console.log(`[db] product 57 design-crop repair: done, ${repairedCount} photo(s) repaired`);
+}

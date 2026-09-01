@@ -30,5 +30,8 @@ RUN npm install --omit=dev
 COPY --from=build /app/dist ./dist
 # SQL migrations are applied at boot (see api/boot.ts).
 COPY db/migrations ./db/migrations
+# Pre-cropped product 57 design-led photos, read at boot by
+# repairProduct57DesignCrop (see api/db-migrate.ts).
+COPY assets/p57-recrop ./assets/p57-recrop
 EXPOSE 3000
 CMD ["npm", "start"]
