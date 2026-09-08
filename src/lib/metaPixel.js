@@ -344,6 +344,70 @@ export function trackPurchasePixel({ eventId, value, currency = 'USD', items = [
   }, { eventID: eventId });
 }
 
+// Wishlist save (heart icon on the PDP). Fires only on ADD, never on remove —
+// Meta has no "RemoveFromWishlist" standard event, and removal isn't a
+// meaningful ad signal.
+export function trackAddToWishlist(product) {
+  if (!ready() || !product) return;
+  const id = String(product.id ?? '').trim();
+  if (!id) return;
+  const price = Number(product.price_usd ?? product.price ?? 0);
+  trackDeduped('AddToWishlist', {
+    content_ids: [id],
+    content_type: 'product',
+    content_name: product.name_en || product.name,
+    value: price,
+    currency: 'USD',
+    contents: [{ id, quantity: 1, item_price: price }],
+  });
+}
+
+// Fires when a shopper actively selects a payment method on the checkout
+// step (COD or Whish) — the closest equivalent this COD/Whish-only checkout
+// has to "entering billing info", since there's no card form.
+export function trackAddPaymentInfo({ items = [], value } = {}) {
+  if (!ready()) return;
+  const contents = items
+    .map((i) => {
+      const id = String(i.productId ?? '').trim();
+      return id ? { id, quantity: Number(i.quantity || 1), item_price: Number(i.unitPrice ?? 0) } : null;
+    })
+    .filter(Boolean);
+  trackDeduped('AddPaymentInfo', {
+    content_ids: contents.map((c) => c.id),
+    content_type: 'product',
+    contents,
+    value: Number(value ?? 0),
+    currency: 'USD',
+  });
+}
+
+// Email OTP sign-in completes (Login.jsx verifyCode). The API treats sign-in
+// and sign-up as the same flow and never tells the client which one just
+// happened, so this fires on every successful OTP verification — both first
+// account creation and later logins. Google/Kimi OAuth sign-in isn't covered
+// (that redirect round-trip is fully server-side).
+export function trackCompleteRegistration() {
+  trackDeduped('CompleteRegistration', { content_name: 'email_otp' });
+}
+
+// A shopper reaches out — the Contact page form, its WhatsApp CTA, or the
+// sitewide floating WhatsApp button all call this the same way.
+export function trackContact() {
+  trackDeduped('Contact');
+}
+
+// "3a Zaw2ak" custom design request submitted.
+export function trackCustomizeProduct() {
+  trackDeduped('CustomizeProduct');
+}
+
+// Newsletter signup (footer). Meta's "Subscribe" is defined as starting a
+// PAID subscription — this free email opt-in is "Lead" per Meta's own spec.
+export function trackLead() {
+  trackDeduped('Lead');
+}
+
 // Tell the backend to fire the server-side Purchase CAPI event for an order.
 // The server reads the order (value, line items, hashed contact) from the DB
 // — nothing money-related is trusted from the client. Best-effort.

@@ -6,6 +6,7 @@ import { BRAND_ASSETS, INK_FILTER } from '@/lib/brandAssets';
 import { DotsMark, LebanonSeal } from '@/components/Brand';
 import { useSiteSettings } from '@/lib/useCatalog.jsx';
 import { whatsappLink } from '@/lib/whatsapp';
+import { trackLead } from '@/lib/metaPixel';
 
 // Hard fallbacks match the brand's real sticker/storefront contact details
 // (kharbesh961.com, +961 76 465367, IG/FB @kharbeshh) so the footer never
@@ -34,11 +35,13 @@ export default function Footer() {
     setNewsletterState('sending');
     try {
       await base44.entities.Newsletter.subscribe(email, lang);
+      trackLead();
       setNewsletterState('done');
       setNewsletterEmail('');
     } catch {
       // Signup is fire-and-forget for the visitor — don't flash an error for
-      // a hiccup; the list stays intact either way.
+      // a hiccup; the list stays intact either way. We didn't confirm the
+      // subscribe actually landed, so no Lead event here.
       setNewsletterState('done');
       setNewsletterEmail('');
     }

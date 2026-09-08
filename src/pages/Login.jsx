@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { cachedMe, base44 } from '@/api/khClient';
 import { Scribble } from '@/components/Brand';
+import { trackCompleteRegistration } from '@/lib/metaPixel';
 
 const RESEND_COOLDOWN_S = 60;
 
@@ -91,6 +92,10 @@ export default function Login() {
     setOtpBusy(true);
     try {
       await base44.auth.verifyEmailOtp(email.trim(), code.trim());
+      // The API treats sign-in and sign-up as the same flow and never tells
+      // the client which one just happened, so this fires on every
+      // successful OTP verification (see src/lib/metaPixel.js).
+      trackCompleteRegistration();
       window.location.replace(returnTo);
     } catch (err) {
       setOtpError(err?.message || (lang === 'ar' ? 'الرمز مش صحيح.' : "That code isn't right."));

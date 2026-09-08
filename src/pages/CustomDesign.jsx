@@ -6,6 +6,7 @@ import { Scribble } from '@/components/Brand';
 import PhoneInput from '@/components/PhoneInput';
 import { toE164, getCountry, validatePhone } from '@/lib/phoneCountries';
 import { whatsappLink } from '@/lib/whatsapp';
+import { trackCustomizeProduct, trackContact } from '@/lib/metaPixel';
 
 export default function CustomDesign() {
   const { t, lang } = useI18n();
@@ -73,6 +74,7 @@ export default function CustomDesign() {
         reference_files: files,
         status: 'new_request',
       });
+      trackCustomizeProduct();
       setDone(true);
     } catch (err) {
       setError(err.message || 'Something went wrong.');
@@ -100,6 +102,7 @@ export default function CustomDesign() {
           href={whatsappLink(settings?.contact?.whatsappNumber, lang === 'ar' ? 'هاي! بدي أعرف لما ترجع طلبات التصميم (خربش ع ذوقك).' : "Hi! Let me know when custom requests (Kharbesh 3a Zaw2ak) are back.")}
           target="_blank"
           rel="noreferrer"
+          onClick={trackContact}
           className="kh-btn-scribble inline-flex items-center gap-2 mt-8"
         >
           {lang === 'ar' ? 'راسلنا واتساب' : 'Message us on WhatsApp'}

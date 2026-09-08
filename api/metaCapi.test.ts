@@ -112,6 +112,12 @@ describe("track events", () => {
     expect(isTrackEvent("ViewContent")).toBe(true);
     expect(isTrackEvent("AddToCart")).toBe(true);
     expect(isTrackEvent("InitiateCheckout")).toBe(true);
+    expect(isTrackEvent("AddToWishlist")).toBe(true);
+    expect(isTrackEvent("AddPaymentInfo")).toBe(true);
+    expect(isTrackEvent("CompleteRegistration")).toBe(true);
+    expect(isTrackEvent("Contact")).toBe(true);
+    expect(isTrackEvent("CustomizeProduct")).toBe(true);
+    expect(isTrackEvent("Lead")).toBe(true);
     expect(isTrackEvent("Purchase")).toBe(false);
     expect(isTrackEvent("")).toBe(false);
     expect(isTrackEvent(undefined)).toBe(false);

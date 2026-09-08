@@ -174,7 +174,18 @@ export function mergeClientHashedUserData(
 // this allowlist: it fires only from the trusted server order flow so a
 // spoofed client body can never mint a Purchase conversion. PageView carries
 // no client-supplied custom_data, so a spoofed PageView is harmless.
-export const TRACK_EVENTS = new Set(["PageView", "ViewContent", "AddToCart", "InitiateCheckout"]);
+export const TRACK_EVENTS = new Set([
+  "PageView",
+  "ViewContent",
+  "AddToCart",
+  "InitiateCheckout",
+  "AddToWishlist",
+  "AddPaymentInfo",
+  "CompleteRegistration",
+  "Contact",
+  "CustomizeProduct",
+  "Lead",
+]);
 
 export function isTrackEvent(name: unknown): name is string {
   return typeof name === "string" && TRACK_EVENTS.has(name);

@@ -4,6 +4,7 @@ import { useSiteSettings } from '@/lib/useCatalog.jsx';
 import { base44 } from '@/api/khClient';
 import { whatsappLink } from '@/lib/whatsapp';
 import { IconWhatsApp } from '@/components/Brand';
+import { trackContact } from '@/lib/metaPixel';
 
 export default function Contact() {
   const { t, lang } = useI18n();
@@ -22,6 +23,7 @@ export default function Contact() {
     setError('');
     try {
       await base44.entities.ContactMessages.create(form);
+      trackContact();
       setSent(true);
     } catch (err) {
       setError(err?.message || (lang === 'ar' ? 'في خطأ، جرب كمان مرة.' : 'Something went wrong. Try again.'));
@@ -44,6 +46,7 @@ export default function Contact() {
             href={whatsappLink(contact.whatsappNumber, lang === 'ar' ? 'هاي خربش!' : 'Hi Kharbesh!')}
             target="_blank"
             rel="noreferrer"
+            onClick={trackContact}
             className="kh-btn-scribble w-full !justify-center flex items-center gap-2"
           >
             <IconWhatsApp size={18} /> {t.contact.whatsappCta}

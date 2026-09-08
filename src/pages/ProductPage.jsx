@@ -11,7 +11,7 @@ import { IconHeart, IconShare, IconCotton, IconNoSweat, IconNoWrinkle, IconFit, 
 import { STANDARD_FRONT_BY_COLOR } from '@/lib/standardPhotos';
 import { useSiteSettings } from '@/lib/useCatalog.jsx';
 import { whatsappLink } from '@/lib/whatsapp';
-import { trackViewContent } from '@/lib/metaPixel';
+import { trackViewContent, trackAddToWishlist } from '@/lib/metaPixel';
 import { IconWhatsApp } from '@/components/Brand';
 
 export default function ProductPage() {
@@ -127,6 +127,7 @@ export default function ProductPage() {
     const next = toggleWishlist(product.id);
     const nowSaved = next.includes(product.id);
     setSaved(nowSaved);
+    if (nowSaved) trackAddToWishlist(product);
     toast({ title: nowSaved ? t.product.saved : t.product.removedFromWishlist });
   };
 
