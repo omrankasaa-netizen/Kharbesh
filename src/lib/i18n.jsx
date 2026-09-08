@@ -26,7 +26,7 @@ const dictionaries = {
       customEyebrow: '3a Zaw2ak',
       customTitle: 'Your line. Our pens. Zero spoilers.',
       customSub: 'Eb3atlna el jomle li 3aylitak ma 3am tbatel t2ela — ma3 el 2isse li waraha. N7awwelha 2it3et Kharbesh, w inte btsallem 3al design abel el tab3.',
-      customCta: 'Kharbesh it my way',
+      customCta: 'Kharbesh your way',
       communityEyebrow: 'Community',
       communityTitle: 'Your teta said it first.',
       communitySub: 'Every family has that one line. Send it over — momken it becomes the next drop.',
