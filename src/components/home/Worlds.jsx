@@ -12,7 +12,7 @@ const WORLDS = [
     name: { en: 'Salbeh', ar: 'سلبة' },
     ghost: 'سلبة',
     desc: {
-      en: 'Rodoud 2asyeh la transport ba2i, dawr taweel, w el survival el youmi.',
+      en: 'Sharp replies for the serwis driver, el dawra el tawileh, w el survival el youmiyye.',
       ar: 'ردود حادّة للأنظمة البطيئة، الطوابير، الازدحام، والبقاء اليومي.',
     },
     cta: { en: 'Enter Salbeh →', ar: 'ادخل سلبة ←' },
@@ -28,7 +28,7 @@ const WORLDS = [
     name: { en: 'Lebneni', ar: 'لبناني' },
     ghost: 'لبناني',
     desc: {
-      en: 'Jomal mahalliyeh, 7aki 3ayle, w eshi ma byehkih ghair na7na.',
+      en: 'Jomal baladiyye, 7aki 3ayle, w shi ma bi7ko gher n7na.',
       ar: 'جمل محلية، أحاديث عائلية، وأشياء بس نحنا منقولها.',
     },
     cta: { en: 'Enter Lebneni →', ar: 'ادخل لبناني ←' },
@@ -44,7 +44,7 @@ const WORLDS = [
     name: { en: 'Sa2afeh', ar: 'ثقافة' },
     ghost: 'ثقافة',
     desc: {
-      en: 'Sa2afeh, shi3er, masra7, mousi2a, w jomal 2eleh ma3na.',
+      en: 'Sa2afeh, shi3ir, masra7, mousi2a — w jomal btefhamhon mara w btou2af 3layhon tene.',
       ar: 'ثقافة، شعر، مسرح، موسيقى، وجمل ضلّت معنا.',
     },
     cta: { en: 'Enter Sa2afeh →', ar: 'ادخل ثقافة ←' },
@@ -60,7 +60,7 @@ const WORLDS = [
     name: { en: '3a Zaw2ak', ar: 'ع ذوقك' },
     ghost: 'ع ذوقك',
     desc: {
-      en: 'Jomletak. 2lamna. 2it3a ma 3ind wala wa7ad gherak.',
+      en: 'Jomlitak. 2lamna. 2it3a ma fi ma3 wala wa7ad gherak.',
       ar: 'جملتك. أقلامنا. قطعة ما حدا غيرك عنده ياها.',
     },
     cta: { en: 'Make it yours →', ar: 'على ذوقك ←' },
