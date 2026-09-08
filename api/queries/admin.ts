@@ -48,6 +48,23 @@ export type ProductWritableFields = {
   sort_order?: number;
 };
 
+/**
+ * Drizzle's own error message for a failed query is just the generic
+ * "Failed query: ... params: ..." wrapper — the actual MySQL driver reason
+ * (e.g. "Data too long for column 'x'", "Incorrect integer value ''") is
+ * attached separately as `.cause` and is otherwise never surfaced to the
+ * client or logged, making per-item bulk failures nearly undiagnosable.
+ * Fold the cause into one readable string so admin UIs can show it directly.
+ */
+function describeDbError(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  const cause = (err as { cause?: unknown }).cause;
+  const causeMessage = cause instanceof Error ? cause.message : cause ? String(cause) : null;
+  return causeMessage && !err.message.includes(causeMessage)
+    ? `${causeMessage} (${err.message})`
+    : err.message;
+}
+
 function mapProductPatch(data: ProductWritableFields): Partial<typeof products.$inferInsert> {
   const patch: Partial<typeof products.$inferInsert> = { updatedAt: new Date() };
   if (data.name_en !== undefined) patch.nameEn = data.name_en;
@@ -189,10 +206,11 @@ export async function bulkCreateProducts(
       }
       results.push({ success: true, id: String(id), name_en: item.product.name_en });
     } catch (err) {
+      console.error(`[bulkCreateProducts] failed for "${item.product.name_en}":`, err);
       results.push({
         success: false,
         name_en: item.product.name_en,
-        error: err instanceof Error ? err.message : String(err),
+        error: describeDbError(err),
       });
     }
   }
@@ -316,10 +334,11 @@ export async function bulkAssignDesignFiles(
         .where(eq(products.id, item.product_id));
       results.push({ success: true, product_id: String(item.product_id) });
     } catch (err) {
+      console.error(`[bulkAssignDesignFiles] failed for product ${item.product_id}:`, err);
       results.push({
         success: false,
         product_id: String(item.product_id),
-        error: err instanceof Error ? err.message : String(err),
+        error: describeDbError(err),
       });
     }
   }
