@@ -32,6 +32,7 @@ function toUiItem(i: FactoryOrderItem) {
     customer_phone: i.customerPhone,
     customer_address: i.customerAddress,
     print_file_url: i.printFileUrl,
+    print_file_url_2: i.printFileUrl2,
   };
 }
 
@@ -110,9 +111,12 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
       ),
     ];
     const productRows = productIds.length
-      ? await tx.select({ id: products.id, printFileUrl: products.printFileUrl }).from(products).where(inArray(products.id, productIds))
+      ? await tx
+          .select({ id: products.id, printFileUrl: products.printFileUrl, printFileUrl2: products.printFileUrl2 })
+          .from(products)
+          .where(inArray(products.id, productIds))
       : [];
-    const printFileByProductId = new Map(productRows.map((p) => [p.id, p.printFileUrl]));
+    const printFileByProductId = new Map(productRows.map((p) => [p.id, { url: p.printFileUrl, url2: p.printFileUrl2 }]));
 
     for (const order of printableOrders) {
       for (const item of order.items) {
@@ -131,7 +135,8 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
           customerName: order.fullName,
           customerPhone: order.phone,
           customerAddress: order.shippingAddress,
-          printFileUrl: productId != null ? printFileByProductId.get(productId) ?? null : null,
+          printFileUrl: productId != null ? printFileByProductId.get(productId)?.url ?? null : null,
+          printFileUrl2: productId != null ? printFileByProductId.get(productId)?.url2 ?? null : null,
         });
       }
 

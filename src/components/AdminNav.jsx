@@ -11,6 +11,7 @@ const LINKS = [
   { to: '/admin/products', label_en: 'Products', label_ar: 'المنتجات', minRole: 'staff' },
   { to: '/admin/bulk-import', label_en: 'Bulk Import', label_ar: 'استيراد بالجملة', minRole: 'staff' },
   { to: '/admin/local-import', label_en: 'Local Import', label_ar: 'استيراد من مجلد', minRole: 'staff' },
+  { to: '/admin/bulk-design-upload', label_en: 'Design Upload', label_ar: 'رفع التصاميم', minRole: 'staff' },
   { to: '/admin/inventory', label_en: 'Inventory', label_ar: 'المخزون', minRole: 'staff' },
   { to: '/admin/factory', label_en: 'Factory', label_ar: 'المصنع', minRole: 'staff' },
   { to: '/admin/messages', label_en: 'Messages', label_ar: 'الرسائل', minRole: 'staff' },

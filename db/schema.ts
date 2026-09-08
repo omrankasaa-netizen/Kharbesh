@@ -131,6 +131,11 @@ export const products = mysqlTable(
     // marketing photos in `images` — resolved onto each factory order item
     // at handoff time so the factory always gets the exact file to print.
     printFileUrl: varchar("printFileUrl", { length: 500 }),
+    // Some designs need a second print file (e.g. a colour-inverted version
+    // for printing on black garments). When set, both files are handed to
+    // the factory on every order for this product — the factory sorts out
+    // which one to use per garment colour, we don't try to guess here.
+    printFileUrl2: varchar("printFileUrl2", { length: 500 }),
     status: mysqlEnum("status", ["active", "draft", "archived"]).default("draft").notNull(),
     preorderType: mysqlEnum("preorderType", [
       "open_until",
@@ -412,6 +417,7 @@ export const factoryOrderItems = mysqlTable(
     customerPhone: varchar("customerPhone", { length: 40 }),
     customerAddress: varchar("customerAddress", { length: 255 }),
     printFileUrl: varchar("printFileUrl", { length: 500 }),
+    printFileUrl2: varchar("printFileUrl2", { length: 500 }),
   },
   (t) => ({
     orderIdx: index("factory_order_items_order_idx").on(t.factoryOrderId),
