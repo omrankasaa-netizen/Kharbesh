@@ -11,6 +11,7 @@ import {
   deleteProduct,
   hardDeleteProduct,
   bulkUpdateProductStatus,
+  bulkUpdateProductCollection,
   bulkHardDeleteProducts,
   listAuditLogs,
 } from "./queries/admin";
@@ -272,6 +273,11 @@ export const adminRouter = createRouter({
   bulkUpdateProductStatus: staffQuery
     .input(z.object({ ids: z.array(idParam).min(1).max(500), status: z.enum(["active", "draft", "archived"]) }))
     .mutation(({ ctx, input }) => bulkUpdateProductStatus(input.ids.map(Number), input.status, ctx.user.id)),
+
+  /** Products list selection toolbar: move many products into the same collection at once. */
+  bulkUpdateProductCollection: staffQuery
+    .input(z.object({ ids: z.array(idParam).min(1).max(500), collectionName: z.string().min(1).max(160).nullable() }))
+    .mutation(({ ctx, input }) => bulkUpdateProductCollection(input.ids.map(Number), input.collectionName, ctx.user.id)),
 
   /** Products list selection toolbar: permanent batch delete — super_admin only. */
   bulkHardDeleteProducts: superAdminQuery

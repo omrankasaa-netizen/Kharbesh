@@ -244,6 +244,29 @@ export async function bulkUpdateProductStatus(
 }
 
 /**
+ * Batch collection (category) assignment for the admin Products list's
+ * row-selection toolbar — move many products into the same collection in
+ * one update statement instead of the per-row inline dropdown one at a
+ * time. `collectionName: null` clears the collection on all selected rows.
+ */
+export async function bulkUpdateProductCollection(
+  ids: number[],
+  collectionName: string | null,
+  actorUserId: number,
+) {
+  const db = getDb();
+  await db.update(products).set({ collectionName, updatedAt: new Date() }).where(inArray(products.id, ids));
+  await db.insert(auditLogs).values({
+    actorUserId,
+    action: "product.bulk_collection_updated",
+    entity: "product",
+    entityId: null,
+    detail: { ids, collectionName },
+  });
+  return { success: true, count: ids.length };
+}
+
+/**
  * Batch permanent delete for the admin Products list — super_admin only
  * (gated in the router, not here). Meant for clearing test/re-import batches
  * (e.g. wiping the catalog before a corrected Local Import re-upload), not

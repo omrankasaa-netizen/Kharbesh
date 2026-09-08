@@ -11,6 +11,11 @@ import { toast } from '@/components/ui/use-toast';
 
 const STATUSES = PRODUCT_STATUSES;
 
+// Sentinel select value for the bulk-collection toolbar's "no collection"
+// option — kept distinct from '' so the Apply button stays disabled until
+// staff explicitly pick something (including explicitly clearing).
+const BULK_CLEAR_COLLECTION = '__clear__';
+
 const emptyForm = {
   name_en: '', name_ar: '', phrase_en: '', phrase_ar: '', payoff_en: '',
   description_en: '', description_ar: '', collection_name: '', mood: '',
@@ -379,6 +384,7 @@ export default function AdminProducts() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkCollection, setBulkCollection] = useState('');
   const priceTouched = useRef(false);
 
   const load = async () => {
@@ -548,7 +554,7 @@ export default function AdminProducts() {
     return next;
   });
 
-  const clearSelection = () => setSelectedIds(new Set());
+  const clearSelection = () => { setSelectedIds(new Set()); setBulkCollection(''); };
 
   const bulkSetStatus = async (status) => {
     const ids = Array.from(selectedIds);
@@ -560,6 +566,22 @@ export default function AdminProducts() {
       clearSelection();
     } catch (err) {
       window.alert(err?.message || (lang === 'ar' ? 'ما قدرنا نبدّل الحالة.' : 'Could not update status.'));
+    } finally { setBulkBusy(false); }
+  };
+
+  // Apply the same collection (or clear it) to every selected product in one
+  // call, from the toolbar's dropdown + Apply button.
+  const bulkSetCollection = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length || !bulkCollection) return;
+    const next = bulkCollection === BULK_CLEAR_COLLECTION ? null : bulkCollection;
+    setBulkBusy(true);
+    try {
+      await base44.entities.Product.bulkUpdateCollection(ids, next);
+      setProducts((ps) => ps.map((p) => (selectedIds.has(p.id) ? { ...p, collection_name: next } : p)));
+      clearSelection();
+    } catch (err) {
+      window.alert(err?.message || (lang === 'ar' ? 'ما قدرنا نحدّث المجموعة.' : 'Could not update collection.'));
     } finally { setBulkBusy(false); }
   };
 
@@ -832,6 +854,26 @@ export default function AdminProducts() {
               >
                 {lang === 'ar' ? 'مسودة' : 'Set draft'}
               </button>
+              <div className="flex items-center gap-2">
+                <select
+                  value={bulkCollection}
+                  onChange={(e) => setBulkCollection(e.target.value)}
+                  className="kh-input !h-9 !py-1 !text-xs max-w-[170px]"
+                  aria-label={lang === 'ar' ? 'طبّق مجموعة على المحدّد' : 'Apply collection to selected'}
+                >
+                  <option value="" disabled>{lang === 'ar' ? 'اختار مجموعة…' : 'Choose collection…'}</option>
+                  <option value={BULK_CLEAR_COLLECTION}>{lang === 'ar' ? '— بلا مجموعة —' : '— No collection —'}</option>
+                  {collectionNames.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <button
+                  type="button"
+                  disabled={bulkBusy || !bulkCollection}
+                  onClick={bulkSetCollection}
+                  className="kh-btn-secondary !text-xs !py-1.5 !px-3"
+                >
+                  {lang === 'ar' ? 'تطبيق' : 'Apply'}
+                </button>
+              </div>
               {isSuperAdmin && (
                 <button
                   type="button"

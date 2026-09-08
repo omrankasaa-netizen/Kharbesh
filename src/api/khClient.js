@@ -172,6 +172,9 @@ export const kh = {
       /** Products list selection toolbar: set many products' status at once. */
       bulkUpdateStatus: (ids, status) =>
         client.admin.bulkUpdateProductStatus.mutate({ ids: ids.map(String), status }),
+      /** Products list selection toolbar: move many products into the same collection at once. */
+      bulkUpdateCollection: (ids, collectionName) =>
+        client.admin.bulkUpdateProductCollection.mutate({ ids: ids.map(String), collectionName: collectionName || null }),
       /** Products list selection toolbar: permanent batch delete — server enforces super_admin. */
       bulkHardDelete: (ids) => client.admin.bulkHardDeleteProducts.mutate({ ids: ids.map(String) }),
     },
