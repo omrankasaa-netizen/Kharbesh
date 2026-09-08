@@ -19,8 +19,33 @@ const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'application/pd
 // Keep in sync with the server-side cap in api/admin-router.ts.
 const MAX_DESIGN_FILES = 6;
 
+// Folder names are typed by hand (or pasted from a spreadsheet/caption doc)
+// while product names are typed separately into the admin panel — the two
+// often drift apart in ways that are invisible to the eye: a curly quote
+// (’) vs a straight one ('), an en-dash (–) vs a plain hyphen, double
+// spaces, or Unicode characters that render identically but aren't the
+// same code points (NFKC normalization fixes that last one). None of that
+// should make an otherwise-correct match fail, so normalize aggressively
+// before comparing.
 function normalizeName(s) {
-  return (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  return (s || '')
+    .normalize('NFKC')
+    .trim()
+    .toLowerCase()
+    .replace(/[\u2018\u2019\u201B\u2032]/g, "'")
+    .replace(/[\u201C\u201D\u2033]/g, '"')
+    .replace(/[\u2013\u2014\u2212]/g, '-')
+    .replace(/\s+/g, ' ');
+}
+
+// Last-resort key once the exact normalized name still doesn't match:
+// strip every character that isn't a letter or digit (any script) so
+// punctuation style, dash style, and spacing differences between the
+// folder name and the product name can't block an otherwise-obvious
+// match. Looser, so it's only used as a fallback and flagged for the
+// admin to eyeball before they hit Apply.
+function looseKey(s) {
+  return normalizeName(s).replace(/[^\p{L}\p{N}]+/gu, '');
 }
 
 function file_key(file) {
@@ -73,6 +98,11 @@ function DesignFolderCard({ folder, products, onResolve, lang }) {
         {folder.matchedProduct ? (
           <span className="text-sm font-medium" style={{ color: 'var(--brand-accent)' }}>
             → {matchedName}
+            {folder.looseMatch && (
+              <span className="ml-1 text-[10px] font-normal" style={{ color: 'var(--brand-destructive)' }}>
+                {lang === 'ar' ? '(تطابق تقريبي — تأكد منّو)' : '(loose match — verify)'}
+              </span>
+            )}
           </span>
         ) : (
           <select
@@ -124,6 +154,7 @@ export default function AdminBulkDesignUpload() {
   const { lang } = useI18n();
   const [allProducts, setAllProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [productsError, setProductsError] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState(null);
   const [folders, setFolders] = useState([]);
@@ -135,11 +166,20 @@ export default function AdminBulkDesignUpload() {
       try {
         const rows = await base44.entities.Product.list();
         setAllProducts((rows || []).filter((p) => p.status !== 'archived'));
+      } catch (err) {
+        // Fail loudly instead of leaving allProducts empty and silently
+        // matching (and manually assigning) against nothing — that used to
+        // look identical to "0 products matched" with no way to tell why.
+        setProductsError(
+          lang === 'ar'
+            ? '⚠️ تعذّر تحميل لائحة المنتجات — التطابق التلقائي وقائمة الاختيار اليدوي رح يكونوا خاليين. حدّث الصفحة أو جرّب لاحقاً.'
+            : "⚠️ Couldn't load the product list \u2014 automatic matching and the manual picker will be empty until this loads. Refresh the page or try again.",
+        );
       } finally {
         setLoadingProducts(false);
       }
     })();
-  }, []);
+  }, [lang]);
 
   const onPickFolder = async (e) => {
     const fileList = Array.from(e.target.files || []);
@@ -170,10 +210,34 @@ export default function AdminBulkDesignUpload() {
         return;
       }
       const byNormalizedName = new Map(allProducts.map((p) => [normalizeName(p.name_en), p]));
+      // Fallback index for the loose match: strip everything except
+      // letters/digits so punctuation/dash-style/spacing differences don't
+      // block a match that's otherwise obviously correct. Skipped when two
+      // products collapse to the same loose key — that's ambiguous, so we
+      // require the exact match in that case instead of guessing.
+      const looseCounts = new Map();
+      for (const p of allProducts) {
+        const lk = looseKey(p.name_en);
+        if (lk) looseCounts.set(lk, (looseCounts.get(lk) || 0) + 1);
+      }
+      const byLooseName = new Map();
+      for (const p of allProducts) {
+        const lk = looseKey(p.name_en);
+        if (lk && looseCounts.get(lk) === 1) byLooseName.set(lk, p);
+      }
+
       const built = [];
       let i = 0;
       for (const [folderName, files] of groups) {
-        const matchedProduct = byNormalizedName.get(normalizeName(folderName)) || null;
+        let matchedProduct = byNormalizedName.get(normalizeName(folderName)) || null;
+        let looseMatch = false;
+        if (!matchedProduct) {
+          const lk = looseKey(folderName);
+          if (lk && byLooseName.has(lk)) {
+            matchedProduct = byLooseName.get(lk);
+            looseMatch = true;
+          }
+        }
         // No naming convention tells us which file is front/back/inverted,
         // so sort alphabetically for a deterministic order — the factory
         // gets all files in that order and figures out front/back/colour
@@ -184,6 +248,7 @@ export default function AdminBulkDesignUpload() {
           folderName,
           files: sortedFiles.slice(0, MAX_DESIGN_FILES),
           matchedProduct,
+          looseMatch,
           manualProductId: null,
           existingPrintFileCount: matchedProduct?.print_files?.length || 0,
         });
@@ -290,6 +355,7 @@ export default function AdminBulkDesignUpload() {
           </span>
         )}
       </div>
+      {productsError && <p className="text-sm mt-2" style={{ color: 'var(--brand-destructive)' }}>{productsError}</p>}
       {scanError && <p className="text-sm mt-2" style={{ color: 'var(--brand-destructive)' }}>{scanError}</p>}
       {unresolvedCount > 0 && (
         <p className="text-sm mt-2" style={{ color: 'var(--brand-destructive)' }}>
