@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Route, Routes } from 'react-router';
 import { AuthProvider } from '@/lib/AuthContext';
@@ -7,55 +7,64 @@ import { I18nProvider } from '@/lib/i18n';
 import { CartProvider } from '@/lib/cart';
 import Layout from '@/components/Layout';
 import AdminGuard from '@/components/AdminGuard';
+import RouteErrorBoundary from '@/components/RouteErrorBoundary';
+import { lazyRetry } from '@/lib/lazyRetry';
 
 // Route-level code splitting: each page ships as its own chunk, so a
 // storefront visitor only ever downloads the JS for the page they're on
 // (never the admin back office), and a product-page ad click doesn't pull
 // in Home, Checkout, or any other unrelated route. Critical on weak 4G.
-const PageNotFound = lazy(() => import('./lib/PageNotFound'));
-const Home = lazy(() => import('@/pages/Home'));
-const ShopAll = lazy(() => import('@/pages/ShopAll'));
-const NewDrop = lazy(() => import('@/pages/NewDrop'));
-const Collections = lazy(() => import('@/pages/Collections'));
-const CollectionPage = lazy(() => import('@/pages/CollectionPage'));
-const ProductPage = lazy(() => import('@/pages/ProductPage'));
-const Cart = lazy(() => import('@/pages/Cart'));
-const Checkout = lazy(() => import('@/pages/Checkout'));
-const OrderConfirmation = lazy(() => import('@/pages/OrderConfirmation'));
-const CustomDesign = lazy(() => import('@/pages/CustomDesign'));
-const OurStory = lazy(() => import('@/pages/OurStory'));
-const FAQ = lazy(() => import('@/pages/FAQ'));
-const Contact = lazy(() => import('@/pages/Contact'));
-const TrackOrder = lazy(() => import('@/pages/TrackOrder'));
-const Login = lazy(() => import('@/pages/Login'));
-const AdminLogin = lazy(() => import('@/pages/AdminLogin'));
-const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
-const AdminOrders = lazy(() => import('@/pages/admin/AdminOrders'));
-const AdminCustomRequests = lazy(() => import('@/pages/admin/AdminCustomRequests'));
-const AdminInventory = lazy(() => import('@/pages/admin/AdminInventory'));
-const AdminProducts = lazy(() => import('@/pages/admin/AdminProducts'));
-const AdminBulkImport = lazy(() => import('@/pages/admin/AdminBulkImport'));
-const AdminDriveImport = lazy(() => import('@/pages/admin/AdminDriveImport'));
-const AdminLocalImport = lazy(() => import('@/pages/admin/AdminLocalImport'));
-const AdminBulkDesignUpload = lazy(() => import('@/pages/admin/AdminBulkDesignUpload'));
-const AdminFactory = lazy(() => import('@/pages/admin/AdminFactory'));
-const AdminMessages = lazy(() => import('@/pages/admin/AdminMessages'));
-const AdminFinancials = lazy(() => import('@/pages/admin/AdminFinancials'));
-const AdminPromotions = lazy(() => import('@/pages/admin/AdminPromotions'));
-const AdminLoyalty = lazy(() => import('@/pages/admin/AdminLoyalty'));
-const AdminStaff = lazy(() => import('@/pages/admin/AdminStaff'));
-const CustomerCRM = lazy(() => import('@/pages/admin/CustomerCRM'));
-const StoreAnalytics = lazy(() => import('@/pages/admin/StoreAnalytics'));
-const SiteSettings = lazy(() => import('@/pages/admin/SiteSettings'));
-const Profile = lazy(() => import('@/pages/Profile'));
-const Lookbook = lazy(() => import('@/pages/Lookbook'));
-const ProductionTimeline = lazy(() => import('@/pages/ProductionTimeline'));
-const Journal = lazy(() => import('@/pages/Journal'));
-const SizingGuide = lazy(() => import('@/pages/SizingGuide'));
-const Archive = lazy(() => import('@/pages/Archive'));
-const ReturnsPolicy = lazy(() => import('@/pages/ReturnsPolicy'));
-const ShippingInfo = lazy(() => import('@/pages/ShippingInfo'));
-const DesignPhilosophy = lazy(() => import('@/pages/DesignPhilosophy'));
+//
+// Every route uses lazyRetry() instead of React.lazy() directly: on weak
+// 4G (or right after a deploy, when a stale tab's chunk hash no longer
+// exists on the server), a chunk fetch can fail outright. lazyRetry()
+// retries transient failures and falls back to one automatic reload
+// instead of leaving the visitor on a stuck spinner until they refresh
+// manually — see src/lib/lazyRetry.js.
+const PageNotFound = lazyRetry(() => import('./lib/PageNotFound'));
+const Home = lazyRetry(() => import('@/pages/Home'));
+const ShopAll = lazyRetry(() => import('@/pages/ShopAll'));
+const NewDrop = lazyRetry(() => import('@/pages/NewDrop'));
+const Collections = lazyRetry(() => import('@/pages/Collections'));
+const CollectionPage = lazyRetry(() => import('@/pages/CollectionPage'));
+const ProductPage = lazyRetry(() => import('@/pages/ProductPage'));
+const Cart = lazyRetry(() => import('@/pages/Cart'));
+const Checkout = lazyRetry(() => import('@/pages/Checkout'));
+const OrderConfirmation = lazyRetry(() => import('@/pages/OrderConfirmation'));
+const CustomDesign = lazyRetry(() => import('@/pages/CustomDesign'));
+const OurStory = lazyRetry(() => import('@/pages/OurStory'));
+const FAQ = lazyRetry(() => import('@/pages/FAQ'));
+const Contact = lazyRetry(() => import('@/pages/Contact'));
+const TrackOrder = lazyRetry(() => import('@/pages/TrackOrder'));
+const Login = lazyRetry(() => import('@/pages/Login'));
+const AdminLogin = lazyRetry(() => import('@/pages/AdminLogin'));
+const AdminDashboard = lazyRetry(() => import('@/pages/admin/AdminDashboard'));
+const AdminOrders = lazyRetry(() => import('@/pages/admin/AdminOrders'));
+const AdminCustomRequests = lazyRetry(() => import('@/pages/admin/AdminCustomRequests'));
+const AdminInventory = lazyRetry(() => import('@/pages/admin/AdminInventory'));
+const AdminProducts = lazyRetry(() => import('@/pages/admin/AdminProducts'));
+const AdminBulkImport = lazyRetry(() => import('@/pages/admin/AdminBulkImport'));
+const AdminDriveImport = lazyRetry(() => import('@/pages/admin/AdminDriveImport'));
+const AdminLocalImport = lazyRetry(() => import('@/pages/admin/AdminLocalImport'));
+const AdminBulkDesignUpload = lazyRetry(() => import('@/pages/admin/AdminBulkDesignUpload'));
+const AdminFactory = lazyRetry(() => import('@/pages/admin/AdminFactory'));
+const AdminMessages = lazyRetry(() => import('@/pages/admin/AdminMessages'));
+const AdminFinancials = lazyRetry(() => import('@/pages/admin/AdminFinancials'));
+const AdminPromotions = lazyRetry(() => import('@/pages/admin/AdminPromotions'));
+const AdminLoyalty = lazyRetry(() => import('@/pages/admin/AdminLoyalty'));
+const AdminStaff = lazyRetry(() => import('@/pages/admin/AdminStaff'));
+const CustomerCRM = lazyRetry(() => import('@/pages/admin/CustomerCRM'));
+const StoreAnalytics = lazyRetry(() => import('@/pages/admin/StoreAnalytics'));
+const SiteSettings = lazyRetry(() => import('@/pages/admin/SiteSettings'));
+const Profile = lazyRetry(() => import('@/pages/Profile'));
+const Lookbook = lazyRetry(() => import('@/pages/Lookbook'));
+const ProductionTimeline = lazyRetry(() => import('@/pages/ProductionTimeline'));
+const Journal = lazyRetry(() => import('@/pages/Journal'));
+const SizingGuide = lazyRetry(() => import('@/pages/SizingGuide'));
+const Archive = lazyRetry(() => import('@/pages/Archive'));
+const ReturnsPolicy = lazyRetry(() => import('@/pages/ReturnsPolicy'));
+const ShippingInfo = lazyRetry(() => import('@/pages/ShippingInfo'));
+const DesignPhilosophy = lazyRetry(() => import('@/pages/DesignPhilosophy'));
 
 const RouteFallback = () => (
   <div className="fixed inset-0 flex items-center justify-center" style={{ background: 'var(--background)' }}>
@@ -128,15 +137,17 @@ const AuthenticatedApp = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <I18nProvider>
-        <CartProvider>
-          <ScrollToTop />
-          <AuthenticatedApp />
-        </CartProvider>
-      </I18nProvider>
-      <Toaster />
-    </AuthProvider>
+    <RouteErrorBoundary>
+      <AuthProvider>
+        <I18nProvider>
+          <CartProvider>
+            <ScrollToTop />
+            <AuthenticatedApp />
+          </CartProvider>
+        </I18nProvider>
+        <Toaster />
+      </AuthProvider>
+    </RouteErrorBoundary>
   );
 }
 
