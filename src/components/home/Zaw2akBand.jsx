@@ -35,7 +35,7 @@ export default function Zaw2akBand() {
         title: 'Your line. Our pens. Zero spoilers.',
         sub: 'Send us the phrase your family can’t stop saying — with the story behind it. We turn it into a Kharbesh piece made for you.',
         approve: 'You approve the design before we print.',
-        cta: 'Kharbesh it my way →',
+        cta: 'Kharbesh 3a Zaw2ak →',
         proofLabel: 'From your messages — pinned in the studio',
       };
 
@@ -45,7 +45,7 @@ export default function Zaw2akBand() {
         <div className="grid gap-10 md:grid-cols-2 items-center">
           <div>
             <span className="kh-eyebrow">{copy.eyebrow}</span>
-            <h2 className="mt-4 text-3xl sm:text-4xl" style={{ fontFamily: "'Rakkas', 'IBM Plex Sans Arabic', sans-serif", color: 'var(--paper)', lineHeight: 1.3 }}>
+            <h2 className="mt-4 text-3xl sm:text-4xl" style={{ fontFamily: "'Rakkas', 'IBM Plex Sans Arabic', sans-serif", color: 'var(--ink)', lineHeight: 1.3 }}>
               {copy.title}
             </h2>
             <p className="mt-4 max-w-md text-sm sm:text-base" style={{ color: 'rgba(251,246,235,.72)' }}>{copy.sub}</p>

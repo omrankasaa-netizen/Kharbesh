@@ -10,6 +10,7 @@ import { trackPurchase } from '@/lib/analytics';
 import {
   trackInitiateCheckout,
   trackPurchasePixel,
+  trackAddPaymentInfo,
   notifyPurchase,
   updateAdvancedMatching,
   genEventId,
@@ -109,6 +110,20 @@ export default function Checkout() {
     trackInitiateCheckout({ items, value: subtotal });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length]);
+
+  // Meta AddPaymentInfo — fires the first time the shopper actively selects a
+  // payment method (this COD/Whish checkout has no card form, so choosing a
+  // method is the closest equivalent). Deduped so re-clicking the same radio
+  // doesn't refire, but switching methods (COD -> Whish) legitimately counts
+  // as the shopper providing new payment info.
+  const firedPaymentMethod = React.useRef(null);
+  const selectPaymentMethod = (method) => {
+    setPaymentMethod(method);
+    if (firedPaymentMethod.current !== method) {
+      firedPaymentMethod.current = method;
+      trackAddPaymentInfo({ items, value: total });
+    }
+  };
 
   // Debounced loyalty preview — refetches whenever the email or the
   // post-automatic-discount subtotal changes. Read-only: no credits are
@@ -286,7 +301,7 @@ export default function Checkout() {
                   <PaymentOption
                     id="pm-cod"
                     checked={paymentMethod === 'cash_on_delivery'}
-                    onSelect={() => setPaymentMethod('cash_on_delivery')}
+                    onSelect={() => selectPaymentMethod('cash_on_delivery')}
                     title={t.checkout.paymentMethodCod}
                     desc={t.checkout.paymentMethodCodDesc}
                   />
@@ -295,7 +310,7 @@ export default function Checkout() {
                   <PaymentOption
                     id="pm-whish"
                     checked={paymentMethod === 'whish'}
-                    onSelect={() => setPaymentMethod('whish')}
+                    onSelect={() => selectPaymentMethod('whish')}
                     title={t.checkout.paymentMethodWhish}
                     desc={t.checkout.paymentMethodWhishDesc}
                   >

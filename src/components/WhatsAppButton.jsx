@@ -4,6 +4,7 @@ import { useSiteSettings } from '@/lib/useCatalog.jsx';
 import { useI18n } from '@/lib/i18n';
 import { whatsappLink } from '@/lib/whatsapp';
 import { IconWhatsApp } from '@/components/Brand';
+import { trackContact } from '@/lib/metaPixel';
 
 const DEFAULT_WHATSAPP_NUMBER = '96176465367';
 
@@ -24,6 +25,7 @@ export default function WhatsAppButton() {
       href={whatsappLink(number, greeting)}
       target="_blank"
       rel="noreferrer"
+      onClick={trackContact}
       aria-label={lang === 'ar' ? 'تواصل معنا عبر واتساب' : 'Chat with us on WhatsApp'}
       title={lang === 'ar' ? 'تواصل معنا عبر واتساب' : 'Chat with us on WhatsApp'}
       className="fixed z-40 flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105"

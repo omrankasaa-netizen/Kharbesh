@@ -29,7 +29,7 @@ const dictionaries = {
       customCta: 'Kharbesh it my way',
       communityEyebrow: 'Community',
       communityTitle: 'Your teta said it first.',
-      communitySub: 'Kel bayt elo jomlto. Eb3athalna yaha — momken tsir drop el jeye.',
+      communitySub: 'Every family has that one line. Send it over — momken it becomes the next drop.',
       communityTagTitle: 'Wear it. Tag it. Get featured.',
       communityTagSub: 'Tag us in your Kharbesh fit for a chance to show up here — and in the next drop’s credits.',
       communityFollow: 'Follow along',
@@ -216,7 +216,7 @@ const dictionaries = {
       or: 'or',
     },
     footer: {
-      tagline: 'Labsak byehki 3annak — Kharbesh it your way.', rights: 'Kel el ha22 mahfouz.', madeIn: 'Mfakkar fiha, m3ammle, w matbou3a b Lebnen.',
+      tagline: 'Lebsak bye7ki 3annak - Kharbesh your way', rights: 'Kel el ha22 mahfouz.', madeIn: 'Thought, made and printed in Lebanon.',
       shop: 'Shop', help: 'Help', social: 'Social', sizeGuide: 'Size guide',
       newsletterTitle: 'Join the Kharbesh list',
       newsletterSub: 'Drops, customs, and studio kharabish — before anyone else.',

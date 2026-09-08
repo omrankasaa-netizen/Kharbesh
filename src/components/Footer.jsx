@@ -3,9 +3,10 @@ import { Link } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { base44 } from '@/api/khClient';
 import { BRAND_ASSETS, INK_FILTER } from '@/lib/brandAssets';
-import { DotsMark } from '@/components/Brand';
+import { DotsMark, LebanonSeal } from '@/components/Brand';
 import { useSiteSettings } from '@/lib/useCatalog.jsx';
 import { whatsappLink } from '@/lib/whatsapp';
+import { trackLead } from '@/lib/metaPixel';
 
 // Hard fallbacks match the brand's real sticker/storefront contact details
 // (kharbesh961.com, +961 76 465367, IG/FB @kharbeshh) so the footer never
@@ -34,11 +35,13 @@ export default function Footer() {
     setNewsletterState('sending');
     try {
       await base44.entities.Newsletter.subscribe(email, lang);
+      trackLead();
       setNewsletterState('done');
       setNewsletterEmail('');
     } catch {
       // Signup is fire-and-forget for the visitor — don't flash an error for
-      // a hiccup; the list stays intact either way.
+      // a hiccup; the list stays intact either way. We didn't confirm the
+      // subscribe actually landed, so no Lead event here.
       setNewsletterState('done');
       setNewsletterEmail('');
     }
@@ -51,10 +54,11 @@ export default function Footer() {
           <div className="md:col-span-2">
             <img src={BRAND_ASSETS.horizontalWhite} alt="Kharbesh" style={{ height: 30, width: 'auto', display: 'block' }} />
             <p className="mt-5 max-w-sm text-sm" style={{ color: muted }}>
-              {lang === 'ar' ? 'لبسك بيحكي عنك — Kharbesh it your way.' : 'Labsak byehki 3annak — Kharbesh it your way.'}
+              {lang === 'ar' ? 'لبسك بيحكي عنك — Kharbesh it your way.' : 'Lebsak bye7ki 3annak - Kharbesh your way'}
             </p>
-            <p className="mt-2 text-xs" style={{ color: 'rgba(251,246,235,.45)' }}>
-              {lang === 'ar' ? 'فكر، مصنوع ومطبوع في لبنان.' : 'Mfakkar fiha, m3ammle, w matbou3a b Lebnen.'}
+            <p className="mt-2 text-xs flex items-center gap-2" style={{ color: 'rgba(251,246,235,.45)' }}>
+              {lang === 'ar' ? 'فكر، مصنوع ومطبوع في لبنان.' : 'Thought, made and printed in Lebanon.'}
+              <LebanonSeal size={30} />
             </p>
             <DotsMark lime className="mt-6" />
             <div className="mt-8 max-w-sm">
@@ -157,7 +161,7 @@ export default function Footer() {
             </a>
           </span>
           <span className="inline-flex items-center gap-2">
-            {lang === 'ar' ? 'لبسك بيحكي عنك — Kharbesh it your way.' : 'Labsak byehki 3annak — Kharbesh it your way.'}
+            {lang === 'ar' ? 'لبسك بيحكي عنك — Kharbesh it your way.' : 'Lebsak bye7ki 3annak - Kharbesh your way'}
             <Link
               to="/admin/login"
               aria-label="Admin login"
