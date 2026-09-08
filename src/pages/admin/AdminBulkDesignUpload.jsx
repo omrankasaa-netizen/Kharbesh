@@ -18,6 +18,15 @@ import { useI18n } from '@/lib/i18n';
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
 // Keep in sync with the server-side cap in api/admin-router.ts.
 const MAX_DESIGN_FILES = 6;
+// applyAll() used to upload one folder fully before starting the next (and,
+// within a folder, one file at a time) — for a 60+ folder batch that meant
+// 100+ sequential HTTP round trips with zero overlap. Uploads go through our
+// own single Node process (api/admin-router.ts's uploadImage -> R2, pure I/O,
+// no per-file CPU work), so running several folders at once is safe and cuts
+// total wall-clock time roughly by this factor. Files within one folder still
+// upload in order (see runFolder below) so front/back/inverted ordering into
+// print_files is untouched.
+const UPLOAD_CONCURRENCY = 5;
 
 // Folder names are typed by hand (or pasted from a spreadsheet/caption doc)
 // while product names are typed separately into the admin panel — the two
@@ -282,7 +291,11 @@ export default function AdminBulkDesignUpload() {
 
     const items = [];
     const itemFolderKeys = [];
-    for (const folder of resolvedFolders) {
+
+    // One folder's files still upload strictly in order (front/back/inverted
+    // ordering must be preserved in print_files), but multiple folders run
+    // this at once via the worker pool below.
+    const runFolder = async (folder) => {
       try {
         const productId = String(folder.matchedProduct ? folder.matchedProduct.id : folder.manualProductId);
         const uploaded = [];
@@ -296,7 +309,23 @@ export default function AdminBulkDesignUpload() {
       } catch (err) {
         setFolders((fs) => fs.map((f) => (f.key === folder.key ? { ...f, _uploading: false, _result: 'error', _error: err?.message || String(err) } : f)));
       }
-    }
+    };
+
+    // Bounded worker pool: at most UPLOAD_CONCURRENCY folders uploading at
+    // once instead of one at a time. `items`/`itemFolderKeys` are pushed to
+    // from multiple in-flight workers, but JS's single-threaded event loop
+    // makes each push atomic, and downstream code matches by product_id (not
+    // array position), so interleaved completion order is harmless.
+    let nextIndex = 0;
+    const worker = async () => {
+      while (nextIndex < resolvedFolders.length) {
+        const folder = resolvedFolders[nextIndex++];
+        await runFolder(folder);
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(UPLOAD_CONCURRENCY, resolvedFolders.length) }, worker),
+    );
 
     let succeeded = 0;
     let failed = folders.length - resolvedFolders.length + (resolvedFolders.length - itemFolderKeys.length);
