@@ -5,23 +5,21 @@ import { useProducts } from '@/lib/useCatalog.jsx';
 
 /* Editorial gallery: why each Kharbesh reads twice.
    Curated copy per product id — pairs a detail crop of the LIVE product
-   photo with the two readings. Only renders when the matching product is
+   photo with its phrase. Only renders when the matching product is
    still active in the catalog; falls back to the next available product
    if none of the curated ids are live, so the section never shows stale
-   artwork once a design is retired. */
+   artwork once a design is retired.
+   We deliberately don't spell out the "second reading" anymore — the joke
+   speaks for itself, or it doesn't land. Over-explaining it killed it. */
 const ENTRIES = [
   {
     matchNameIncludes: 'fine-ancially unstable',
     phrase: { en: "I'M FINE", ar: 'تمام' },
-    first: { en: 'Tammin hadeh — \'I\'m fine\', enno khalasna.', ar: 'طمأنة هادية، مقولة بصوت واضح.' },
-    second: { en: 'La 7ad ma el khat el a7mar byo2ta3 el jomle nosseyn: financially unstable.', ar: 'لحد ما الخط الأحمر بيقطع الجملة نصين: مالياً منهار.' },
     crop: { x: '50%', y: '50%', scale: 1 },
   },
   {
     matchNameIncludes: 'massari bi amen',
     phrase: { en: 'MONEY IS SAFE', ar: 'المصاري بأمان' },
-    first: { en: '3enwen moutma2in — el massari \'bi amen\', chou ra7 ysir.', ar: 'عنوان مطمّن، طالع من باب الخزنة.' },
-    second: { en: 'Bass mesh ma3nata. W ma kenet abadan.', ar: 'بس مش معنا. وما كانت أبداً.' },
     crop: { x: '50%', y: '50%', scale: 1 },
   },
 ];
@@ -47,8 +45,8 @@ export default function ReadItTwice() {
           </h2>
           <p className="mt-3" style={{ color: 'var(--muted)' }}>
             {lang === 'ar'
-              ? 'كل خربشة بتبلّش من جملة. النظرة التانية — هونيك ساكنة النكتة.'
-              : 'Kel kharbesha btebda men jomle. El nazra el tenye — honi el nekte sakne.'}
+              ? 'كل خربشة بتبلّش من جملة واحدة. والنكتة الحقيقية ساكنة بالنظرة الثانية — ولأ، ما رح نشرحها لك.'
+              : "Every design starts with a line. The second read is where the joke lives — and no, we're not explaining it."}
           </p>
         </div>
 
@@ -73,21 +71,6 @@ export default function ReadItTwice() {
                 <h3 className="text-xl sm:text-2xl" style={{ fontFamily: "'Rakkas', 'IBM Plex Sans Arabic', sans-serif", color: 'var(--ink)' }}>
                   {lang === 'ar' ? e.phrase.ar : e.phrase.en}
                 </h3>
-
-                <dl className="mt-5 space-y-4 flex-1">
-                  <div>
-                    <dt className="kh-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted-2)' }}>
-                      {lang === 'ar' ? 'النظرة الأولى' : 'El nazra el awwaleh'}
-                    </dt>
-                    <dd className="mt-1 text-sm" style={{ color: 'var(--ink)' }}>{lang === 'ar' ? e.first.ar : e.first.en}</dd>
-                  </div>
-                  <div>
-                    <dt className="kh-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--ink)' }}>
-                      {lang === 'ar' ? 'النظرة التانية' : 'El nazra el tanyeh'}
-                    </dt>
-                    <dd className="mt-1 text-sm font-semibold" style={{ color: 'var(--ink)' }}>{lang === 'ar' ? e.second.ar : e.second.en}</dd>
-                  </div>
-                </dl>
 
                 <Link to={`/product/${e.product.id}`} className="kh-btn-text mt-6 self-start !text-[13px]">
                   {lang === 'ar' ? 'شوف القطعة ←' : 'View piece →'}

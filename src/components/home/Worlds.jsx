@@ -1,79 +1,93 @@
 import React from 'react';
 import { Link } from 'react-router';
 import { useI18n } from '@/lib/i18n';
+import { useCollections } from '@/lib/useCatalog.jsx';
 
-/* The four Kharbesh worlds — a bento of typography-led entry cards.
-   Each one carries its own accent color, its own shape, its giant Arabic
-   ghost word behind the Latin name, plus ONE signature hover action. */
-const WORLDS = [
-  {
-    key: 'salbeh',
-    to: '/shop',
-    name: { en: 'Salbeh', ar: 'سلبة' },
-    ghost: 'سلبة',
+/* The Kharbesh worlds bento — driven by the admin's own Collections list,
+   so a new collection shows up here the moment it's created, with no code
+   change. Visual treatment (span/shape/hover-action/fallback accent) still
+   cycles through the site's four signature patterns, i % 4, so the bento
+   keeps its handmade rhythm no matter how many collections exist.
+   A pinned "3a Zaw2ak" card always closes the row — it's not a catalog
+   collection, it's the custom-order door, so it keeps its own fixed
+   amber/notch treatment regardless of the cycle. */
+const SPANS = ['sm:col-span-7', 'sm:col-span-5', 'sm:col-span-5', 'sm:col-span-7'];
+const SHAPES = ['kh-world-notch kh-world-lg', 'kh-world-tab', 'kh-world-tab', 'kh-world-notch kh-world-lg'];
+const ACTIONS = ['act-stamp', 'act-dot', 'act-scribble', 'act-route'];
+const FALLBACK_ACCENTS = ['var(--brick)', 'var(--lime)', 'var(--plum)', 'var(--amber)'];
+const FALLBACK_INKS = ['var(--ink)', 'var(--on-lime)', 'var(--on-lime)', 'var(--on-lime)'];
+
+const FALLBACK_DESC = {
+  en: "New kharabish, this world's mood.",
+  ar: 'خربشات جديدة، بمزاج هالعالم.',
+};
+
+/* Admin collection names are entered as "Kharbesh <Name>" (or "خربش <Name>"
+   in Arabic) for internal clarity — strip that prefix for the card's
+   display name so the bento shows just "Politics", "أقوال", etc. */
+function shortName(name) {
+  if (!name) return '';
+  return name.replace(/^(Kharbesh|خربش)\s+/i, '').trim();
+}
+
+/* Best-effort text contrast for an admin-picked hex accent, so the corner
+   tag stays legible no matter which color they chose. */
+function contrastInk(hex) {
+  if (typeof hex !== 'string' || !hex.startsWith('#')) return null;
+  const raw = hex.slice(1);
+  const full = raw.length === 3 ? raw.split('').map((c) => c + c).join('') : raw;
+  if (full.length !== 6 || /[^0-9a-fA-F]/.test(full)) return null;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.55 ? 'var(--on-lime)' : 'var(--ink)';
+}
+
+export default function Worlds() {
+  const { t, lang } = useI18n();
+  const { collections } = useCollections();
+
+  const worldCards = collections.map((c, i) => ({
+    key: c.id,
+    to: `/collections/${c.slug}`,
+    name: { en: shortName(c.name_en), ar: shortName(c.name_ar) || shortName(c.name_en) },
+    ghost: shortName(c.name_ar) || shortName(c.name_en),
     desc: {
-      en: 'Sharp replies for the serwis driver, el dawra el tawileh, w el survival el youmiyye.',
-      ar: 'ردود حادّة للأنظمة البطيئة، الطوابير، الازدحام، والبقاء اليومي.',
+      en: c.description_en || FALLBACK_DESC.en,
+      ar: c.description_ar || FALLBACK_DESC.ar,
     },
-    cta: { en: 'Enter Salbeh →', ar: 'ادخل سلبة ←' },
-    action: 'act-stamp',
-    accent: 'var(--brick)',
-    ink: 'var(--ink)',
-    shape: 'kh-world-notch kh-world-lg',
-    span: 'sm:col-span-7',
-  },
-  {
-    key: 'lebneni',
-    to: '/drop',
-    name: { en: 'Lebneni', ar: 'لبناني' },
-    ghost: 'لبناني',
-    desc: {
-      en: 'Jomal baladiyye, 7aki 3ayle, w shi ma bi7ko gher n7na.',
-      ar: 'جمل محلية، أحاديث عائلية، وأشياء بس نحنا منقولها.',
+    cta: {
+      en: `Enter ${shortName(c.name_en)} →`,
+      ar: `ادخل ${shortName(c.name_ar) || shortName(c.name_en)} ←`,
     },
-    cta: { en: 'Enter Lebneni →', ar: 'ادخل لبناني ←' },
-    action: 'act-dot',
-    accent: 'var(--lime)',
-    ink: 'var(--on-lime)',
-    shape: 'kh-world-tab',
-    span: 'sm:col-span-5',
-  },
-  {
-    key: 'sa2afeh',
-    to: '/collections',
-    name: { en: 'Sa2afeh', ar: 'ثقافة' },
-    ghost: 'ثقافة',
-    desc: {
-      en: 'Sa2afeh, shi3ir, masra7, mousi2a — w jomal btefhamhon mara w btou2af 3layhon tene.',
-      ar: 'ثقافة، شعر، مسرح، موسيقى، وجمل ضلّت معنا.',
-    },
-    cta: { en: 'Enter Sa2afeh →', ar: 'ادخل ثقافة ←' },
-    action: 'act-scribble',
-    accent: 'var(--plum)',
-    ink: 'var(--on-lime)',
-    shape: 'kh-world-tab',
-    span: 'sm:col-span-5',
-  },
-  {
-    key: 'zaw2ak',
+    action: ACTIONS[i % 4],
+    accent: c.accent || FALLBACK_ACCENTS[i % 4],
+    ink: (c.accent && contrastInk(c.accent)) || FALLBACK_INKS[i % 4],
+    shape: SHAPES[i % 4],
+    span: SPANS[i % 4],
+  }));
+
+  const zaw2akCard = {
+    key: 'zaw2ak-pinned',
     to: '/custom',
     name: { en: '3a Zaw2ak', ar: 'ع ذوقك' },
     ghost: 'ع ذوقك',
     desc: {
-      en: 'Jomlitak. 2lamna. 2it3a ma fi ma3 wala wa7ad gherak.',
+      en: 'Your line, our pens — a piece nobody else has. Khalas.',
       ar: 'جملتك. أقلامنا. قطعة ما حدا غيرك عنده ياها.',
     },
-    cta: { en: 'Make it yours →', ar: 'على ذوقك ←' },
+    cta: { en: 'Kharbesh 3a Zaw2ak →', ar: 'على ذوقك ←' },
     action: 'act-route',
     accent: 'var(--amber)',
     ink: 'var(--on-lime)',
     shape: 'kh-world-notch kh-world-lg',
     span: 'sm:col-span-7',
-  },
-];
+    pinned: true,
+  };
 
-export default function Worlds() {
-  const { t, lang } = useI18n();
+  const cards = [...worldCards, zaw2akCard];
+
   return (
     <section className="max-w-[1400px] mx-auto px-4 sm:px-6 py-16 sm:py-24" style={{ borderTop: '1px solid var(--line)' }}>
       <div className="flex items-end justify-between gap-4 mb-10">
@@ -85,7 +99,7 @@ export default function Worlds() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 sm:gap-5">
-        {WORLDS.map((w, i) => (
+        {cards.map((w, i) => (
           <Link
             key={w.key}
             to={w.to}
