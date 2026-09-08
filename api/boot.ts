@@ -54,11 +54,11 @@ if (env.isProduction) {
     await next();
     c.header("Content-Security-Policy", [
       "default-src 'self'",
-      "script-src 'self'",
+      "script-src 'self' https://connect.facebook.net",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      "connect-src 'self'",
+      "connect-src 'self' https://www.facebook.com https://connect.facebook.net",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
