@@ -11,6 +11,10 @@ import { toast } from '@/components/ui/use-toast';
 
 const STATUSES = PRODUCT_STATUSES;
 
+// Covers front/back × colour-inverted-for-black-garments (4) with a little
+// headroom — keep in sync with the server-side cap in api/admin-router.ts.
+const MAX_PRINT_FILES = 6;
+
 // Sentinel select value for the bulk-collection toolbar's "no collection"
 // option — kept distinct from '' so the Apply button stays disabled until
 // staff explicitly pick something (including explicitly clearing).
@@ -21,7 +25,7 @@ const emptyForm = {
   description_en: '', description_ar: '', collection_name: '', mood: '',
   product_type: 'tee', garment_style: '', fit_en: '', care_en: '', care_ar: '',
   measurements_en: '', approved_colors: [], sizes: [], placement: '',
-  price: DEFAULT_PRICE_BY_TYPE.tee, compare_at_price: '', images: [DEFAULT_COVER_FRONT], print_file_url: null, print_file_url_2: null, status: 'draft',
+  price: DEFAULT_PRICE_BY_TYPE.tee, compare_at_price: '', images: [DEFAULT_COVER_FRONT], print_files: [], status: 'draft',
   preorder_type: 'always_on', preorder_close_date: '', preorder_capacity: '',
   units_sold: 0, estimated_production_days: 10, estimated_dispatch_window: '',
   drop_name: '', sort_order: 0,
@@ -37,6 +41,7 @@ function toFormShape(p) {
     approved_colors: p.approved_colors || [],
     sizes: p.sizes || [],
     images: p.images || [],
+    print_files: p.print_files || [],
   };
 }
 
@@ -428,29 +433,29 @@ export default function AdminProducts() {
     });
   };
 
-  const [uploadingPrintFile, setUploadingPrintFile] = useState(false);
-  const onPrintFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingPrintFile(true);
+  // Ordered list of print-ready files for the factory — usually 1,
+  // sometimes 2 (colour-inverted for black garments), sometimes 4
+  // (front+back, each with a black-garment variant). Staff can add any
+  // number of files (up to MAX_PRINT_FILES) and remove any of them; order
+  // in the list is the order the factory receives them in.
+  const [uploadingPrintFiles, setUploadingPrintFiles] = useState(false);
+  const onPrintFilesUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploadingPrintFiles(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setForm((f) => ({ ...f, print_file_url: file_url }));
-    } finally { setUploadingPrintFile(false); }
+      const uploaded = [];
+      for (const file of files) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        uploaded.push(file_url);
+      }
+      setForm((f) => ({ ...f, print_files: [...(f.print_files || []), ...uploaded].slice(0, MAX_PRINT_FILES) }));
+    } finally {
+      setUploadingPrintFiles(false);
+      e.target.value = '';
+    }
   };
-  const removePrintFile = () => setForm((f) => ({ ...f, print_file_url: null }));
-
-  const [uploadingPrintFile2, setUploadingPrintFile2] = useState(false);
-  const onPrintFileUpload2 = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingPrintFile2(true);
-    try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setForm((f) => ({ ...f, print_file_url_2: file_url }));
-    } finally { setUploadingPrintFile2(false); }
-  };
-  const removePrintFile2 = () => setForm((f) => ({ ...f, print_file_url_2: null }));
+  const removePrintFileAt = (idx) => setForm((f) => ({ ...f, print_files: (f.print_files || []).filter((_, i) => i !== idx) }));
 
   const onCoverUpload = async (slotIdx, e) => {
     const file = e.target.files?.[0];
@@ -741,55 +746,39 @@ export default function AdminProducts() {
             )}
             <div className="mt-6 border-t border-border pt-6">
               <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-1">
-                {lang === 'ar' ? 'ملف الطباعة (للمصنع)' : 'Print file (for factory)'}
+                {lang === 'ar' ? 'ملفات الطباعة (للمصنع)' : 'Print files (for factory)'}
               </span>
               <p className="text-xs text-muted-foreground mb-3">
                 {lang === 'ar'
-                  ? 'الملف الجاهز للطباعة يلي بيروح عالمصنع مع كل طلبية — منفصل عن صور الموقع.'
-                  : 'The print-ready artwork sent to the factory with every order for this design — separate from the storefront photos above.'}
+                  ? 'الملفات الجاهزة للطباعة يلي بتروح عالمصنع مع كل طلبية، بالترتيب يلي بترفعهم فيه — منفصلة عن صور الموقع. عادةً ملف واحد، بعض التصاميم فيها 2 (نسخة معكوسة للقطع السودا) أو 4 (قدام وخلف، كل واحد بنسختين). المصنع بيحدد قدام/خلف/لون بالعين، خصوصاً مع صورة القطعة الحقيقية يلي عم تنبعتله كمرجع.'
+                  : 'The print-ready artwork sent to the factory with every order for this design, in the order you upload them — separate from the storefront photos above. Usually 1 file, sometimes 2 (a colour-inverted version for black garments) or 4 (front + back, each with its own black-garment variant). The factory figures out front/back/colour by eye, helped by the real garment photo sent alongside as a reference.'}
               </p>
-              {form.print_file_url ? (
-                <div className="flex items-center gap-3 text-sm">
-                  <a href={form.print_file_url} target="_blank" rel="noreferrer" className="underline" style={{ color: 'var(--brand-accent)' }}>
-                    {lang === 'ar' ? 'فتح الملف الحالي' : 'View current file'}
-                  </a>
-                  <button type="button" onClick={removePrintFile} className="kh-btn-text text-xs">{lang === 'ar' ? 'إزالة' : 'Remove'}</button>
-                </div>
+              {(form.print_files || []).length > 0 ? (
+                <ul className="space-y-1 mb-3">
+                  {form.print_files.map((url, idx) => (
+                    <li key={`${url}-${idx}`} className="flex items-center gap-3 text-sm">
+                      <span className="text-xs text-muted-foreground w-14 shrink-0">{lang === 'ar' ? `ملف ${idx + 1}` : `File ${idx + 1}`}</span>
+                      <a href={url} target="_blank" rel="noreferrer" className="underline truncate" style={{ color: 'var(--brand-accent)' }}>
+                        {lang === 'ar' ? 'فتح' : 'View'}
+                      </a>
+                      <button type="button" onClick={() => removePrintFileAt(idx)} className="kh-btn-text text-xs">{lang === 'ar' ? 'إزالة' : 'Remove'}</button>
+                    </li>
+                  ))}
+                </ul>
               ) : (
-                <p className="text-xs text-muted-foreground mb-2">{lang === 'ar' ? 'ما في ملف طباعة مرفوع بعد.' : 'No print file uploaded yet.'}</p>
+                <p className="text-xs text-muted-foreground mb-2">{lang === 'ar' ? 'ما في ملفات طباعة مرفوعة بعد.' : 'No print files uploaded yet.'}</p>
               )}
-              <input
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={onPrintFileUpload}
-                disabled={uploadingPrintFile}
-                className="text-xs mt-2 w-full"
-              />
-              {uploadingPrintFile && <span className="text-[11px] text-muted-foreground">{lang === 'ar' ? 'عم يرفع…' : 'Uploading…'}</span>}
-
-              <p className="text-xs text-muted-foreground mt-4 mb-2">
-                {lang === 'ar'
-                  ? 'بعض التصاميم بتحتاج نسخة ثانية بألوان معكوسة للطباعة عالقطع السودا — إذا في نسخة تانية رفعها هون، والمصنع بيقرر شو يستخدم حسب لون القطعة.'
-                  : 'Some designs need a second, colour-inverted file for printing on black garments. If this design has one, upload it here — the factory decides which file to use per garment colour.'}
-              </p>
-              {form.print_file_url_2 ? (
-                <div className="flex items-center gap-3 text-sm">
-                  <a href={form.print_file_url_2} target="_blank" rel="noreferrer" className="underline" style={{ color: 'var(--brand-accent)' }}>
-                    {lang === 'ar' ? 'فتح الملف الثاني' : 'View second file'}
-                  </a>
-                  <button type="button" onClick={removePrintFile2} className="kh-btn-text text-xs">{lang === 'ar' ? 'إزالة' : 'Remove'}</button>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground mb-2">{lang === 'ar' ? 'ما في ملف ثاني مرفوع.' : 'No second file uploaded.'}</p>
+              {(form.print_files || []).length < MAX_PRINT_FILES && (
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  multiple
+                  onChange={onPrintFilesUpload}
+                  disabled={uploadingPrintFiles}
+                  className="text-xs mt-2 w-full"
+                />
               )}
-              <input
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={onPrintFileUpload2}
-                disabled={uploadingPrintFile2}
-                className="text-xs mt-2 w-full"
-              />
-              {uploadingPrintFile2 && <span className="text-[11px] text-muted-foreground">{lang === 'ar' ? 'عم يرفع…' : 'Uploading…'}</span>}
+              {uploadingPrintFiles && <span className="text-[11px] text-muted-foreground">{lang === 'ar' ? 'عم يرفع…' : 'Uploading…'}</span>}
             </div>
           </SectionCard>
 

@@ -127,15 +127,16 @@ export const products = mysqlTable(
     // compute per-product profit margin alongside the unit cost settings.
     costPriceCents: int("costPriceCents"),
     images: json("images").$type<string[]>().notNull(),
-    // Flat print-ready artwork the factory prints from, distinct from
-    // marketing photos in `images` — resolved onto each factory order item
-    // at handoff time so the factory always gets the exact file to print.
-    printFileUrl: varchar("printFileUrl", { length: 500 }),
-    // Some designs need a second print file (e.g. a colour-inverted version
-    // for printing on black garments). When set, both files are handed to
-    // the factory on every order for this product — the factory sorts out
-    // which one to use per garment colour, we don't try to guess here.
-    printFileUrl2: varchar("printFileUrl2", { length: 500 }),
+    // Print-ready artwork the factory prints from, distinct from marketing
+    // photos in `images` — resolved onto each factory order item at
+    // handoff time so the factory always gets the exact files to print.
+    // Ordered list: usually 1 file, sometimes 2 (front + a colour-inverted
+    // version for black garments), sometimes 4 (front/back, each with a
+    // black-garment variant). All files in the list are handed to the
+    // factory on every order for this product, in order — the factory
+    // figures out front/back/colour by eye (with the garment reference
+    // photo), we don't try to guess or label that here.
+    printFiles: json("printFiles").$type<string[]>(),
     status: mysqlEnum("status", ["active", "draft", "archived"]).default("draft").notNull(),
     preorderType: mysqlEnum("preorderType", [
       "open_until",
@@ -416,8 +417,11 @@ export const factoryOrderItems = mysqlTable(
     customerName: varchar("customerName", { length: 160 }),
     customerPhone: varchar("customerPhone", { length: 40 }),
     customerAddress: varchar("customerAddress", { length: 255 }),
-    printFileUrl: varchar("printFileUrl", { length: 500 }),
-    printFileUrl2: varchar("printFileUrl2", { length: 500 }),
+    printFiles: json("printFiles").$type<string[]>(),
+    // The product's real garment photo for this line item's color (from
+    // productColorImages, falling back to the product's primary image) so
+    // the factory has a visual reference for how/where each file prints.
+    referencePhotoUrl: varchar("referencePhotoUrl", { length: 500 }),
   },
   (t) => ({
     orderIdx: index("factory_order_items_order_idx").on(t.factoryOrderId),

@@ -7,12 +7,17 @@ import { useI18n } from '@/lib/i18n';
 // factory prints from) and assigns it straight to EXISTING products —
 // distinct from Local Import, which creates NEW products from garment
 // mockup photos. Each design folder is named exactly like the product it
-// belongs to; it holds 1 file, or 2 when the design needs a second,
-// colour-inverted version for printing on black garments. Both files (when
-// there are two) go to the factory — we don't try to guess which one is
-// "for black", the factory sorts that out per order.
+// belongs to and holds 1, 2, or up to MAX_DESIGN_FILES design files —
+// e.g. front-only (1), front + colour-inverted-for-black (2), or front +
+// back each with their own black-garment variant (4). There's no naming
+// convention for which file is which, so we sort files alphabetically for
+// a deterministic order and forward ALL of them to the factory in that
+// order, along with the product's real garment reference photo — the
+// factory figures out front/back/colour by eye, we don't try to guess it.
 
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
+// Keep in sync with the server-side cap in api/admin-router.ts.
+const MAX_DESIGN_FILES = 6;
 
 function normalizeName(s) {
   return (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -83,9 +88,11 @@ function DesignFolderCard({ folder, products, onResolve, lang }) {
         )}
       </div>
 
-      {folder.existingPrintFile && folder._result !== 'success' && (
+      {folder.existingPrintFileCount > 0 && folder._result !== 'success' && (
         <p className="text-[11px] mb-2" style={{ color: 'var(--brand-destructive)' }}>
-          {lang === 'ar' ? 'هذا المنتج عندو ملف طباعة مرفوع سابقاً — رح يتبدّل.' : 'This product already has a print file \u2014 it will be replaced.'}
+          {lang === 'ar'
+            ? `هذا المنتج عندو ${folder.existingPrintFileCount} ملف/ملفات طباعة مرفوعة سابقاً — رح ينقلبو للملفات الجديدة.`
+            : `This product already has ${folder.existingPrintFileCount} print file${folder.existingPrintFileCount === 1 ? '' : 's'} \u2014 they will be replaced by the new ones.`}
         </p>
       )}
 
@@ -94,11 +101,11 @@ function DesignFolderCard({ folder, products, onResolve, lang }) {
           <FilePreview key={file_key(f)} file={f} lang={lang} />
         ))}
       </div>
-      {folder.files.length > 2 && (
+      {folder.files.length > MAX_DESIGN_FILES && (
         <p className="text-[11px] mt-2" style={{ color: 'var(--brand-destructive)' }}>
           {lang === 'ar'
-            ? `في ${folder.files.length} ملفات بهذا المجلد — لازم ملف أو ملفين بس. عم ناخد أول ملفين وبتجاهل الباقي.`
-            : `This folder has ${folder.files.length} files \u2014 expected 1 or 2. Using the first two, ignoring the rest.`}
+            ? `في ${folder.files.length} ملفات بهذا المجلد — أكتر من ${MAX_DESIGN_FILES}. عم ناخد أول ${MAX_DESIGN_FILES} بالترتيب الأبجدي وبتجاهل الباقي.`
+            : `This folder has ${folder.files.length} files \u2014 more than the ${MAX_DESIGN_FILES}-file limit. Using the first ${MAX_DESIGN_FILES} in alphabetical order, ignoring the rest.`}
         </p>
       )}
 
@@ -167,13 +174,18 @@ export default function AdminBulkDesignUpload() {
       let i = 0;
       for (const [folderName, files] of groups) {
         const matchedProduct = byNormalizedName.get(normalizeName(folderName)) || null;
+        // No naming convention tells us which file is front/back/inverted,
+        // so sort alphabetically for a deterministic order — the factory
+        // gets all files in that order and figures out front/back/colour
+        // by eye, helped by the reference photo sent alongside.
+        const sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name));
         built.push({
           key: `${folderName}_${i++}`,
           folderName,
-          files: files.slice(0, 2),
+          files: sortedFiles.slice(0, MAX_DESIGN_FILES),
           matchedProduct,
           manualProductId: null,
-          existingPrintFile: matchedProduct?.print_file_url || null,
+          existingPrintFileCount: matchedProduct?.print_files?.length || 0,
         });
       }
       // Design folders first (name found in caption order), unmatched last so they stand out.
@@ -190,7 +202,7 @@ export default function AdminBulkDesignUpload() {
     setFolders((fs) => fs.map((f) => {
       if (f.key !== key) return f;
       const product = productId ? allProducts.find((p) => String(p.id) === String(productId)) : null;
-      return { ...f, manualProductId: productId, existingPrintFile: product?.print_file_url || null };
+      return { ...f, manualProductId: productId, existingPrintFileCount: product?.print_files?.length || 0 };
     }));
   };
 
@@ -214,7 +226,7 @@ export default function AdminBulkDesignUpload() {
           uploaded.push(file_url);
         }
         if (uploaded.length === 0) throw new Error(lang === 'ar' ? 'ما في ملفات.' : 'No files found.');
-        items.push({ product_id: productId, print_file_url: uploaded[0], print_file_url_2: uploaded[1] || null });
+        items.push({ product_id: productId, print_files: uploaded });
         itemFolderKeys.push(folder.key);
       } catch (err) {
         setFolders((fs) => fs.map((f) => (f.key === folder.key ? { ...f, _uploading: false, _result: 'error', _error: err?.message || String(err) } : f)));
@@ -253,8 +265,8 @@ export default function AdminBulkDesignUpload() {
       <PageHeader eyebrow="Admin" title={lang === 'ar' ? 'رفع تصاميم الطباعة بالجملة' : 'Bulk Design Upload'} />
       <p className="text-sm text-muted-foreground mt-3 max-w-2xl">
         {lang === 'ar'
-          ? 'هون منرفع ملفات التصميم الجاهزة للطباعة (خلفية شفافة) — منفصلة عن صور المنتج بالموقع. كل مجلد لازم يحمل نفس اسم المنتج بالضبط، وفيه ملف أو ملفين (إذا التصميم بحاجة نسخة معكوسة الألوان للطباعة عالقطع السودا). الملفين، إذا في اثنين، بيروحوا عالمصنع سوا وهو بيقرر شو يستخدم حسب لون القطعة.'
-          : "This uploads the print-ready artwork (transparent PNGs) the factory prints from \u2014 separate from the storefront photos on the Products page. Each folder must be named exactly like the product it belongs to, and holds 1 file, or 2 when the design needs a colour-inverted version for printing on black garments. When there are two, both go to the factory and it decides which to use per garment colour."}
+          ? 'هون منرفع ملفات التصميم الجاهزة للطباعة — منفصلة عن صور المنتج بالموقع. كل مجلد لازم يحمل نفس اسم المنتج بالضبط، وفيه ملف واحد أو أكتر (قدام/خلف، مع أو بدون نسخ معكوسة الألوان للقطع السودا). ما في ترتيب تسمية ثابت للملفات، فمنرتّبهم أبجدياً ومنرسلهم كلهم للمصنع بهذا الترتيب، مع صورة القطعة الحقيقية من المنتج كمرجع — المصنع بيحدد قدام/خلف/لون بالعين.'
+          : "This uploads the print-ready artwork the factory prints from \u2014 separate from the storefront photos on the Products page. Each folder must be named exactly like the product it belongs to, and holds one or more design files (e.g. front/back, with or without colour-inverted versions for black garments). There's no fixed naming convention for the files, so we sort them alphabetically and forward all of them to the factory in that order, along with the product's real garment reference photo \u2014 the factory figures out front/back/colour by eye."}
       </p>
 
       <div className="flex flex-wrap items-center gap-3 mt-6">
