@@ -2,11 +2,8 @@ FROM node:22-slim AS build
 # curl is needed by scripts/restore-assets.sh and is not in the slim image
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-# NOTE: package-lock.json is intentionally not committed yet (regenerate with
-# `npm install` and commit it when a binary-capable git push is available),
-# so the build uses npm install instead of npm ci.
-COPY package.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
 # Binary assets (fonts, brand PNGs) are restored at build time from
 # scripts/asset-urls.txt (see scripts/restore-assets.sh).
@@ -27,8 +24,8 @@ FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
-COPY package.json ./
-RUN npm install --omit=dev
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 # SQL migrations are applied at boot (see api/boot.ts).
 COPY db/migrations ./db/migrations
