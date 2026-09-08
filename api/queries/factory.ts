@@ -31,8 +31,8 @@ function toUiItem(i: FactoryOrderItem) {
     customer_name: i.customerName,
     customer_phone: i.customerPhone,
     customer_address: i.customerAddress,
-    print_file_url: i.printFileUrl,
-    print_file_url_2: i.printFileUrl2,
+    print_files: i.printFiles ?? [],
+    reference_photo_url: i.referencePhotoUrl,
   };
 }
 
@@ -104,7 +104,10 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
       .$returningId();
 
     // Look up print-ready artwork per product once so every line item for
-    // that product carries the file the factory should actually print.
+    // that product carries the files the factory should actually print,
+    // plus a real garment reference photo for the item's specific color
+    // (falling back to the product's primary photo) so the factory can see
+    // how/where the design goes without guessing front/back by filename.
     const productIds = [
       ...new Set(
         printableOrders.flatMap((o) => o.items.map((i) => Number(i.productId))).filter((id) => Number.isInteger(id)),
@@ -112,15 +115,27 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
     ];
     const productRows = productIds.length
       ? await tx
-          .select({ id: products.id, printFileUrl: products.printFileUrl, printFileUrl2: products.printFileUrl2 })
+          .select({ id: products.id, printFiles: products.printFiles, images: products.images })
           .from(products)
           .where(inArray(products.id, productIds))
       : [];
-    const printFileByProductId = new Map(productRows.map((p) => [p.id, { url: p.printFileUrl, url2: p.printFileUrl2 }]));
+    const productById = new Map(productRows.map((p) => [p.id, p]));
+
+    const colorImageRows = productIds.length
+      ? await tx
+          .select({ productId: productColorImages.productId, colorName: productColorImages.colorName, images: productColorImages.images })
+          .from(productColorImages)
+          .where(inArray(productColorImages.productId, productIds))
+      : [];
+    const colorKey = (productId: number, color: string) => `${productId}::${color.trim().toLowerCase()}`;
+    const colorImagesByKey = new Map(colorImageRows.map((r) => [colorKey(r.productId, r.colorName), r.images]));
 
     for (const order of printableOrders) {
       for (const item of order.items) {
         const productId = Number.isInteger(Number(item.productId)) ? Number(item.productId) : null;
+        const product = productId != null ? productById.get(productId) : undefined;
+        const colorImages = productId != null ? colorImagesByKey.get(colorKey(productId, item.color)) : undefined;
+        const referencePhotoUrl = colorImages?.[0] ?? product?.images?.[0] ?? null;
         await tx.insert(factoryOrderItems).values({
           factoryOrderId,
           sourceOrderId: order.id,
@@ -135,8 +150,8 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
           customerName: order.fullName,
           customerPhone: order.phone,
           customerAddress: order.shippingAddress,
-          printFileUrl: productId != null ? printFileByProductId.get(productId)?.url ?? null : null,
-          printFileUrl2: productId != null ? printFileByProductId.get(productId)?.url2 ?? null : null,
+          printFiles: product?.printFiles ?? null,
+          referencePhotoUrl,
         });
       }
 

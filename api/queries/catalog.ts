@@ -38,8 +38,7 @@ export function toUiProduct(p: Product) {
     price: p.priceCents / 100,
     compare_at_price: p.compareAtPriceCents != null ? p.compareAtPriceCents / 100 : null,
     images: p.images,
-    print_file_url: p.printFileUrl,
-    print_file_url_2: p.printFileUrl2,
+    print_files: p.printFiles ?? [],
     status: p.status,
     preorder_type: p.preorderType,
     preorder_close_date: p.preorderCloseDate,
@@ -56,15 +55,14 @@ export function toUiProduct(p: Product) {
 /**
  * Public storefront serializer (audit M4). The full `toUiProduct` carries
  * ops/factory-only fields that must never reach anonymous shoppers:
- * `print_file_url` (factory artwork), `units_sold`, and `preorder_capacity`
+ * `print_files` (factory artwork), `units_sold`, and `preorder_capacity`
  * (internal sales/stock numbers). The product page only needs to know
  * whether a limited run is sold out, so that's exposed as a boolean.
  * Staff/admin endpoints keep using the full `toUiProduct` above.
  */
 export function toUiPublicProduct(p: Product) {
   const {
-    print_file_url: _artwork,
-    print_file_url_2: _artwork2,
+    print_files: _artwork,
     units_sold: _sold,
     preorder_capacity: _capacity,
     ...publicFields

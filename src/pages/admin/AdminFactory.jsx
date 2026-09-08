@@ -11,24 +11,35 @@ const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 
 function exportToExcel(factoryOrder) {
-  const rows = factoryOrder.items.map((it) => ({
-    'Order #': it.source_order_number || '—',
-    'Customer Name': it.customer_name || '—',
-    'Phone': it.customer_phone || '—',
-    'Address': it.customer_address || '—',
-    'Design': it.design_name_en || '—',
-    'Phrase': it.phrase_en || '',
-    'Product type': it.product_type,
-    'Color': it.color,
-    'Size': it.size,
-    'Quantity': it.quantity,
-    'Placement': it.placement || '',
-    'Print File': it.print_file_url || '—',
-    'Print File 2': it.print_file_url_2 || '',
-    'Notes': it.notes || '',
-  }));
+  // Some designs have 1 print file, some 2 (colour-inverted for black
+  // garments), some 4 (front+back, each with a black-garment variant) —
+  // one "Print File N" column per file, sized to the widest item in this
+  // order so the sheet never has more empty columns than it needs.
+  const maxFiles = Math.max(1, ...factoryOrder.items.map((it) => (it.print_files || []).length));
+  const rows = factoryOrder.items.map((it) => {
+    const files = it.print_files || [];
+    const row = {
+      'Order #': it.source_order_number || '—',
+      'Customer Name': it.customer_name || '—',
+      'Phone': it.customer_phone || '—',
+      'Address': it.customer_address || '—',
+      'Design': it.design_name_en || '—',
+      'Phrase': it.phrase_en || '',
+      'Product type': it.product_type,
+      'Color': it.color,
+      'Size': it.size,
+      'Quantity': it.quantity,
+      'Placement': it.placement || '',
+    };
+    for (let i = 0; i < maxFiles; i++) row[`Print File ${i + 1}`] = files[i] || (i === 0 ? '—' : '');
+    row['Reference Photo'] = it.reference_photo_url || '';
+    row['Notes'] = it.notes || '';
+    return row;
+  });
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{ wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 30 }, { wch: 24 }, { wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 16 }, { wch: 40 }, { wch: 40 }, { wch: 20 }];
+  const baseCols = [{ wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 30 }, { wch: 24 }, { wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 16 }];
+  const fileCols = Array.from({ length: maxFiles }, () => ({ wch: 40 }));
+  ws['!cols'] = [...baseCols, ...fileCols, { wch: 40 }, { wch: 20 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Factory Order');
   const label = factoryOrder.type === 'restock' ? 'restock' : 'print-job';

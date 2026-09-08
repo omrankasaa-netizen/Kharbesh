@@ -189,8 +189,7 @@ const productFields = {
   price: z.number().min(0).max(1_000_000),
   compare_at_price: z.number().min(0).max(1_000_000).nullable(),
   images: z.array(z.string()),
-  print_file_url: z.string().max(500).nullable(),
-  print_file_url_2: z.string().max(500).nullable(),
+  print_files: z.array(z.string().max(500)).max(6).nullable(),
   status: z.enum(["active", "draft", "archived"]),
   preorder_type: z.enum(["open_until", "quantity_target", "limited_quantity", "always_on"]),
   preorder_close_date: z.string().max(10).nullable(),
@@ -289,8 +288,9 @@ export const adminRouter = createRouter({
   /**
    * Bulk Design Upload page: assigns already-uploaded print-ready artwork
    * URLs to matched existing products (matched client-side by folder
-   * name). One row per product; `print_file_url_2` is only sent when a
-   * design folder had a second file for black-garment printing.
+   * name). `print_files` is the folder's ordered file list — usually 1,
+   * sometimes 2 (colour-inverted for black garments), sometimes 4
+   * (front+back, each with a black-garment variant).
    */
   bulkAssignDesignFiles: staffQuery
     .input(
@@ -299,8 +299,7 @@ export const adminRouter = createRouter({
           .array(
             z.object({
               product_id: idParam,
-              print_file_url: z.string().min(1).max(500),
-              print_file_url_2: z.string().max(500).nullable().optional(),
+              print_files: z.array(z.string().min(1).max(500)).min(1).max(6),
             }),
           )
           .min(1)
