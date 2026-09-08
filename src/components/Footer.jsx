@@ -54,7 +54,7 @@ export default function Footer() {
               {lang === 'ar' ? 'لبسك بيحكي عنك — Kharbesh it your way.' : 'Labsak byehki 3annak — Kharbesh it your way.'}
             </p>
             <p className="mt-2 text-xs" style={{ color: 'rgba(251,246,235,.45)' }}>
-              {lang === 'ar' ? 'فكر، مصنوع ومطبوع في لبنان.' : 'Mfakkar fiha, m3amle, w matbou3a fi Lebnan.'}
+              {lang === 'ar' ? 'فكر، مصنوع ومطبوع في لبنان.' : 'Mfakkar fiha, m3ammle, w matbou3a b Lebnen.'}
             </p>
             <DotsMark lime className="mt-6" />
             <div className="mt-8 max-w-sm">

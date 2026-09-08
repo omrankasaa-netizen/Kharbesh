@@ -13,15 +13,15 @@ const ENTRIES = [
   {
     matchNameIncludes: 'fine-ancially unstable',
     phrase: { en: "I'M FINE", ar: 'تمام' },
-    first: { en: 'Tatmine hadye, ma2oule bsawt wadeh.', ar: 'طمأنة هادية، مقولة بصوت واضح.' },
-    second: { en: 'La7ad ma el khat el a7mar byi2ta3 el jomle nossein: financially unstable.', ar: 'لحد ما الخط الأحمر بيقطع الجملة نصين: مالياً منهار.' },
+    first: { en: 'Tammin hadeh — \'I\'m fine\', enno khalasna.', ar: 'طمأنة هادية، مقولة بصوت واضح.' },
+    second: { en: 'La 7ad ma el khat el a7mar byo2ta3 el jomle nosseyn: financially unstable.', ar: 'لحد ما الخط الأحمر بيقطع الجملة نصين: مالياً منهار.' },
     crop: { x: '50%', y: '50%', scale: 1 },
   },
   {
     matchNameIncludes: 'massari bi amen',
     phrase: { en: 'MONEY IS SAFE', ar: 'المصاري بأمان' },
-    first: { en: '3onwan mtamen, tale3 min bab el khazneh.', ar: 'عنوان مطمّن، طالع من باب الخزنة.' },
-    second: { en: 'Bass mish ma3na. W ma kanet abadan.', ar: 'بس مش معنا. وما كانت أبداً.' },
+    first: { en: '3enwen moutma2in — el massari \'bi amen\', chou ra7 ysir.', ar: 'عنوان مطمّن، طالع من باب الخزنة.' },
+    second: { en: 'Bass mesh ma3nata. W ma kenet abadan.', ar: 'بس مش معنا. وما كانت أبداً.' },
     crop: { x: '50%', y: '50%', scale: 1 },
   },
 ];
@@ -41,14 +41,14 @@ export default function ReadItTwice() {
     <section style={{ background: 'var(--paper-2)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-16 sm:py-24">
         <div className="max-w-2xl">
-          <span className="kh-eyebrow">{lang === 'ar' ? 'النكتة بالتفصيل' : 'El nekte, 3an 2orb'}</span>
+          <span className="kh-eyebrow">{lang === 'ar' ? 'النكتة بالتفصيل' : 'El nekte, min 2rib'}</span>
           <h2 className={`kh-section-title mt-3 ${lang === 'ar' ? 'kh-section-title-ar' : ''}`}>
             {lang === 'ar' ? 'اقراها مرتين.' : 'Read it twice.'}
           </h2>
           <p className="mt-3" style={{ color: 'var(--muted)' }}>
             {lang === 'ar'
               ? 'كل خربشة بتبلّش من جملة. النظرة التانية — هونيك ساكنة النكتة.'
-              : 'Kel kharbesha btbalesh min jomleh. El nazra el tanyeh — honik sakneh el nekte.'}
+              : 'Kel kharbesha btebda men jomle. El nazra el tenye — honi el nekte sakne.'}
           </p>
         </div>
 
