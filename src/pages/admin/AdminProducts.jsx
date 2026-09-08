@@ -21,7 +21,7 @@ const emptyForm = {
   description_en: '', description_ar: '', collection_name: '', mood: '',
   product_type: 'tee', garment_style: '', fit_en: '', care_en: '', care_ar: '',
   measurements_en: '', approved_colors: [], sizes: [], placement: '',
-  price: DEFAULT_PRICE_BY_TYPE.tee, compare_at_price: '', images: [DEFAULT_COVER_FRONT], print_file_url: null, status: 'draft',
+  price: DEFAULT_PRICE_BY_TYPE.tee, compare_at_price: '', images: [DEFAULT_COVER_FRONT], print_file_url: null, print_file_url_2: null, status: 'draft',
   preorder_type: 'always_on', preorder_close_date: '', preorder_capacity: '',
   units_sold: 0, estimated_production_days: 10, estimated_dispatch_window: '',
   drop_name: '', sort_order: 0,
@@ -440,6 +440,18 @@ export default function AdminProducts() {
   };
   const removePrintFile = () => setForm((f) => ({ ...f, print_file_url: null }));
 
+  const [uploadingPrintFile2, setUploadingPrintFile2] = useState(false);
+  const onPrintFileUpload2 = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPrintFile2(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setForm((f) => ({ ...f, print_file_url_2: file_url }));
+    } finally { setUploadingPrintFile2(false); }
+  };
+  const removePrintFile2 = () => setForm((f) => ({ ...f, print_file_url_2: null }));
+
   const onCoverUpload = async (slotIdx, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -754,6 +766,30 @@ export default function AdminProducts() {
                 className="text-xs mt-2 w-full"
               />
               {uploadingPrintFile && <span className="text-[11px] text-muted-foreground">{lang === 'ar' ? 'عم يرفع…' : 'Uploading…'}</span>}
+
+              <p className="text-xs text-muted-foreground mt-4 mb-2">
+                {lang === 'ar'
+                  ? 'بعض التصاميم بتحتاج نسخة ثانية بألوان معكوسة للطباعة عالقطع السودا — إذا في نسخة تانية رفعها هون، والمصنع بيقرر شو يستخدم حسب لون القطعة.'
+                  : 'Some designs need a second, colour-inverted file for printing on black garments. If this design has one, upload it here — the factory decides which file to use per garment colour.'}
+              </p>
+              {form.print_file_url_2 ? (
+                <div className="flex items-center gap-3 text-sm">
+                  <a href={form.print_file_url_2} target="_blank" rel="noreferrer" className="underline" style={{ color: 'var(--brand-accent)' }}>
+                    {lang === 'ar' ? 'فتح الملف الثاني' : 'View second file'}
+                  </a>
+                  <button type="button" onClick={removePrintFile2} className="kh-btn-text text-xs">{lang === 'ar' ? 'إزالة' : 'Remove'}</button>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground mb-2">{lang === 'ar' ? 'ما في ملف ثاني مرفوع.' : 'No second file uploaded.'}</p>
+              )}
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={onPrintFileUpload2}
+                disabled={uploadingPrintFile2}
+                className="text-xs mt-2 w-full"
+              />
+              {uploadingPrintFile2 && <span className="text-[11px] text-muted-foreground">{lang === 'ar' ? 'عم يرفع…' : 'Uploading…'}</span>}
             </div>
           </SectionCard>
 

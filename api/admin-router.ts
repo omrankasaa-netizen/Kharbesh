@@ -13,6 +13,7 @@ import {
   bulkUpdateProductStatus,
   bulkUpdateProductCollection,
   bulkHardDeleteProducts,
+  bulkAssignDesignFiles,
   listAuditLogs,
 } from "./queries/admin";
 import { getDriveConnectionStatus, disconnectDrive } from "./queries/driveConnection";
@@ -189,6 +190,7 @@ const productFields = {
   compare_at_price: z.number().min(0).max(1_000_000).nullable(),
   images: z.array(z.string()),
   print_file_url: z.string().max(500).nullable(),
+  print_file_url_2: z.string().max(500).nullable(),
   status: z.enum(["active", "draft", "archived"]),
   preorder_type: z.enum(["open_until", "quantity_target", "limited_quantity", "always_on"]),
   preorder_close_date: z.string().max(10).nullable(),
@@ -283,6 +285,34 @@ export const adminRouter = createRouter({
   bulkHardDeleteProducts: superAdminQuery
     .input(z.object({ ids: z.array(idParam).min(1).max(500) }))
     .mutation(({ ctx, input }) => bulkHardDeleteProducts(input.ids.map(Number), ctx.user.id)),
+
+  /**
+   * Bulk Design Upload page: assigns already-uploaded print-ready artwork
+   * URLs to matched existing products (matched client-side by folder
+   * name). One row per product; `print_file_url_2` is only sent when a
+   * design folder had a second file for black-garment printing.
+   */
+  bulkAssignDesignFiles: staffQuery
+    .input(
+      z.object({
+        items: z
+          .array(
+            z.object({
+              product_id: idParam,
+              print_file_url: z.string().min(1).max(500),
+              print_file_url_2: z.string().max(500).nullable().optional(),
+            }),
+          )
+          .min(1)
+          .max(500),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      bulkAssignDesignFiles(
+        input.items.map((i) => ({ ...i, product_id: Number(i.product_id) })),
+        ctx.user.id,
+      ),
+    ),
 
   /**
    * Uploads a product photo (sent as a base64 data URL) to R2 and returns

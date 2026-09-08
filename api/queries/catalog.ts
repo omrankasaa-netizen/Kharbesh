@@ -39,6 +39,7 @@ export function toUiProduct(p: Product) {
     compare_at_price: p.compareAtPriceCents != null ? p.compareAtPriceCents / 100 : null,
     images: p.images,
     print_file_url: p.printFileUrl,
+    print_file_url_2: p.printFileUrl2,
     status: p.status,
     preorder_type: p.preorderType,
     preorder_close_date: p.preorderCloseDate,
@@ -61,7 +62,13 @@ export function toUiProduct(p: Product) {
  * Staff/admin endpoints keep using the full `toUiProduct` above.
  */
 export function toUiPublicProduct(p: Product) {
-  const { print_file_url: _artwork, units_sold: _sold, preorder_capacity: _capacity, ...publicFields } = toUiProduct(p);
+  const {
+    print_file_url: _artwork,
+    print_file_url_2: _artwork2,
+    units_sold: _sold,
+    preorder_capacity: _capacity,
+    ...publicFields
+  } = toUiProduct(p);
   return {
     ...publicFields,
     is_sold_out:

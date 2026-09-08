@@ -37,6 +37,7 @@ export type ProductWritableFields = {
   compare_at_price?: number | null;
   images?: string[];
   print_file_url?: string | null;
+  print_file_url_2?: string | null;
   status?: "active" | "draft" | "archived";
   preorder_type?: "open_until" | "quantity_target" | "limited_quantity" | "always_on";
   preorder_close_date?: string | null;
@@ -73,6 +74,7 @@ function mapProductPatch(data: ProductWritableFields): Partial<typeof products.$
     patch.compareAtPriceCents = data.compare_at_price != null ? Math.round(data.compare_at_price * 100) : null;
   if (data.images !== undefined) patch.images = data.images;
   if (data.print_file_url !== undefined) patch.printFileUrl = data.print_file_url;
+  if (data.print_file_url_2 !== undefined) patch.printFileUrl2 = data.print_file_url_2;
   if (data.status !== undefined) patch.status = data.status;
   if (data.preorder_type !== undefined) patch.preorderType = data.preorder_type;
   if (data.preorder_close_date !== undefined) patch.preorderCloseDate = data.preorder_close_date;
@@ -129,6 +131,7 @@ function buildProductInsertValues(
     compareAtPriceCents: data.compare_at_price != null ? Math.round(data.compare_at_price * 100) : null,
     images: data.images ?? [],
     printFileUrl: data.print_file_url ?? null,
+    printFileUrl2: data.print_file_url_2 ?? null,
     status: data.status ?? "draft",
     preorderType: data.preorder_type ?? "always_on",
     preorderCloseDate: data.preorder_close_date ?? null,
@@ -285,6 +288,53 @@ export async function bulkHardDeleteProducts(ids: number[], actorUserId: number)
     detail: { ids, names: rows.map((r) => r.nameEn) },
   });
   return { success: true, count: ids.length };
+}
+
+/**
+ * Batch print-file assignment for the "Bulk Design Upload" admin tool —
+ * each matched folder carries its own file(s), so unlike the other bulk
+ * helpers this can't be a single shared-value UPDATE; it's a per-product
+ * write with per-item try/catch (one bad row doesn't sink the batch) plus
+ * one summary audit entry. `print_file_url_2` is the optional second file
+ * some designs need for printing on black garments — when present, the
+ * factory gets both and sorts out which to use per order.
+ */
+export async function bulkAssignDesignFiles(
+  items: Array<{ product_id: number; print_file_url: string; print_file_url_2?: string | null }>,
+  actorUserId: number,
+) {
+  const db = getDb();
+  const results: Array<{ success: boolean; product_id: string; error?: string }> = [];
+
+  for (const item of items) {
+    try {
+      await db
+        .update(products)
+        .set({
+          printFileUrl: item.print_file_url,
+          printFileUrl2: item.print_file_url_2 ?? null,
+          updatedAt: new Date(),
+        })
+        .where(eq(products.id, item.product_id));
+      results.push({ success: true, product_id: String(item.product_id) });
+    } catch (err) {
+      results.push({
+        success: false,
+        product_id: String(item.product_id),
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  await db.insert(auditLogs).values({
+    actorUserId,
+    action: "product.bulk_design_files_assigned",
+    entity: "product",
+    entityId: null,
+    detail: { total: items.length, succeeded: results.filter((r) => r.success).length },
+  });
+
+  return results;
 }
 
 /**
