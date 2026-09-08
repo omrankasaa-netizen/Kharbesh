@@ -33,6 +33,12 @@ export function serveStaticFiles(app: App) {
     }
     const indexPath = path.resolve(distPath, "index.html");
     const content = fs.readFileSync(indexPath, "utf-8");
-    return c.html(content);
+    // Explicit 200: this branch serves a real, valid SPA route (e.g.
+    // /shop, /admin) via client-side routing — it's not actually an
+    // error. Without an explicit status, Hono's app.notFound() context
+    // defaults the response to 404, which is wrong for search engines,
+    // uptime/status-code monitors, and any cache layer (e.g. Cloudflare)
+    // that treats 4xx responses differently from 200s.
+    return c.html(content, 200);
   });
 }
