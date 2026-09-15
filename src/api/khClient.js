@@ -176,7 +176,7 @@ export const kh = {
       /** Products list selection toolbar: move many products into the same collection at once. */
       bulkUpdateCollection: (ids, collectionName) =>
         client.admin.bulkUpdateProductCollection.mutate({ ids: ids.map(String), collectionName: collectionName || null }),
-      /** Products list selection toolbar: permanent batch delete — super_admin. */
+      /** Products list selection toolbar: permanent batch delete — server enforces super_admin. */
       bulkHardDelete: (ids) => client.admin.bulkHardDeleteProducts.mutate({ ids: ids.map(String) }),
       /** Bulk Design Upload page: assigns matched print-file URL(s) to many products at once. */
       bulkAssignDesignFiles: (items) => client.admin.bulkAssignDesignFiles.mutate({ items }),
