@@ -9,6 +9,19 @@ import { toast } from '@/components/ui/use-toast';
 const PENDING_STATUSES = ['order_received', 'preorder_confirmed', 'in_production'];
 const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
+// Tee blanks are ordered from the factory per FIT in internal group sizes
+// (S/M, L/XL, XXL) — adjacent customer sizes share one physical blank.
+const TEE_INTERNAL_SIZES = ['S/M', 'L/XL', 'XXL'];
+const FITS = ['regular', 'oversize'];
+
+/** One-line garment spec for a factory line item: fit + internal cut size
+    (what the factory pulls), with the customer's chosen size alongside. */
+function garmentSpec(it) {
+  const fit = it.product_type === 'tee' ? (it.fit || 'regular') : null;
+  const cut = it.size;
+  const customer = it.display_size && it.display_size !== it.size ? ` (customer: ${it.display_size})` : '';
+  return `${fit ? `${fit} · ` : ''}${cut}${customer}`;
+}
 
 function exportToExcel(factoryOrder) {
   // Some designs have 1 print file, some 2 (colour-inverted for black
@@ -27,7 +40,9 @@ function exportToExcel(factoryOrder) {
       'Phrase': it.phrase_en || '',
       'Product type': it.product_type,
       'Color': it.color,
-      'Size': it.size,
+      'Fit': it.product_type === 'tee' ? (it.fit || 'regular') : '',
+      'Cut size': it.size,
+      'Customer size': it.display_size || it.size,
       'Quantity': it.quantity,
       'Placement': it.placement || '',
     };
@@ -37,7 +52,7 @@ function exportToExcel(factoryOrder) {
     return row;
   });
   const ws = XLSX.utils.json_to_sheet(rows);
-  const baseCols = [{ wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 30 }, { wch: 24 }, { wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 16 }];
+  const baseCols = [{ wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 30 }, { wch: 24 }, { wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 13 }, { wch: 8 }, { wch: 16 }];
   const fileCols = Array.from({ length: maxFiles }, () => ({ wch: 40 }));
   ws['!cols'] = [...baseCols, ...fileCols, { wch: 40 }, { wch: 20 }];
   const wb = XLSX.utils.book_new();
@@ -53,7 +68,7 @@ export default function AdminFactory() {
   const [pendingOrders, setPendingOrders] = useState([]);
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [restockRows, setRestockRows] = useState([{ product_type: 'tee', color: '', size: '', quantity: 1 }]);
+  const [restockRows, setRestockRows] = useState([{ product_type: 'tee', color: '', fit: 'regular', size: '', quantity: 1 }]);
   const [restockNotes, setRestockNotes] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -114,7 +129,7 @@ export default function AdminFactory() {
     } finally { setBusy(false); }
   };
 
-  const addRestockRow = () => setRestockRows((r) => [...r, { product_type: 'tee', color: '', size: '', quantity: 1 }]);
+  const addRestockRow = () => setRestockRows((r) => [...r, { product_type: 'tee', color: '', fit: 'regular', size: '', quantity: 1 }]);
   const updateRestockRow = (i, patch) => setRestockRows((r) => r.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
   const removeRestockRow = (i) => setRestockRows((r) => r.filter((_, idx) => idx !== i));
 
@@ -125,7 +140,7 @@ export default function AdminFactory() {
     try {
       const created = await base44.entities.FactoryOrder.createRestock(items, restockNotes || undefined);
       setFactoryOrders((f) => [created, ...f]);
-      setRestockRows([{ product_type: 'tee', color: '', size: '', quantity: 1 }]);
+      setRestockRows([{ product_type: 'tee', color: '', fit: 'regular', size: '', quantity: 1 }]);
       setRestockNotes('');
     } catch (err) {
       toast({ title: err?.message || (lang === 'ar' ? 'ما قدرنا نبعت طلب إعادة التعبئة' : 'Could not create restock request'), variant: 'destructive' });
@@ -196,16 +211,21 @@ export default function AdminFactory() {
           <div className="space-y-2">
             {restockRows.map((row, i) => (
               <div key={i} className="flex flex-wrap gap-2 items-center">
-                <select className="kh-input !h-9 !py-1 max-w-[110px]" value={row.product_type} onChange={(e) => updateRestockRow(i, { product_type: e.target.value })}>
+                <select className="kh-input !h-9 !py-1 max-w-[110px]" value={row.product_type} onChange={(e) => updateRestockRow(i, { product_type: e.target.value, size: '' })}>
                   {PRODUCT_TYPES.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
                 <select className="kh-input !h-9 !py-1 max-w-[130px]" value={row.color} onChange={(e) => updateRestockRow(i, { color: e.target.value })}>
                   <option value="">Color…</option>
                   {colors.map((c) => <option key={c.id} value={c.name_en}>{c.name_en}</option>)}
                 </select>
+                {row.product_type === 'tee' && (
+                  <select className="kh-input !h-9 !py-1 max-w-[120px]" value={row.fit} onChange={(e) => updateRestockRow(i, { fit: e.target.value })}>
+                    {FITS.map((f) => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                )}
                 <select className="kh-input !h-9 !py-1 max-w-[90px]" value={row.size} onChange={(e) => updateRestockRow(i, { size: e.target.value })}>
                   <option value="">Size…</option>
-                  {SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {(row.product_type === 'tee' ? TEE_INTERNAL_SIZES : SIZES).map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <input type="number" min={1} className="kh-input !h-9 !py-1 max-w-[80px]" value={row.quantity} onChange={(e) => updateRestockRow(i, { quantity: Number(e.target.value) })} />
                 <button onClick={() => removeRestockRow(i)} className="kh-btn-text text-xs" style={{ color: 'var(--brand-destructive)' }}>×</button>
@@ -247,7 +267,7 @@ export default function AdminFactory() {
                       </div>
                       <div className="mt-3 overflow-x-auto">
                         <table className="w-full text-xs">
-                          <thead><tr className="text-left text-muted-foreground"><th className="pr-3 py-1">Order</th><th className="pr-3 py-1">Design</th><th className="pr-3 py-1">Type</th><th className="pr-3 py-1">Color</th><th className="pr-3 py-1">Size</th><th className="pr-3 py-1">Qty</th></tr></thead>
+                          <thead><tr className="text-left text-muted-foreground"><th className="pr-3 py-1">Order</th><th className="pr-3 py-1">Design</th><th className="pr-3 py-1">Type</th><th className="pr-3 py-1">Color</th><th className="pr-3 py-1">Garment</th><th className="pr-3 py-1">Qty</th></tr></thead>
                           <tbody>
                             {fo.items.map((it) => (
                               <tr key={it.id}>
@@ -255,7 +275,7 @@ export default function AdminFactory() {
                                 <td className="pr-3 py-1">{it.design_name_en || '—'}</td>
                                 <td className="pr-3 py-1">{it.product_type}</td>
                                 <td className="pr-3 py-1">{it.color}</td>
-                                <td className="pr-3 py-1">{it.size}</td>
+                                <td className="pr-3 py-1">{garmentSpec(it)}</td>
                                 <td className="pr-3 py-1">{it.quantity}</td>
                               </tr>
                             ))}
