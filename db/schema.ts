@@ -322,7 +322,7 @@ export const newsletterSubscribers = mysqlTable("newsletter_subscribers", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
-// ── Site settings + audit ────────────────────────────────────────────────────
+// ── Site settings + audit ─────────────────────────────────────────────────
 export const siteSettings = mysqlTable("site_settings", {
   id: serial("id").primaryKey(),
   key: varchar("key", { length: 120 }).notNull().unique(),
@@ -550,7 +550,6 @@ export const discounts = mysqlTable("discounts", {
   active: boolean("active").default(true).notNull(),
   startsAt: timestamp("startsAt"),
   expiresAt: timestamp("expiresAt"),
-  createdByUserId: bigint("createdByUserId", { mode: "number", unsigned: true }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });

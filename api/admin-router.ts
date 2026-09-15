@@ -516,7 +516,7 @@ export const adminRouter = createRouter({
     .mutation(({ input }) => createGarmentColor(input)),
 
   updateGarmentColor: adminQuery
-    .input(z.object({ id: idParam, name_en: z.string().max(80).optional(), name_ar: z.string().max(80).nullable().optional(), hex: z.string().min(3).max(9).optional() }))
+    .input(z.object({ id: idParam, name_en: z.string().min(1).max(80).optional(), name_ar: z.string().max(80).nullable().optional(), hex: z.string().min(3).max(9).optional() }))
     .mutation(({ input }) => updateGarmentColor(Number(input.id), input)),
 
   deleteGarmentColor: adminQuery
