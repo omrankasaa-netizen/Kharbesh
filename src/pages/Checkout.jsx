@@ -6,6 +6,7 @@ import { base44, cachedMe } from '@/api/khClient';
 import PhoneInput from '@/components/PhoneInput';
 import { toE164, getCountry, validatePhone } from '@/lib/phoneCountries';
 import { useSiteSettings } from '@/lib/useCatalog.jsx';
+import { fitLabel } from '@/lib/fitSizes';
 import { trackPurchase } from '@/lib/analytics';
 import {
   trackInitiateCheckout,
@@ -197,7 +198,7 @@ export default function Checkout() {
         city: form.city,
         country: form.country,
         notes: form.notes,
-        items: items.map((i) => ({ productId: i.productId, productName: i.productName, phrase: i.phrase, productType: i.productType, color: i.color, size: i.size, quantity: i.quantity, unitPrice: i.unitPrice, lineTotal: i.unitPrice * i.quantity })),
+        items: items.map((i) => ({ productId: i.productId, productName: i.productName, phrase: i.phrase, productType: i.productType, color: i.color, size: i.size, fit: i.fit, quantity: i.quantity, unitPrice: i.unitPrice, lineTotal: i.unitPrice * i.quantity })),
         subtotal,
         shipping,
         total,
@@ -355,7 +356,7 @@ export default function Checkout() {
           <div className="divide-y divide-border">
             {items.map((i) => (
               <div key={i.key} className="py-3 flex justify-between gap-2 text-sm">
-                <span className="min-w-0"><span className="block font-medium truncate">{i.productName}</span><span className="text-muted-foreground text-xs">{i.color} · {i.size} · ×{i.quantity}</span></span>
+                <span className="min-w-0"><span className="block font-medium truncate">{i.productName}</span><span className="text-muted-foreground text-xs">{i.color} · {i.size}{i.fit === 'oversize' ? ` · ${fitLabel('oversize', lang)}` : ''} · ×{i.quantity}</span></span>
                 <span className="shrink-0">${i.unitPrice * i.quantity}</span>
               </div>
             ))}

@@ -224,7 +224,7 @@ export default function AdminOrders() {
                             <div className="space-y-1 text-sm">
                               {(o.items || []).map((i, idx) => (
                                 <div key={idx} className="flex justify-between gap-2">
-                                  <span className="min-w-0 truncate">{i.productName} — {i.color} · {i.size} · ×{i.quantity}</span>
+                                  <span className="min-w-0 truncate">{i.productName} — {i.color} · {i.size}{i.fit === 'oversize' ? ' · Oversize' : ''} · ×{i.quantity}</span>
                                   <span className="shrink-0">${i.lineTotal ?? (i.unitPrice * i.quantity)}</span>
                                 </div>
                               ))}
