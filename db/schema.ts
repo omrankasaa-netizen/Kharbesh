@@ -191,6 +191,9 @@ export type OrderLineItem = {
   productType?: string;
   color: string;
   size: string;
+  // Customer-facing cut choice (tees only; absent on legacy orders and
+  // non-tee items — treat absent as "regular").
+  fit?: "regular" | "oversize";
   quantity: number;
   unitPrice: number;
   lineTotal: number;
@@ -339,15 +342,21 @@ export const auditLogs = mysqlTable("audit_logs", {
 
 // ── Blank garment inventory ───────────────────────────────────────────────────
 // The factory holds physical blank garments (no print yet) per productType +
-// color + size. Printed designs are applied on demand when an order arrives,
-// so stock is tracked at the blank level, shared across every product/design
-// that uses that garment/color/size combination.
+// color + fit + size. Printed designs are applied on demand when an order
+// arrives, so stock is tracked at the blank level, shared across every
+// product/design that uses that garment/color/fit/size combination.
+//
+// Tees come in two cuts (fit: regular | oversize), each stocked in three
+// INTERNAL sizes only — S/M, L/XL, XXL (adjacent customer sizes share one
+// physical blank; see api/lib/fitSizes.ts). Non-tee garments stay on
+// fit="regular" with their real sizes.
 export const blankStock = mysqlTable(
   "blank_stock",
   {
     id: serial("id").primaryKey(),
     productType: mysqlEnum("productType", ["tee", "hoodie", "accessory"]).notNull(),
     color: varchar("color", { length: 80 }).notNull(),
+    fit: mysqlEnum("fit", ["regular", "oversize"]).default("regular").notNull(),
     size: varchar("size", { length: 20 }).notNull(),
     quantityOnHand: int("quantityOnHand").default(0).notNull(),
     lowStockThreshold: int("lowStockThreshold").default(2).notNull(),
@@ -355,7 +364,7 @@ export const blankStock = mysqlTable(
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
   (t) => ({
-    variantIdx: uniqueIndex("blank_stock_variant_idx").on(t.productType, t.color, t.size),
+    variantIdx: uniqueIndex("blank_stock_variant_idx").on(t.productType, t.color, t.fit, t.size),
   }),
 );
 
@@ -407,7 +416,13 @@ export const factoryOrderItems = mysqlTable(
     phraseEn: varchar("phraseEn", { length: 255 }),
     productType: mysqlEnum("productType", ["tee", "hoodie", "accessory"]).notNull(),
     color: varchar("color", { length: 80 }).notNull(),
+    // Cut of the garment — tees only; non-tee rows stay "regular".
+    fit: mysqlEnum("fit", ["regular", "oversize"]).default("regular").notNull(),
+    // The size the FACTORY cuts: for tees this is the internal group
+    // (S/M, L/XL, XXL) — see api/lib/fitSizes.ts. The customer's chosen
+    // size (S, M, L, XL, XXL) is kept in displaySize for packing.
     size: varchar("size", { length: 20 }).notNull(),
+    displaySize: varchar("displaySize", { length: 20 }),
     quantity: int("quantity").notNull(),
     placement: varchar("placement", { length: 180 }),
     notes: varchar("notes", { length: 500 }),
@@ -535,6 +550,7 @@ export const discounts = mysqlTable("discounts", {
   active: boolean("active").default(true).notNull(),
   startsAt: timestamp("startsAt"),
   expiresAt: timestamp("expiresAt"),
+  createdByUserId: bigint("createdByUserId", { mode: "number", unsigned: true }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });

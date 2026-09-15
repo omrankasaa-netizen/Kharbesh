@@ -83,7 +83,7 @@
       "idx": 11,
       "version": "5",
       "when": 1788880097835,
-      "tag": "0011_add_print_file_url_2",
+      "tag": "0011_url_2",
       "breakpoints": true
     },
     {
@@ -91,6 +91,13 @@
       "version": "5",
       "when": 1788880812345,
       "tag": "0012_add_print_files_reference_photo",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1789490398680,
+      "tag": "0013_add_garment_fit",
       "breakpoints": true
     }
   ]
