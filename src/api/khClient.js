@@ -48,6 +48,7 @@ const resolveAssetUrl = (url) => {
 const resolveAssetUrls = (urls) => (Array.isArray(urls) ? urls.map(resolveAssetUrl) : urls);
 
 const TONES = ['subtle', 'bold', 'sarcastic', 'clean', 'colorful'];
+const FITS = ['regular', 'oversize'];
 
 const ROLE_LEVEL = { user: 0, staff: 1, admin: 2, super_admin: 3 };
 /** True when the signed-in user's role is at least `minRole` in the hierarchy. */
@@ -175,7 +176,7 @@ export const kh = {
       /** Products list selection toolbar: move many products into the same collection at once. */
       bulkUpdateCollection: (ids, collectionName) =>
         client.admin.bulkUpdateProductCollection.mutate({ ids: ids.map(String), collectionName: collectionName || null }),
-      /** Products list selection toolbar: permanent batch delete — server enforces super_admin. */
+      /** Products list selection toolbar: permanent batch delete — super_admin. */
       bulkHardDelete: (ids) => client.admin.bulkHardDeleteProducts.mutate({ ids: ids.map(String) }),
       /** Bulk Design Upload page: assigns matched print-file URL(s) to many products at once. */
       bulkAssignDesignFiles: (items) => client.admin.bulkAssignDesignFiles.mutate({ items }),
@@ -233,6 +234,8 @@ export const kh = {
             productId: String(i.productId),
             color: i.color,
             size: i.size,
+            // Tee cut choice — dropped here unless it's a valid fit value.
+            fit: FITS.includes(i.fit) ? i.fit : undefined,
             quantity: i.quantity,
           })),
           promoCode: empty(data.promo_code),
@@ -292,6 +295,7 @@ export const kh = {
           occasion: empty(data.occasion),
           tone: TONES.includes(data.tone) ? data.tone : undefined,
           garment: empty(data.garment),
+          fit: FITS.includes(data.fit) ? data.fit : undefined,
           color: empty(data.color),
           size: empty(data.size),
           quantity: Number(data.quantity) || 1,
