@@ -4,6 +4,7 @@ import { useI18n } from '@/lib/i18n';
 import { useCart } from '@/lib/cart';
 import { useColors, resolveColor, useSiteSettings } from '@/lib/useCatalog.jsx';
 import GarmentMockup, { contrastInk } from '@/components/GarmentMockup';
+import { fitLabel } from '@/lib/fitSizes';
 import { whatsappLink } from '@/lib/whatsapp';
 import { IconWhatsApp } from '@/components/Brand';
 
@@ -33,7 +34,7 @@ export default function Cart() {
   const shipping = shippingCents / 100;
   const total = subtotal + shipping;
 
-  const orderLines = items.map((item) => `${item.quantity}x ${item.productName} (${item.color}, ${item.size})`).join('\n');
+  const orderLines = items.map((item) => `${item.quantity}x ${item.productName} (${item.color}${item.fit === 'oversize' ? ', oversize fit' : ''}, ${item.size})`).join('\n');
   const whatsappOrderText = `${lang === 'ar' ? 'هاي، بدي اطلب هالليستة' : "Hi! I'd like to order"}:\n${orderLines}\n\n${lang === 'ar' ? 'المجموع' : 'Total'}: $${total.toFixed(2)}`;
 
   return (
@@ -56,7 +57,7 @@ export default function Cart() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-heading text-lg uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{item.productName}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{lang === 'ar' ? (color?.name_ar || item.color) : item.color} · {item.size}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{lang === 'ar' ? (color?.name_ar || item.color) : item.color} · {item.size}{item.fit === 'oversize' ? ` · ${fitLabel('oversize', lang)}` : ''}</p>
                   <p className="font-heading mt-2" style={{ fontFamily: 'var(--brand-font-heading)' }}>${item.unitPrice} {t.product.perUnit}</p>
                   <div className="flex items-center gap-4 mt-3">
                     <div className="flex items-center border border-border rounded-sm">
