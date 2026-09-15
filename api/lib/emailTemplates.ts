@@ -264,6 +264,7 @@ export type CustomRequestNotification = {
   occasion?: string | null;
   tone?: string | null;
   garment?: string | null;
+  fit?: string | null;
   color?: string | null;
   size?: string | null;
   quantity: number;
@@ -310,6 +311,7 @@ export function customRequestNotificationEmail(r: CustomRequestNotification): { 
       ${fieldRow("Occasion", r.occasion)}
       ${fieldRow("Tone", r.tone)}
       ${fieldRow("Garment", r.garment)}
+      ${fieldRow("Fit", r.fit)}
       ${fieldRow("Color", r.color)}
       ${fieldRow("Size", r.size)}
       ${fieldRow("Quantity", r.quantity)}
@@ -338,6 +340,7 @@ export function customRequestNotificationEmail(r: CustomRequestNotification): { 
     r.occasion ? `Occasion: ${r.occasion}` : null,
     r.tone ? `Tone: ${r.tone}` : null,
     r.garment ? `Garment: ${r.garment}` : null,
+    r.fit ? `Fit: ${r.fit}` : null,
     r.color ? `Color: ${r.color}` : null,
     r.size ? `Size: ${r.size}` : null,
     `Quantity: ${r.quantity}`,
