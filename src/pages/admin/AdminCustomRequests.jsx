@@ -96,7 +96,7 @@ export default function AdminCustomRequests() {
                     <td className="py-3 pr-3 font-medium">{r.name}</td>
                     <td className="py-3 pr-3 max-w-[220px]"><span className="block truncate">{r.phrase}</span></td>
                     <td className="py-3 pr-3 text-muted-foreground text-xs whitespace-nowrap">
-                      {[r.garment, r.color, r.size].filter(Boolean).join(' · ') || '—'}{r.quantity ? ` · ×${r.quantity}` : ''}
+                      {[r.garment, r.fit ? `${r.fit} fit` : null, r.color, r.size].filter(Boolean).join(' · ') || '—'}{r.quantity ? ` · ×${r.quantity}` : ''}
                     </td>
                     <td className="py-3 pr-3" onClick={(e) => e.stopPropagation()}>
                       <span
@@ -138,6 +138,7 @@ export default function AdminCustomRequests() {
                             {detailField('Recipient', 'لمن', r.recipient)}
                             {detailField('Occasion', 'المناسبة', r.occasion)}
                             {detailField('Tone', 'النبرة', r.tone)}
+                            {detailField('Fit', 'القصّة', r.fit ? (r.fit === 'oversize' ? (lang === 'ar' ? 'أوفرسايز' : 'Oversize') : (lang === 'ar' ? 'عادية' : 'Regular')) : null)}
                             {detailField('Placement', 'مكان الطبعة', r.placement)}
                             {detailField('Needed by', 'مطلوب قبل', r.needed_by)}
                             <div>

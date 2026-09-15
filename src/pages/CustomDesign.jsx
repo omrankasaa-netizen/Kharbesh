@@ -6,6 +6,7 @@ import { Scribble } from '@/components/Brand';
 import PhoneInput from '@/components/PhoneInput';
 import { toE164, getCountry, validatePhone } from '@/lib/phoneCountries';
 import { whatsappLink } from '@/lib/whatsapp';
+import { FIT_OPTIONS } from '@/lib/fitSizes';
 import { trackCustomizeProduct, trackContact } from '@/lib/metaPixel';
 
 export default function CustomDesign() {
@@ -13,7 +14,9 @@ export default function CustomDesign() {
   const colors = useColors();
   const styles = useGarmentStyles();
   const { settings } = useSiteSettings();
-  const [form, setForm] = useState({ name: '', email: '', phrase: '', story: '', language: '', recipient: '', occasion: '', tone: 'subtle', garment: '', color: '', size: '', quantity: 1, placement: '', needed_by: '', notes: '', rights: false });
+  const [form, setForm] = useState({ name: '', email: '', phrase: '', story: '', language: '', recipient: '', occasion: '', tone: 'subtle', garment: '', fit: 'regular', color: '', size: '', quantity: 1, placement: '', needed_by: '', notes: '', rights: false });
+  // The cut choice (regular/oversize) only applies to tee garments.
+  const isTee = /tee|t-?shirt|تيشيرت/i.test(form.garment || '');
   // Optional phone — same international picker as checkout. Stays optional,
   // but when filled it must validate and is sent as E.164.
   const [phone, setPhone] = useState({ iso: 'LB', national: '' });
@@ -69,6 +72,7 @@ export default function CustomDesign() {
     try {
       await base44.entities.CustomProject.create({
         ...form,
+        fit: isTee ? form.fit : undefined,
         phone: phoneFilled ? toE164(phoneDial, phone.national) : undefined,
         quantity: Number(form.quantity) || 1,
         reference_files: files,
@@ -164,6 +168,13 @@ export default function CustomDesign() {
               {styles.map((s) => <option key={s.id} value={s.name_en}>{lang === 'ar' ? s.name_ar : s.name_en}</option>)}
             </select>
           </Field>
+          {isTee && (
+            <Field label={t.product.chooseFit}>
+              <select value={form.fit} onChange={set('fit')} className="kh-input">
+                {FIT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{lang === 'ar' ? o.ar : o.en}</option>)}
+              </select>
+            </Field>
+          )}
           <Field label={t.custom.color}>
             <select value={form.color} onChange={set('color')} className="kh-input">
               <option value="">—</option>

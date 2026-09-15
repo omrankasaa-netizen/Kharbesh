@@ -274,6 +274,10 @@ export const customRequests = mysqlTable("custom_requests", {
   occasion: varchar("occasion", { length: 200 }),
   tone: mysqlEnum("tone", ["subtle", "bold", "sarcastic", "clean", "colorful"]).default("subtle"),
   garment: varchar("garment", { length: 120 }),
+  // Requested cut when the garment is a tee (regular | oversize). Nullable —
+  // legacy requests and non-tee garments have no fit; treat absent as
+  // "regular" (matches the storefront default).
+  fit: mysqlEnum("fit", ["regular", "oversize"]),
   color: varchar("color", { length: 80 }),
   size: varchar("size", { length: 20 }),
   quantity: int("quantity").default(1).notNull(),

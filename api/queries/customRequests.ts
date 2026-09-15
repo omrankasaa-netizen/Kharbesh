@@ -15,6 +15,7 @@ export function toUiCustomRequest(r: CustomRequest) {
     occasion: r.occasion,
     tone: r.tone,
     garment: r.garment,
+    fit: r.fit,
     color: r.color,
     size: r.size,
     quantity: r.quantity,
@@ -40,6 +41,7 @@ export type CreateCustomRequestInput = {
   occasion?: string;
   tone?: "subtle" | "bold" | "sarcastic" | "clean" | "colorful";
   garment?: string;
+  fit?: "regular" | "oversize";
   color?: string;
   size?: string;
   quantity: number;
@@ -67,6 +69,7 @@ export async function createCustomRequest(input: CreateCustomRequestInput) {
       occasion: input.occasion ?? null,
       tone: input.tone ?? "subtle",
       garment: input.garment ?? null,
+      fit: input.fit ?? null,
       color: input.color ?? null,
       size: input.size ?? null,
       quantity: input.quantity,
