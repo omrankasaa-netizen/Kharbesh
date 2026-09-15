@@ -322,7 +322,7 @@ export const newsletterSubscribers = mysqlTable("newsletter_subscribers", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
-// ── Site settings + audit ─────────────────────────────────────────────────
+// ── Site settings + audit ────────────────────────────────────────────────────
 export const siteSettings = mysqlTable("site_settings", {
   id: serial("id").primaryKey(),
   key: varchar("key", { length: 120 }).notNull().unique(),
