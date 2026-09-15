@@ -4,6 +4,7 @@ import { useI18n } from '@/lib/i18n';
 import { base44 } from '@/api/khClient';
 import { Scribble } from '@/components/Brand';
 import { useSiteSettings } from '@/lib/useCatalog.jsx';
+import { fitLabel } from '@/lib/fitSizes';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function OrderConfirmation() {
@@ -58,7 +59,7 @@ export default function OrderConfirmation() {
         <div className="divide-y divide-border">
           {(order.items || []).map((it, idx) => (
             <div key={idx} className="py-3 flex justify-between text-sm">
-              <span>{it.productName} · {it.color} · {it.size} · ×{it.quantity}</span>
+              <span>{it.productName} · {it.color} · {it.size}{it.fit === 'oversize' ? ` · ${fitLabel('oversize', lang)}` : ''} · ×{it.quantity}</span>
               <span>${it.lineTotal}</span>
             </div>
           ))}

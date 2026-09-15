@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router';
 import { useI18n } from '@/lib/i18n';
 import { useProducts, useColors, resolveColor } from '@/lib/useCatalog.jsx';
 import { useCart } from '@/lib/cart';
+import { FIT_OPTIONS, DEFAULT_FIT, productHasFits } from '@/lib/fitSizes';
 import { toggleWishlist, isSaved } from '@/lib/wishlist';
 import { toast } from '@/components/ui/use-toast';
 import { base44 } from '@/api/khClient';
@@ -27,6 +28,7 @@ export default function ProductPage() {
 
   const [colorName, setColorName] = useState('');
   const [size, setSize] = useState('');
+  const [fit, setFit] = useState(DEFAULT_FIT);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [colorImages, setColorImages] = useState({});
@@ -87,6 +89,8 @@ export default function ProductPage() {
   const name = lang === 'ar' ? (product.name_ar || product.name_en) : product.name_en;
   const desc = lang === 'ar' ? (product.description_ar || product.description_en) : product.description_en;
   const isPreorder = product.preorder_type !== 'always_on';
+  const hasFits = productHasFits(product);
+  const chosenFit = hasFits ? fit : DEFAULT_FIT;
 
   const handleAdd = () => {
     if (!canAdd) return;
@@ -98,6 +102,7 @@ export default function ProductPage() {
       image: product.images?.[0],
       color: colorName,
       size,
+      fit: chosenFit,
       quantity: qty,
       unitPrice: product.price,
     });
@@ -218,6 +223,26 @@ export default function ProductPage() {
             {colorName && <p className="text-sm text-muted-foreground mt-2">{lang === 'ar' ? (resolveColor(colorName, colors)?.name_ar) : colorName}</p>}
           </fieldset>
 
+          {/* Fit — tees come in two cuts, same price, same sizes */}
+          {hasFits && (
+            <fieldset className="mt-6" disabled={!colorName}>
+              <legend className="kh-eyebrow mb-3">{t.product.chooseFit}</legend>
+              <div className="flex flex-wrap gap-2">
+                {FIT_OPTIONS.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setFit(f.id)}
+                    aria-pressed={fit === f.id}
+                    className={`kh-btn-outline kh-btn-filter !text-[13px] !py-2 !px-4 ${fit === f.id ? '!bg-primary !text-primary-foreground' : ''}`}
+                  >
+                    {lang === 'ar' ? f.ar : f.en}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">{t.product.fitNote}</p>
+            </fieldset>
+          )}
+
           {/* Size */}
           <fieldset className="mt-6" disabled={!colorName}>
             <legend className="kh-eyebrow mb-3">{t.product.chooseSize}</legend>
@@ -267,8 +292,8 @@ export default function ProductPage() {
             href={whatsappLink(
               settings?.contact?.whatsappNumber,
               (lang === 'ar'
-                ? `هاي، بدي هالتيشيرت: ${name}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`
-                : `Hi! I'd like to order: ${name}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`),
+                ? `هاي، بدي هالتيشيرت: ${name}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (أوفرسايز)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`
+                : `Hi! I'd like to order: ${name}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (oversize fit)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`),
             )}
             target="_blank"
             rel="noreferrer"

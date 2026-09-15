@@ -3,11 +3,13 @@ import { getDb } from "./connection";
 import { auditLogs, blankStock, stockMovements } from "@db/schema";
 import { sendEmail } from "../lib/email";
 import { lowStockAlertEmail } from "../lib/emailTemplates";
+import { normalizeFit } from "../lib/fitSizes";
 import { env } from "../lib/env";
 
 export type LowStockVariant = {
   productType: string;
   color: string;
+  fit: string;
   size: string;
   quantityOnHand: number;
   lowStockThreshold: number;
@@ -45,6 +47,7 @@ export function toUiStock(s: typeof blankStock.$inferSelect) {
     id: String(s.id),
     product_type: s.productType,
     color: s.color,
+    fit: s.fit,
     size: s.size,
     quantity_on_hand: s.quantityOnHand,
     low_stock_threshold: s.lowStockThreshold,
@@ -57,15 +60,16 @@ export async function listBlankStock() {
   const rows = await getDb()
     .select()
     .from(blankStock)
-    .orderBy(asc(blankStock.productType), asc(blankStock.color), asc(blankStock.size));
+    .orderBy(asc(blankStock.productType), asc(blankStock.color), asc(blankStock.fit), asc(blankStock.size));
   return rows.map(toUiStock);
 }
 
-/** Creates a new blank-stock variant (productType + color + size) or updates its threshold. */
+/** Creates a new blank-stock variant (productType + color + fit + size) or updates its threshold. */
 export async function upsertStockVariant(
   data: {
     product_type: "tee" | "hoodie" | "accessory";
     color: string;
+    fit?: "regular" | "oversize";
     size: string;
     quantity_on_hand?: number;
     low_stock_threshold?: number;
@@ -73,10 +77,12 @@ export async function upsertStockVariant(
   actorUserId: number,
 ) {
   const db = getDb();
+  const fit = normalizeFit(data.fit, data.product_type);
   const existing = await db.query.blankStock.findFirst({
     where: and(
       eq(blankStock.productType, data.product_type),
       eq(blankStock.color, data.color),
+      eq(blankStock.fit, fit),
       eq(blankStock.size, data.size),
     ),
   });
@@ -97,6 +103,7 @@ export async function upsertStockVariant(
       notifyLowStock([{
         productType: row.productType,
         color: row.color,
+        fit: row.fit,
         size: row.size,
         quantityOnHand: row.quantityOnHand,
         lowStockThreshold: row.lowStockThreshold,
@@ -110,6 +117,7 @@ export async function upsertStockVariant(
     .values({
       productType: data.product_type,
       color: data.color,
+      fit,
       size: data.size,
       quantityOnHand: data.quantity_on_hand ?? 0,
       lowStockThreshold: data.low_stock_threshold ?? 2,
@@ -163,6 +171,7 @@ export async function adjustStock(
       crossed = {
         productType: row.productType,
         color: row.color,
+        fit: row.fit,
         size: row.size,
         quantityOnHand: nextQty,
         lowStockThreshold: row.lowStockThreshold,

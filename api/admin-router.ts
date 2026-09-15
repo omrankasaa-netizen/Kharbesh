@@ -421,6 +421,9 @@ export const adminRouter = createRouter({
       z.object({
         product_type: productType,
         color: z.string().min(1).max(80),
+        // Tee blank cut — internal group sizes (S/M, L/XL, XXL) apply per
+        // fit; non-tee variants ignore it (normalized server-side).
+        fit: z.enum(["regular", "oversize"]).optional(),
         size: z.string().min(1).max(20),
         quantity_on_hand: z.number().int().min(0).max(100_000).optional(),
         low_stock_threshold: z.number().int().min(0).max(100_000).optional(),
@@ -479,6 +482,8 @@ export const adminRouter = createRouter({
             z.object({
               product_type: productType,
               color: z.string().min(1).max(80),
+              // Tee blanks are restocked per fit in internal group sizes.
+              fit: z.enum(["regular", "oversize"]).optional(),
               size: z.string().min(1).max(20),
               quantity: z.number().int().min(1).max(100_000),
             }),

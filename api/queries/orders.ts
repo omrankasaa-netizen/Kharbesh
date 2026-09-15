@@ -5,6 +5,7 @@ import { normalizePhoneToE164, phoneLookupVariants } from "../lib/phone";
 import { discountAmountCents, isWithinWindow, matchesDiscount } from "./promotions";
 import { computeShippingCents, getSettings, isPaymentMethodEnabled } from "./settings";
 import { applyLoyaltyToOrder, tierLabel } from "./loyalty";
+import { normalizeFit } from "../lib/fitSizes";
 import { sendEmail } from "../lib/email";
 import { followUpEmail } from "../lib/emailTemplates";
 
@@ -59,7 +60,7 @@ export type CreateOrderInput = {
   language: "en" | "ar";
   userId?: number;
   paymentMethod: "cash_on_delivery" | "whish";
-  items: { productId: string; color: string; size: string; quantity: number }[];
+  items: { productId: string; color: string; size: string; fit?: string; quantity: number }[];
   promoCode?: string;
 };
 
@@ -122,6 +123,9 @@ export async function createOrder(input: CreateOrderInput) {
       if (!product.sizes.includes(item.size)) {
         throw new Error("SIZE_UNAVAILABLE");
       }
+      // Fit is a tee-only cut choice; anything else is forced to regular
+      // so inventory/factory never see a fit on a hoodie or accessory.
+      const fit = normalizeFit(item.fit, product.productType);
       if (item.quantity < 1 || item.quantity > 20) {
         throw new Error("INVALID_QUANTITY");
       }
@@ -154,6 +158,7 @@ export async function createOrder(input: CreateOrderInput) {
         productType: product.productType,
         color: item.color,
         size: item.size,
+        fit,
         quantity: item.quantity,
         unitPrice: product.priceCents / 100,
         lineTotal: lineTotalCents / 100,

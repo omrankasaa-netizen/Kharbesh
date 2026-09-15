@@ -24,7 +24,10 @@ function loadCart() {
         const quantity = Math.max(1, Math.floor(Number(item.quantity)) || 1);
         const color = item.color ?? '';
         const size = item.size ?? '';
-        return { ...item, quantity, color, size, key: item.key || `${item.productId}|${color}|${size}` };
+        // Tees come in regular + oversize cuts — the fit is part of what
+        // makes a cart line unique (same tee in both cuts = two lines).
+        const fit = item.fit === 'oversize' ? 'oversize' : 'regular';
+        return { ...item, quantity, color, size, fit, key: item.key || `${item.productId}|${color}|${size}|${fit}` };
       });
   } catch {
     return memoryCart;
@@ -56,7 +59,7 @@ export const CartProvider = ({ children }) => {
       /* tracking must never break the cart */
     }
     setItems((prev) => {
-      const key = `${item.productId}|${item.color}|${item.size}`;
+      const key = `${item.productId}|${item.color}|${item.size}|${item.fit === 'oversize' ? 'oversize' : 'regular'}`;
       const existing = prev.find((p) => p.key === key);
       if (existing) {
         return prev.map((p) => (p.key === key ? { ...p, quantity: p.quantity + item.quantity } : p));

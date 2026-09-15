@@ -92,6 +92,13 @@
       "when": 1788880812345,
       "tag": "0012_add_print_files_reference_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1789490398680,
+      "tag": "0013_add_garment_fit",
+      "breakpoints": true
     }
   ]
 }

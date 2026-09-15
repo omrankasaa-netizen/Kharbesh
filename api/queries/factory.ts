@@ -6,11 +6,13 @@ import {
   factoryOrderItems,
   factoryOrders,
   orders,
+  productColorImages,
   products,
   stockMovements,
   type FactoryOrder,
   type FactoryOrderItem,
 } from "@db/schema";
+import { factorySizeFor, normalizeFit } from "../lib/fitSizes";
 import { crossedIntoLow, notifyLowStock, type LowStockVariant } from "./inventory";
 
 function toUiItem(i: FactoryOrderItem) {
@@ -24,7 +26,9 @@ function toUiItem(i: FactoryOrderItem) {
     phrase_en: i.phraseEn,
     product_type: i.productType,
     color: i.color,
+    fit: i.fit,
     size: i.size,
+    display_size: i.displaySize,
     quantity: i.quantity,
     placement: i.placement,
     notes: i.notes,
@@ -136,6 +140,8 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
         const product = productId != null ? productById.get(productId) : undefined;
         const colorImages = productId != null ? colorImagesByKey.get(colorKey(productId, item.color)) : undefined;
         const referencePhotoUrl = colorImages?.[0] ?? product?.images?.[0] ?? null;
+        const productType = (item.productType as "tee" | "hoodie" | "accessory") ?? "tee";
+        const fit = normalizeFit(item.fit, productType);
         await tx.insert(factoryOrderItems).values({
           factoryOrderId,
           sourceOrderId: order.id,
@@ -143,9 +149,13 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
           productId,
           designNameEn: item.productName,
           phraseEn: item.phrase ?? null,
-          productType: (item.productType as "tee" | "hoodie" | "accessory") ?? "tee",
+          productType,
           color: item.color,
-          size: item.size,
+          fit,
+          // The factory cuts the INTERNAL size group (tees: S/M, L/XL,
+          // XXL); the customer's chosen size rides along for packing.
+          size: factorySizeFor(productType, item.size),
+          displaySize: item.size,
           quantity: item.quantity,
           customerName: order.fullName,
           customerPhone: order.phone,
@@ -180,7 +190,7 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
 
 /** Creates a manual restock request draft (blanks to keep on hand, not tied to a customer order). */
 export async function createRestockRequest(
-  items: { product_type: "tee" | "hoodie" | "accessory"; color: string; size: string; quantity: number }[],
+  items: { product_type: "tee" | "hoodie" | "accessory"; color: string; fit?: string; size: string; quantity: number }[],
   notes: string | undefined,
   actorUserId: number,
 ) {
@@ -196,6 +206,9 @@ export async function createRestockRequest(
         factoryOrderId,
         productType: item.product_type,
         color: item.color,
+        // Restock rows for tees already carry INTERNAL group sizes
+        // (S/M, L/XL, XXL) chosen in the admin UI — pass through as-is.
+        fit: normalizeFit(item.fit, item.product_type),
         size: item.size,
         quantity: item.quantity,
       });
@@ -258,6 +271,7 @@ export async function markFactoryOrderFulfilled(id: number, actorUserId: number)
           and(
             eq(blankStock.productType, item.productType),
             eq(blankStock.color, item.color),
+            eq(blankStock.fit, item.fit),
             eq(blankStock.size, item.size),
           ),
         )
@@ -274,6 +288,7 @@ export async function markFactoryOrderFulfilled(id: number, actorUserId: number)
           crossedVariants.push({
             productType: stock.productType,
             color: stock.color,
+            fit: stock.fit,
             size: stock.size,
             quantityOnHand: nextQty,
             lowStockThreshold: stock.lowStockThreshold,
@@ -292,6 +307,7 @@ export async function markFactoryOrderFulfilled(id: number, actorUserId: number)
           .values({
             productType: item.productType,
             color: item.color,
+            fit: item.fit,
             size: item.size,
             quantityOnHand: item.quantity,
           })

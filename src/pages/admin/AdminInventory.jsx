@@ -7,6 +7,11 @@ import { toast } from '@/components/ui/use-toast';
 
 const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
+// Tees are stocked per FIT in three internal sizes — adjacent customer
+// sizes share one blank (S+M → S/M, L+XL → L/XL). Other garment types
+// keep their real sizes and stay on the regular fit.
+const TEE_INTERNAL_SIZES = ['S/M', 'L/XL', 'XXL'];
+const FITS = ['regular', 'oversize'];
 
 export default function AdminInventory() {
   const { t, lang } = useI18n();
@@ -14,7 +19,7 @@ export default function AdminInventory() {
   const styles = useGarmentStyles();
   const [stock, setStock] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [newVariant, setNewVariant] = useState({ product_type: 'tee', color: '', size: '', quantity_on_hand: 0, low_stock_threshold: 2 });
+  const [newVariant, setNewVariant] = useState({ product_type: 'tee', color: '', fit: 'regular', size: '', quantity_on_hand: 0, low_stock_threshold: 2 });
   const [adjusting, setAdjusting] = useState(null);
   const [adjustQty, setAdjustQty] = useState('');
   const [movements, setMovements] = useState({});
@@ -40,7 +45,7 @@ export default function AdminInventory() {
       const exists = s.some((x) => x.id === created.id);
       return exists ? s.map((x) => (x.id === created.id ? created : x)) : [created, ...s];
     });
-    setNewVariant({ product_type: 'tee', color: '', size: '', quantity_on_hand: 0, low_stock_threshold: 2 });
+    setNewVariant({ product_type: 'tee', color: '', fit: 'regular', size: '', quantity_on_hand: 0, low_stock_threshold: 2 });
   };
 
   const submitAdjust = async (row, type) => {
@@ -72,6 +77,7 @@ export default function AdminInventory() {
       const updated = await base44.entities.BlankStock.upsertVariant({
         product_type: row.product_type,
         color: row.color,
+        fit: row.fit,
         size: row.size,
         low_stock_threshold: value,
       });
@@ -136,16 +142,21 @@ export default function AdminInventory() {
 
       <h2 className="font-heading text-xl uppercase mt-10 mb-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'إضافة متغيّر' : 'Add stock variant'}</h2>
       <div className="bg-card border border-border rounded-md p-5 flex flex-wrap gap-3 items-end">
-        <select className="kh-input !h-9 !py-1 max-w-[140px]" value={newVariant.product_type} onChange={(e) => setNewVariant((v) => ({ ...v, product_type: e.target.value }))}>
+        <select className="kh-input !h-9 !py-1 max-w-[140px]" value={newVariant.product_type} onChange={(e) => setNewVariant((v) => ({ ...v, product_type: e.target.value, size: '' }))}>
           {PRODUCT_TYPES.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
         <select className="kh-input !h-9 !py-1 max-w-[160px]" value={newVariant.color} onChange={(e) => setNewVariant((v) => ({ ...v, color: e.target.value }))}>
           <option value="">Color…</option>
           {colors.map((c) => <option key={c.id} value={c.name_en}>{c.name_en}</option>)}
         </select>
+        {newVariant.product_type === 'tee' && (
+          <select className="kh-input !h-9 !py-1 max-w-[130px]" value={newVariant.fit} onChange={(e) => setNewVariant((v) => ({ ...v, fit: e.target.value }))}>
+            {FITS.map((f) => <option key={f} value={f}>{f} fit</option>)}
+          </select>
+        )}
         <select className="kh-input !h-9 !py-1 max-w-[100px]" value={newVariant.size} onChange={(e) => setNewVariant((v) => ({ ...v, size: e.target.value }))}>
           <option value="">Size…</option>
-          {SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {(newVariant.product_type === 'tee' ? TEE_INTERNAL_SIZES : SIZES).map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         <input type="number" placeholder="Qty on hand" className="kh-input !h-9 !py-1 max-w-[120px]" value={newVariant.quantity_on_hand} onChange={(e) => setNewVariant((v) => ({ ...v, quantity_on_hand: Number(e.target.value) }))} />
         <input type="number" placeholder="Low-stock alert" className="kh-input !h-9 !py-1 max-w-[130px]" value={newVariant.low_stock_threshold} onChange={(e) => setNewVariant((v) => ({ ...v, low_stock_threshold: Number(e.target.value) }))} />
@@ -157,7 +168,7 @@ export default function AdminInventory() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="text-left text-muted-foreground border-b border-border">
-              <th className="py-3 pr-3">Type</th><th className="py-3 pr-3">Color</th><th className="py-3 pr-3">Size</th>
+              <th className="py-3 pr-3">Type</th><th className="py-3 pr-3">Color</th><th className="py-3 pr-3">Fit</th><th className="py-3 pr-3">Size</th>
               <th className="py-3 pr-3">On hand</th><th className="py-3 pr-3">Alert at</th><th className="py-3 pr-3"></th>
             </tr></thead>
             <tbody>
@@ -166,6 +177,7 @@ export default function AdminInventory() {
                   <tr className="border-b border-border">
                     <td className="py-3 pr-3">{s.product_type}</td>
                     <td className="py-3 pr-3">{s.color}</td>
+                    <td className="py-3 pr-3">{s.product_type === 'tee' ? (s.fit || 'regular') : '—'}</td>
                     <td className="py-3 pr-3">{s.size}</td>
                     <td className="py-3 pr-3 font-semibold" style={{ color: s.is_low ? 'var(--brand-accent)' : undefined }}>{s.quantity_on_hand}</td>
                     <td className="py-3 pr-3">
@@ -196,7 +208,7 @@ export default function AdminInventory() {
                   </tr>
                   {movements[s.id] && (
                     <tr>
-                      <td colSpan={6} className="pb-4">
+                      <td colSpan={7} className="pb-4">
                         <ul className="text-xs text-muted-foreground space-y-1 pl-2">
                           {movements[s.id].map((m) => (
                             <li key={m.id}>{new Date(m.created_date).toLocaleString()} — {m.type} {m.quantity_delta > 0 ? '+' : ''}{m.quantity_delta} {m.note ? `(${m.note})` : ''}</li>
@@ -208,7 +220,7 @@ export default function AdminInventory() {
                   )}
                 </React.Fragment>
               ))}
-              {stock.length === 0 && <tr><td colSpan={6} className="py-8 text-muted-foreground">No stock variants yet — add one above.</td></tr>}
+              {stock.length === 0 && <tr><td colSpan={7} className="py-8 text-muted-foreground">No stock variants yet — add one above.</td></tr>}
             </tbody>
           </table>
         </div>

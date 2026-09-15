@@ -31,7 +31,7 @@ function itemsTable(items: OrderLineItem[], lang: "en" | "ar"): string {
       <tr>
         <td style="padding:10px 0;border-bottom:1px solid ${BORDER};color:${CREAM};font-family:${lang === "ar" ? ARABIC_FONT : LATIN_FONT};font-size:14px;">
           ${esc(it.productName)}<br/>
-          <span style="color:${MUTED};font-size:12px;">${esc(it.color)} · ${esc(it.size)} · ×${it.quantity}</span>
+          <span style="color:${MUTED};font-size:12px;">${esc(it.color)} · ${esc(it.size)}${it.fit === "oversize" ? (lang === "ar" ? " · أوفرسايز" : " · Oversize fit") : ""} · ×${it.quantity}</span>
         </td>
         <td align="${lang === "ar" ? "left" : "right"}" style="padding:10px 0;border-bottom:1px solid ${BORDER};color:${CREAM};font-family:${LATIN_FONT};font-size:14px;white-space:nowrap;">
           $${it.lineTotal.toFixed(2)}
@@ -354,7 +354,7 @@ export function customRequestNotificationEmail(r: CustomRequestNotification): { 
  *  CROSSES its threshold (not on every change) so it stays meaningful.
  *  Lists every newly-low variant — time to reorder blanks from the factory. */
 export function lowStockAlertEmail(
-  variants: { productType: string; color: string; size: string; quantityOnHand: number; lowStockThreshold: number }[],
+  variants: { productType: string; color: string; fit?: string; size: string; quantityOnHand: number; lowStockThreshold: number }[],
 ): { subject: string; html: string; text: string } {
   const lang: "en" | "ar" = "en";
   const adminUrl = "https://kharbesh961.com/admin/inventory";
@@ -364,7 +364,7 @@ export function lowStockAlertEmail(
       (v) => `
       <tr>
         <td style="padding:8px 0;border-bottom:1px solid ${BORDER};color:${CREAM};font-size:13px;font-family:${LATIN_FONT};">
-          ${esc(v.productType)} — ${esc(v.color)} · ${esc(v.size)}
+          ${esc(v.productType)} — ${esc(v.color)}${v.productType === "tee" ? ` · ${esc(v.fit ?? "regular")} fit` : ""} · ${esc(v.size)}
         </td>
         <td align="right" style="padding:8px 0 8px 16px;border-bottom:1px solid ${BORDER};color:${LIME};font-size:13px;font-family:${LATIN_FONT};white-space:nowrap;">
           ${v.quantityOnHand} left (alert at ${v.lowStockThreshold})
@@ -394,7 +394,7 @@ export function lowStockAlertEmail(
   });
   const text = [
     `Low blank stock at the factory — time to reorder. ${variants.length} variant(s) at or below threshold:`,
-    ...variants.map((v) => `- ${v.productType} ${v.color} ${v.size}: ${v.quantityOnHand} left (alert at ${v.lowStockThreshold})`),
+    ...variants.map((v) => `- ${v.productType} ${v.color}${v.productType === "tee" ? ` ${v.fit ?? "regular"}` : ""} ${v.size}: ${v.quantityOnHand} left (alert at ${v.lowStockThreshold})`),
     `Admin: ${adminUrl}`,
   ].join("\n");
   return { subject, html, text };
