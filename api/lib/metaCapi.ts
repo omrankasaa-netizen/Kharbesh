@@ -94,6 +94,44 @@ export function validFbc(fbc: unknown): string | undefined {
   return /^fb\.1\.\d{13,}\..+/.test(v) ? v : undefined;
 }
 
+// Slugify a color name EXACTLY the way the catalog feed builds its per-color
+// row ids (`{productId}-{colorSlug}` in api/queries/catalog.ts) — KEEP IN
+// SYNC with that inline expression AND with colorSlug in src/lib/metaPixel.js.
+// Meta matches event content_ids against the feed `id` case-sensitively, so
+// any drift silently breaks catalog matching for dynamic ads.
+export function colorSlug(colorName: unknown): string {
+  return String(colorName ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+// The catalog-matching content id for a product(+color): the feed's per-color
+// row id when a color is known, else the plain product id (which equals the
+// feed's item_group_id — Meta resolves group-level ids too).
+export function variantContentId(productId: unknown, color?: unknown): string {
+  const pid = String(productId ?? "").trim();
+  if (!pid) return "";
+  const slug = colorSlug(color);
+  return slug ? `${pid}-${slug}` : pid;
+}
+
+// Build CAPI `contents` from TRUSTED order items (read from the DB), with
+// catalog-matching variant ids. Drops id-less lines so Meta never receives
+// an undefined content id.
+export function buildPurchaseContents(items: unknown): Array<{ id: string; quantity: number; item_price?: number }> {
+  const out: Array<{ id: string; quantity: number; item_price?: number }> = [];
+  for (const i of Array.isArray(items) ? items : []) {
+    const rawId = String((i as { productId?: unknown })?.productId ?? "").trim();
+    if (!rawId) continue;
+    const id = variantContentId(rawId, (i as { color?: unknown })?.color);
+    const quantity = Number((i as { quantity?: unknown })?.quantity) || 1;
+    const price = Number((i as { unitPrice?: unknown })?.unitPrice);
+    out.push({ id, quantity, ...(Number.isFinite(price) ? { item_price: price } : {}) });
+  }
+  return out;
+}
+
 export type MetaUserDataInput = {
   email?: unknown;
   phone?: unknown;

@@ -6,6 +6,7 @@ import { getDb } from "./queries/connection";
 import { env } from "./lib/env";
 import { metaTrackLimiter, metaPurchaseLimiter } from "./lib/rateLimit";
 import {
+  buildPurchaseContents,
   buildTrackCustomData,
   buildUserData,
   clampEventTime,
@@ -120,15 +121,9 @@ export const metaRouter = createRouter({
       if (!Number.isFinite(value) || value <= 0) return { ok: true as const, skipped: "invalid_value" };
 
       const items = Array.isArray(order.items) ? order.items : [];
-      const contents = items
-        .map((i) => {
-          const id = String(i?.productId ?? "").trim();
-          if (!id) return null;
-          const quantity = Number(i?.quantity) || 1;
-          const price = Number(i?.unitPrice);
-          return { id, quantity, ...(Number.isFinite(price) ? { item_price: price } : {}) };
-        })
-        .filter((c): c is { id: string; quantity: number; item_price?: number } => !!c);
+      // Catalog-matching variant ids ({productId}-{colorSlug}) so Meta can
+      // tie the Purchase to the exact feed rows for dynamic ads.
+      const contents = buildPurchaseContents(items);
 
       const nameParts = String(order.fullName ?? "").trim().split(/\s+/);
       const userData = buildUserData(
