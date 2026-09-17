@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   buildEventPayload,
+  buildPurchaseContents,
   buildTrackCustomData,
   buildUserData,
   clampEventTime,
+  colorSlug,
   isTrackEvent,
   mergeClientHashedUserData,
   normalizeCountry,
@@ -12,6 +14,7 @@ import {
   sanitizeContents,
   sha256,
   validFbc,
+  variantContentId,
 } from "./lib/metaCapi";
 
 /**
@@ -169,5 +172,42 @@ describe("event envelope", () => {
     expect(clampEventTime(new Date((now + 3600) * 1000).toISOString(), now)).toBe(now);
     expect(clampEventTime("garbage", now)).toBe(now);
     expect(clampEventTime(undefined, now)).toBe(now);
+  });
+});
+
+describe("catalog-matching content ids", () => {
+  it("colorSlug matches the feed's per-color id format exactly", () => {
+    // These fixtures mirror real feed rows (e.g. "51-white",
+    // "36-dark-charcoal") — the slugify must never drift from
+    // api/queries/catalog.ts.
+    expect(colorSlug("White")).toBe("white");
+    expect(colorSlug("Dark Charcoal")).toBe("dark-charcoal");
+    expect(colorSlug("Grey ")).toBe("grey");
+    expect(colorSlug("Ecru/Pink")).toBe("ecru-pink");
+    // Non-latin (Arabic) color names slug to "" → caller falls back to the
+    // plain product id rather than emitting a broken "51-" id.
+    expect(colorSlug("أبيض")).toBe("");
+    expect(colorSlug("")).toBe("");
+    expect(colorSlug(null)).toBe("");
+  });
+
+  it("variantContentId builds the feed row id, or the group id without a color", () => {
+    expect(variantContentId(51, "White")).toBe("51-white");
+    expect(variantContentId("36", "Dark Charcoal")).toBe("36-dark-charcoal");
+    expect(variantContentId(51)).toBe("51");
+    expect(variantContentId(51, "أبيض")).toBe("51");
+    expect(variantContentId("")).toBe("");
+  });
+
+  it("buildPurchaseContents maps trusted order items to variant ids", () => {
+    const contents = buildPurchaseContents([
+      { productId: 51, color: "White", quantity: 2, unitPrice: 24 },
+      { productId: "36", color: "Grey", quantity: 1, unitPrice: 24 },
+      { color: "Black", quantity: 1 }, // no productId → dropped
+    ]);
+    expect(contents).toEqual([
+      { id: "51-white", quantity: 2, item_price: 24 },
+      { id: "36-grey", quantity: 1, item_price: 24 },
+    ]);
   });
 });

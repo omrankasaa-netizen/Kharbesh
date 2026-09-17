@@ -231,6 +231,35 @@ export function genEventId() {
   return `evt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+// Slugify a color name EXACTLY the way the catalog feed builds its per-color
+// row ids (`{productId}-{colorSlug}` in api/queries/catalog.ts) — KEEP IN
+// SYNC with colorSlug in api/lib/metaCapi.ts. Meta matches event content_ids
+// against the feed `id` case-sensitively; drift breaks catalog matching.
+export function colorSlug(colorName) {
+  return String(colorName ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+// The catalog-matching content id for a product(+color): the feed's per-color
+// row id when a color is known, else the plain product id (= the feed's
+// item_group_id, which Meta also resolves).
+export function variantContentId(productId, color) {
+  const pid = String(productId ?? '').trim();
+  if (!pid) return '';
+  const slug = colorSlug(color);
+  return slug ? `${pid}-${slug}` : pid;
+}
+
+// A product's default color name (first approved color — the same default the
+// PDP preselects), so ViewContent/Wishlist events can carry the feed's
+// per-color variant id even before the shopper picks a color.
+function defaultColorOf(product) {
+  const colors = product?.approved_colors;
+  return Array.isArray(colors) && colors.length ? colors[0] : undefined;
+}
+
 function ready() {
   return !!META_PIXEL_ID && typeof window !== 'undefined' && !!window.fbq && hasMarketingConsent();
 }
@@ -272,10 +301,10 @@ export function trackPageView() {
   postCapiTrack('PageView', eventId);
 }
 
-// PDP view. content_ids:[productId], value, currency, content_name.
+// PDP view. content_ids:[variantId] (feed-matching), value, currency, content_name.
 export function trackViewContent(product) {
   if (!ready() || !product) return;
-  const id = String(product.id ?? '').trim();
+  const id = variantContentId(product.id, defaultColorOf(product));
   if (!id) return;
   const price = Number(product.price_usd ?? product.price ?? 0);
   trackDeduped('ViewContent', {
@@ -291,7 +320,7 @@ export function trackViewContent(product) {
 // Add-to-cart. value is the line value (unit price × quantity).
 export function trackAddToCart(item) {
   if (!ready() || !item) return;
-  const id = String(item.productId ?? '').trim();
+  const id = variantContentId(item.productId, item.color);
   if (!id) return;
   const unit = Number(item.unitPrice ?? 0);
   const quantity = Number(item.quantity || 1);
@@ -310,7 +339,7 @@ export function trackInitiateCheckout({ items = [], value } = {}) {
   if (!ready() || !items.length) return;
   const contents = items
     .map((i) => {
-      const id = String(i.productId ?? '').trim();
+      const id = variantContentId(i.productId, i.color);
       return id ? { id, quantity: Number(i.quantity || 1), item_price: Number(i.unitPrice ?? 0) } : null;
     })
     .filter(Boolean);
@@ -330,7 +359,7 @@ export function trackPurchasePixel({ eventId, value, currency = 'USD', items = [
   if (!ready() || !eventId) return;
   const contents = items
     .map((i) => {
-      const id = String(i.productId ?? '').trim();
+      const id = variantContentId(i.productId, i.color);
       return id ? { id, quantity: Number(i.quantity || 1), item_price: Number(i.unitPrice ?? 0) } : null;
     })
     .filter(Boolean);
@@ -349,7 +378,7 @@ export function trackPurchasePixel({ eventId, value, currency = 'USD', items = [
 // meaningful ad signal.
 export function trackAddToWishlist(product) {
   if (!ready() || !product) return;
-  const id = String(product.id ?? '').trim();
+  const id = variantContentId(product.id, defaultColorOf(product));
   if (!id) return;
   const price = Number(product.price_usd ?? product.price ?? 0);
   trackDeduped('AddToWishlist', {
@@ -369,7 +398,7 @@ export function trackAddPaymentInfo({ items = [], value } = {}) {
   if (!ready()) return;
   const contents = items
     .map((i) => {
-      const id = String(i.productId ?? '').trim();
+      const id = variantContentId(i.productId, i.color);
       return id ? { id, quantity: Number(i.quantity || 1), item_price: Number(i.unitPrice ?? 0) } : null;
     })
     .filter(Boolean);
