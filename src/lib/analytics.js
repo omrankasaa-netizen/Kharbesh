@@ -20,18 +20,31 @@ const TIKTOK_PIXEL_ID = import.meta.env.VITE_TIKTOK_PIXEL_ID;
 const GA_ID = import.meta.env.VITE_GA_ID;
 
 let initialized = false;
+let metaInitialized = false;
+
+/** Meta pixel boots EARLY — called synchronously from main.tsx in the same
+ * task as the initial render, so the fbq stub + _fbc cookie exist before any
+ * route/PDP effect can fire an event. Deferring Meta behind
+ * requestIdleCallback (or the 1.5s fallback) silently DROPPED the landing
+ * PageView + ViewContent on exactly the sessions that carry fbclid (ad
+ * clicks) — worst on Safari / FB-in-app WebKit, which have no
+ * requestIdleCallback at all. Injecting the async fbevents.js costs no
+ * main-thread time, so there is no perf win worth that data loss. */
+export function initMetaEarly() {
+  if (metaInitialized || typeof window === 'undefined') return;
+  metaInitialized = true;
+  // Implied-consent default-ON; explicit decline only. PageView fires per
+  // route from the Layout tracker, not here, so SPA navigations are covered
+  // and there is no double-count on first load.
+  if (META_PIXEL_ID) initMetaPixel();
+}
 
 /** Injects only the pixels that have an env var configured. Call once, after
  * first paint (see main.tsx) so it never competes with the initial render
- * for bandwidth on slow connections. */
+ * for bandwidth on slow connections. Meta is NOT here — see initMetaEarly. */
 export function initAnalytics() {
   if (initialized || typeof window === 'undefined') return;
   initialized = true;
-
-  // Meta: boot the pixel (implied-consent default-ON; explicit decline only).
-  // PageView fires per route from the Layout tracker, not here, so SPA
-  // navigations are covered and there is no double-count on first load.
-  if (META_PIXEL_ID) initMetaPixel();
 
   if (TIKTOK_PIXEL_ID) {
     /* eslint-disable */

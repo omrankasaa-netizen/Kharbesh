@@ -70,6 +70,10 @@ export const customRequestLimiter = createFixedWindowLimiter({ windowMs: 60 * 60
 export const newsletterLimiter = createFixedWindowLimiter({ windowMs: 60 * 60 * 1000, max: 10 });
 
 // Meta CAPI endpoints: generous (every page view posts a track event) but
-// bounded so a hostile client can't burn the Meta event quota.
-export const metaTrackLimiter = createFixedWindowLimiter({ windowMs: 60 * 1000, max: 120 });
-export const metaPurchaseLimiter = createFixedWindowLimiter({ windowMs: 10 * 60 * 1000, max: 20 });
+// bounded so a hostile client can't burn the Meta event quota. The budget
+// must absorb MANY real shoppers at once on a single IP: Lebanese mobile
+// carriers put large numbers of users behind shared CGNAT egress addresses,
+// and an over-limit drop here silently deletes a server event — it shows up
+// in Events Manager as "pixel events not covered by Conversions API".
+export const metaTrackLimiter = createFixedWindowLimiter({ windowMs: 60 * 1000, max: 600 });
+export const metaPurchaseLimiter = createFixedWindowLimiter({ windowMs: 10 * 60 * 1000, max: 60 });
