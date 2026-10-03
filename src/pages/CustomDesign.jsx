@@ -15,8 +15,8 @@ export default function CustomDesign() {
   const styles = useGarmentStyles();
   const { settings } = useSiteSettings();
   const [form, setForm] = useState({ name: '', email: '', phrase: '', story: '', language: '', recipient: '', occasion: '', tone: 'subtle', garment: '', fit: 'regular', color: '', size: '', quantity: 1, placement: '', needed_by: '', notes: '', rights: false });
-  // The cut choice (regular/oversize) only applies to tee garments.
-  const isTee = /tee|t-?shirt|تيشيرت/i.test(form.garment || '');
+  // The cut choice (regular/oversize) applies to tee and hoodie garments.
+  const hasFitChoice = /tee|t-?shirt|تيشيرت|hoodie|هودي/i.test(form.garment || '');
   // Optional phone — same international picker as checkout. Stays optional,
   // but when filled it must validate and is sent as E.164.
   const [phone, setPhone] = useState({ iso: 'LB', national: '' });
@@ -72,7 +72,7 @@ export default function CustomDesign() {
     try {
       await base44.entities.CustomProject.create({
         ...form,
-        fit: isTee ? form.fit : undefined,
+        fit: hasFitChoice ? form.fit : undefined,
         phone: phoneFilled ? toE164(phoneDial, phone.national) : undefined,
         quantity: Number(form.quantity) || 1,
         reference_files: files,
@@ -168,7 +168,7 @@ export default function CustomDesign() {
               {styles.map((s) => <option key={s.id} value={s.name_en}>{lang === 'ar' ? s.name_ar : s.name_en}</option>)}
             </select>
           </Field>
-          {isTee && (
+          {hasFitChoice && (
             <Field label={t.product.chooseFit}>
               <select value={form.fit} onChange={set('fit')} className="kh-input">
                 {FIT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{lang === 'ar' ? o.ar : o.en}</option>)}
