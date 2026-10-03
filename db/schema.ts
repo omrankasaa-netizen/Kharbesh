@@ -191,8 +191,8 @@ export type OrderLineItem = {
   productType?: string;
   color: string;
   size: string;
-  // Customer-facing cut choice (tees only; absent on legacy orders and
-  // non-tee items — treat absent as "regular").
+  // Customer-facing cut choice (tees + hoodies; absent on legacy orders
+  // and accessories — treat absent as "regular").
   fit?: "regular" | "oversize";
   quantity: number;
   unitPrice: number;
@@ -274,8 +274,8 @@ export const customRequests = mysqlTable("custom_requests", {
   occasion: varchar("occasion", { length: 200 }),
   tone: mysqlEnum("tone", ["subtle", "bold", "sarcastic", "clean", "colorful"]).default("subtle"),
   garment: varchar("garment", { length: 120 }),
-  // Requested cut when the garment is a tee (regular | oversize). Nullable —
-  // legacy requests and non-tee garments have no fit; treat absent as
+  // Requested cut for tee/hoodie garments (regular | oversize). Nullable —
+  // legacy requests and other garments have no fit; treat absent as
   // "regular" (matches the storefront default).
   fit: mysqlEnum("fit", ["regular", "oversize"]),
   color: varchar("color", { length: 80 }),
@@ -352,8 +352,8 @@ export const auditLogs = mysqlTable("audit_logs", {
 //
 // Tees come in two cuts (fit: regular | oversize), each stocked in three
 // INTERNAL sizes only — S/M, L/XL, XXL (adjacent customer sizes share one
-// physical blank; see api/lib/fitSizes.ts). Non-tee garments stay on
-// fit="regular" with their real sizes.
+// physical blank; see api/lib/fitSizes.ts). Hoodies carry the same fit
+// choice but keep their real sizes. Accessories stay on fit="regular".
 export const blankStock = mysqlTable(
   "blank_stock",
   {
@@ -420,7 +420,7 @@ export const factoryOrderItems = mysqlTable(
     phraseEn: varchar("phraseEn", { length: 255 }),
     productType: mysqlEnum("productType", ["tee", "hoodie", "accessory"]).notNull(),
     color: varchar("color", { length: 80 }).notNull(),
-    // Cut of the garment — tees only; non-tee rows stay "regular".
+    // Cut of the garment — tees + hoodies; accessory rows stay "regular".
     fit: mysqlEnum("fit", ["regular", "oversize"]).default("regular").notNull(),
     // The size the FACTORY cuts: for tees this is the internal group
     // (S/M, L/XL, XXL) — see api/lib/fitSizes.ts. The customer's chosen

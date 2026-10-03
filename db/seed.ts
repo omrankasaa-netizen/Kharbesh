@@ -68,6 +68,22 @@ const styleSeeds = [
     sizes: ["S", "M", "L", "XL", "XXL"],
     sortOrder: 3,
   },
+  {
+    nameEn: "Autumn Hoodie",
+    nameAr: "هودي خريفي",
+    // Modifier left at 0 until the owner keys in the real one (also true
+    // for the migration twin of this seed — 0015_add_hoodie_styles).
+    priceModifierCents: 0,
+    sizes: ["S", "M", "L", "XL", "XXL"],
+    sortOrder: 4,
+  },
+  {
+    nameEn: "Fleeced Winter Hoodie",
+    nameAr: "هودي شتوي مبطّن",
+    priceModifierCents: 0,
+    sizes: ["S", "M", "L", "XL", "XXL"],
+    sortOrder: 5,
+  },
 ] as const;
 
 const TEE_SIZES = ["S", "M", "L", "XL", "XXL"];

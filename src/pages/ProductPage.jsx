@@ -91,6 +91,12 @@ export default function ProductPage() {
   const isPreorder = product.preorder_type !== 'always_on';
   const hasFits = productHasFits(product);
   const chosenFit = hasFits ? fit : DEFAULT_FIT;
+  // Fit explainer names the garment — tees and hoodies both carry the
+  // two-cut choice but the copy shouldn't say "tee" on a hoodie page.
+  const fitNote = product.product_type === 'hoodie' ? t.product.fitNoteHoodie : t.product.fitNote;
+  // Garment noun for the WhatsApp order message (Arabic only — the EN
+  // message is generic). Defaults to the generic "piece" for accessories.
+  const garmentNounAr = { tee: 'هالتيشيرت', hoodie: 'هالهودي' }[product.product_type] || 'هالقطعة';
 
   const handleAdd = () => {
     if (!canAdd) return;
@@ -223,7 +229,7 @@ export default function ProductPage() {
             {colorName && <p className="text-sm text-muted-foreground mt-2">{lang === 'ar' ? (resolveColor(colorName, colors)?.name_ar) : colorName}</p>}
           </fieldset>
 
-          {/* Fit — tees come in two cuts, same price, same sizes */}
+          {/* Fit — tees and hoodies come in two cuts, same price, same sizes */}
           {hasFits && (
             <fieldset className="mt-6" disabled={!colorName}>
               <legend className="kh-eyebrow mb-3">{t.product.chooseFit}</legend>
@@ -239,7 +245,7 @@ export default function ProductPage() {
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">{t.product.fitNote}</p>
+              <p className="text-xs text-muted-foreground mt-2">{fitNote}</p>
             </fieldset>
           )}
 
@@ -292,7 +298,7 @@ export default function ProductPage() {
             href={whatsappLink(
               settings?.contact?.whatsappNumber,
               (lang === 'ar'
-                ? `هاي، بدي هالتيشيرت: ${name}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (أوفرسايز)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`
+                ? `هاي، بدي ${garmentNounAr}: ${name}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (أوفرسايز)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`
                 : `Hi! I'd like to order: ${name}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (oversize fit)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`),
             )}
             target="_blank"

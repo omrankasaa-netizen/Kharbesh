@@ -54,8 +54,8 @@ export const customProjectSchema = z.object({
   occasion: z.string().trim().max(200).optional(),
   tone: z.enum(["subtle", "bold", "sarcastic", "clean", "colorful"]).optional(),
   garment: z.string().trim().max(60).optional(),
-  // Requested tee cut — only meaningful when `garment` is a tee; the
-  // storefront only offers the choice for tee styles.
+  // Requested cut — only meaningful for tee/hoodie garments; the
+  // storefront only offers the choice for those styles.
   fit: z.enum(["regular", "oversize"]).optional(),
   color: z.string().trim().max(60).optional(),
   size: z.string().trim().max(10).optional(),

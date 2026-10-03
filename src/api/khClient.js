@@ -234,7 +234,7 @@ export const kh = {
             productId: String(i.productId),
             color: i.color,
             size: i.size,
-            // Tee cut choice — dropped here unless it's a valid fit value.
+            // Cut choice (tees + hoodies) — dropped unless a valid fit value.
             fit: FITS.includes(i.fit) ? i.fit : undefined,
             quantity: i.quantity,
           })),

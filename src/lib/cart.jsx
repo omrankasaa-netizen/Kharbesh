@@ -24,8 +24,8 @@ function loadCart() {
         const quantity = Math.max(1, Math.floor(Number(item.quantity)) || 1);
         const color = item.color ?? '';
         const size = item.size ?? '';
-        // Tees come in regular + oversize cuts — the fit is part of what
-        // makes a cart line unique (same tee in both cuts = two lines).
+        // Tees and hoodies come in regular + oversize cuts — the fit is
+        // part of what makes a cart line unique (both cuts = two lines).
         const fit = item.fit === 'oversize' ? 'oversize' : 'regular';
         return { ...item, quantity, color, size, fit, key: item.key || `${item.productId}|${color}|${size}|${fit}` };
       });

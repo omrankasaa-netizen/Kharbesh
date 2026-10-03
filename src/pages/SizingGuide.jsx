@@ -24,7 +24,7 @@ export default function SizingGuide() {
         <div className="bg-card border border-border rounded-md p-6 flex flex-col items-center">
           <GarmentMockup type="hoodie" color="#F0E9D6" phrase="مقاس L" className="w-48" />
           <h3 className="font-heading text-lg uppercase mt-4" style={{ fontFamily: 'var(--brand-font-heading)' }}>{lang === 'ar' ? 'هودي ثقيل' : 'Heavy hoodie'}</h3>
-          <p className="text-muted-foreground text-sm text-center mt-1">{lang === 'ar' ? 'على المقاس — لو تحب واسع اطلب أكبر.' : 'True to size — size up for oversized.'}</p>
+          <p className="text-muted-foreground text-sm text-center mt-1">{lang === 'ar' ? 'قصّتين — العادية على قدّك، والأوفرسايز أوسع وأطول.' : 'Two cuts — regular runs true to size, oversize is boxier and longer.'}</p>
         </div>
       </div>
       <div className="overflow-x-auto mt-10">
