@@ -11,13 +11,14 @@ const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 // Tee blanks are ordered from the factory per FIT in internal group sizes
 // (S/M, L/XL, XXL) — adjacent customer sizes share one physical blank.
+// Hoodies carry a fit too, but keep their real sizes.
 const TEE_INTERNAL_SIZES = ['S/M', 'L/XL', 'XXL'];
 const FITS = ['regular', 'oversize'];
 
 /** One-line garment spec for a factory line item: fit + internal cut size
     (what the factory pulls), with the customer's chosen size alongside. */
 function garmentSpec(it) {
-  const fit = it.product_type === 'tee' ? (it.fit || 'regular') : null;
+  const fit = it.product_type === 'tee' || it.product_type === 'hoodie' ? (it.fit || 'regular') : null;
   const cut = it.size;
   const customer = it.display_size && it.display_size !== it.size ? ` (customer: ${it.display_size})` : '';
   return `${fit ? `${fit} · ` : ''}${cut}${customer}`;
@@ -40,7 +41,7 @@ function exportToExcel(factoryOrder) {
       'Phrase': it.phrase_en || '',
       'Product type': it.product_type,
       'Color': it.color,
-      'Fit': it.product_type === 'tee' ? (it.fit || 'regular') : '',
+      'Fit': it.product_type === 'tee' || it.product_type === 'hoodie' ? (it.fit || 'regular') : '',
       'Cut size': it.size,
       'Customer size': it.display_size || it.size,
       'Quantity': it.quantity,
@@ -218,7 +219,7 @@ export default function AdminFactory() {
                   <option value="">Color…</option>
                   {colors.map((c) => <option key={c.id} value={c.name_en}>{c.name_en}</option>)}
                 </select>
-                {row.product_type === 'tee' && (
+                {(row.product_type === 'tee' || row.product_type === 'hoodie') && (
                   <select className="kh-input !h-9 !py-1 max-w-[120px]" value={row.fit} onChange={(e) => updateRestockRow(i, { fit: e.target.value })}>
                     {FITS.map((f) => <option key={f} value={f}>{f}</option>)}
                   </select>
