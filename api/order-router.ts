@@ -55,8 +55,8 @@ export const createOrderSchema = z.object({
         productId: z.string().regex(/^\d+$/),
         color: z.string().min(1).max(80),
         size: z.string().min(1).max(20),
-        // Tee cut choice — optional so older clients / non-tee items keep
-        // working; normalized server-side (tees only, default regular).
+        // Garment cut choice (tees + hoodies) — optional so older clients /
+        // accessories keep working; normalized server-side (default regular).
         fit: z.enum(["regular", "oversize"]).optional(),
         quantity: z.number().int().min(1).max(20),
       }),

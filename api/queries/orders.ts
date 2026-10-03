@@ -123,8 +123,8 @@ export async function createOrder(input: CreateOrderInput) {
       if (!product.sizes.includes(item.size)) {
         throw new Error("SIZE_UNAVAILABLE");
       }
-      // Fit is a tee-only cut choice; anything else is forced to regular
-      // so inventory/factory never see a fit on a hoodie or accessory.
+      // Fit is a cut choice for tees and hoodies; accessories are forced
+      // to regular so inventory/factory never see a junk fit value.
       const fit = normalizeFit(item.fit, product.productType);
       if (item.quantity < 1 || item.quantity > 20) {
         throw new Error("INVALID_QUANTITY");
