@@ -8,8 +8,8 @@ import { toast } from '@/components/ui/use-toast';
 const PRODUCT_TYPES = ['tee', 'hoodie', 'accessory'];
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 // Tees are stocked per FIT in three internal sizes — adjacent customer
-// sizes share one blank (S+M → S/M, L+XL → L/XL). Other garment types
-// keep their real sizes and stay on the regular fit.
+// sizes share one blank (S+M → S/M, L+XL → L/XL). Hoodies also come in
+// both fits but keep their real sizes. Accessories stay on regular fit.
 const TEE_INTERNAL_SIZES = ['S/M', 'L/XL', 'XXL'];
 const FITS = ['regular', 'oversize'];
 
@@ -149,7 +149,7 @@ export default function AdminInventory() {
           <option value="">Color…</option>
           {colors.map((c) => <option key={c.id} value={c.name_en}>{c.name_en}</option>)}
         </select>
-        {newVariant.product_type === 'tee' && (
+        {(newVariant.product_type === 'tee' || newVariant.product_type === 'hoodie') && (
           <select className="kh-input !h-9 !py-1 max-w-[130px]" value={newVariant.fit} onChange={(e) => setNewVariant((v) => ({ ...v, fit: e.target.value }))}>
             {FITS.map((f) => <option key={f} value={f}>{f} fit</option>)}
           </select>
@@ -177,7 +177,7 @@ export default function AdminInventory() {
                   <tr className="border-b border-border">
                     <td className="py-3 pr-3">{s.product_type}</td>
                     <td className="py-3 pr-3">{s.color}</td>
-                    <td className="py-3 pr-3">{s.product_type === 'tee' ? (s.fit || 'regular') : '—'}</td>
+                    <td className="py-3 pr-3">{s.product_type === 'tee' || s.product_type === 'hoodie' ? (s.fit || 'regular') : '—'}</td>
                     <td className="py-3 pr-3">{s.size}</td>
                     <td className="py-3 pr-3 font-semibold" style={{ color: s.is_low ? 'var(--brand-accent)' : undefined }}>{s.quantity_on_hand}</td>
                     <td className="py-3 pr-3">
