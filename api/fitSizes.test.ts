@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { factorySizeFor, normalizeFit, toInternalSize, INTERNAL_TEE_SIZES } from "./lib/fitSizes";
 
 /**
- * The tee fit contract: customers pick S, M, L, XL, XXL in one of two cuts
- * (regular | oversize); the factory stocks each cut in three internal
- * sizes — S/M, L/XL, XXL. Every other garment type has no fit at all.
+ * The fit contract: customers pick S, M, L, XL, XXL in one of two cuts
+ * (regular | oversize) on tees and hoodies; the factory stocks each tee cut
+ * in three internal sizes — S/M, L/XL, XXL — while hoodies keep real sizes.
+ * Accessories have no fit at all.
  */
 describe("fitSizes", () => {
   it("collapses adjacent customer sizes onto one internal blank size", () => {
@@ -35,13 +36,17 @@ describe("fitSizes", () => {
     expect(factorySizeFor("accessory", "OS")).toBe("OS");
   });
 
-  it("normalizes fits: oversize only when explicit, tees only", () => {
+  it("normalizes fits: oversize only when explicit, tees and hoodies only", () => {
     expect(normalizeFit("oversize", "tee")).toBe("oversize");
     expect(normalizeFit("regular", "tee")).toBe("regular");
     expect(normalizeFit(undefined, "tee")).toBe("regular");
     expect(normalizeFit("garbage", "tee")).toBe("regular");
-    // Fits never leak onto non-tee garments, even if a client sends one.
-    expect(normalizeFit("oversize", "hoodie")).toBe("regular");
+    // Hoodies carry the same two-cut choice (kept in real sizes, no
+    // internal grouping — covered by the factorySizeFor test above).
+    expect(normalizeFit("oversize", "hoodie")).toBe("oversize");
+    expect(normalizeFit("regular", "hoodie")).toBe("regular");
+    expect(normalizeFit(undefined, "hoodie")).toBe("regular");
+    // Fits never leak onto unfitted garments, even if a client sends one.
     expect(normalizeFit("oversize", "accessory")).toBe("regular");
     expect(normalizeFit("oversize")).toBe("oversize");
   });

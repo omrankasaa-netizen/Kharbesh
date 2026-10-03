@@ -1,8 +1,9 @@
 /**
- * Garment fits — tees are sold in two cuts: "regular" and "oversize".
+ * Garment fits — tees and hoodies are sold in two cuts: "regular" and
+ * "oversize".
  *
  * The storefront always shows the customer-facing sizes S, M, L, XL, XXL.
- * The factory, however, cuts each fit in only THREE internal sizes, and
+ * The factory, however, cuts each tee fit in only THREE internal sizes, and
  * adjacent customer sizes map onto one physical blank:
  *
  *   customer S or M  → internal "S/M"
@@ -10,8 +11,10 @@
  *   customer XXL     → internal "XXL"
  *
  * So a tee blank variant is (productType=tee, color, fit, internalSize) —
- * 2 fits × 3 internal sizes per color. Hoodies and accessories have no
- * fits: they stay on fit="regular" with their real sizes untouched.
+ * 2 fits × 3 internal sizes per color. Hoodies carry the same fit choice
+ * but are stocked/cut in their REAL sizes (no internal grouping — the
+ * factory pulls each hoodie size as-is). Accessories have no fits: they
+ * stay on fit="regular".
  *
  * Keep in sync with the client mirror in src/lib/fitSizes.js.
  */
@@ -20,6 +23,9 @@ export const FITS = ["regular", "oversize"] as const;
 export type Fit = (typeof FITS)[number];
 
 export const DEFAULT_FIT: Fit = "regular";
+
+/** Garment types that carry a customer-facing fit choice. */
+export const FITTED_PRODUCT_TYPES = ["tee", "hoodie"] as const;
 
 /** Internal blank sizes a tee fit is stocked in. */
 export const INTERNAL_TEE_SIZES = ["S/M", "L/XL", "XXL"] as const;
@@ -46,16 +52,19 @@ export function toInternalSize(size: string): InternalTeeSize {
   }
 }
 
-/** Accepts anything from the client and returns a valid fit. Only tees
- *  carry a meaningful fit — every other garment type is forced to the
- *  default so downstream (inventory, factory) never sees junk values. */
+/** Accepts anything from the client and returns a valid fit. Only tees and
+ *  hoodies carry a meaningful fit — every other garment type is forced to
+ *  the default so downstream (inventory, factory) never sees junk values. */
 export function normalizeFit(fit: unknown, productType?: string): Fit {
-  if (productType !== undefined && productType !== "tee") return DEFAULT_FIT;
+  if (productType !== undefined && !(FITTED_PRODUCT_TYPES as readonly string[]).includes(productType)) {
+    return DEFAULT_FIT;
+  }
   return fit === "oversize" ? "oversize" : DEFAULT_FIT;
 }
 
 /** The size the factory cuts/prints for an order or factory line item:
- *  tees collapse to their internal group, everything else passes through. */
+ *  tees collapse to their internal group; hoodies and accessories keep
+ *  their real customer-facing sizes untouched. */
 export function factorySizeFor(productType: string, size: string): string {
   return productType === "tee" ? toInternalSize(size) : size;
 }

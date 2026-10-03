@@ -1,8 +1,8 @@
-/* Garment fits — tees come in two cuts: regular and oversize.
+/* Garment fits — tees and hoodies come in two cuts: regular and oversize.
    The storefront keeps showing customer sizes S, M, L, XL, XXL; the
-   factory cuts each fit in three internal sizes (S/M, L/XL, XXL) — the
-   server-side mirror of this file (api/lib/fitSizes.ts) owns that mapping.
-   Keep the two in sync. */
+   factory cuts each tee fit in three internal sizes (S/M, L/XL, XXL) while
+   hoodies keep their real sizes — the server-side mirror of this file
+   (api/lib/fitSizes.ts) owns those mappings. Keep the two in sync. */
 
 export const FIT_OPTIONS = [
   { id: 'regular', en: 'Regular', ar: 'عادية' },
@@ -11,8 +11,9 @@ export const FIT_OPTIONS = [
 
 export const DEFAULT_FIT = 'regular';
 
-/** Fits apply to tees only. */
-export const productHasFits = (product) => product?.product_type === 'tee';
+/** Fits apply to tees and hoodies (accessories stay one-cut). */
+export const productHasFits = (product) =>
+  product?.product_type === 'tee' || product?.product_type === 'hoodie';
 
 export const fitLabel = (fit, lang) =>
   (FIT_OPTIONS.find((f) => f.id === fit) || FIT_OPTIONS[0])[lang === 'ar' ? 'ar' : 'en'];
