@@ -175,7 +175,7 @@ export default function Checkout() {
   if (items.length === 0 && !loading) {
     return (
       <div className="max-w-[1400px] mx-auto px-6 py-20 text-center">
-        <h1 className="font-heading text-4xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.cart.empty}</h1>
+        <h1 className="font-heading text-4xl sm:text-6xl uppercase" style={{ fontFamily: 'var(--brand-font-heading)' }}>{t.cart.empty}</h1>
         <Link to="/shop" className="kh-btn-scribble mt-8">{t.cart.emptyCta}</Link>
       </div>
     );
@@ -198,7 +198,7 @@ export default function Checkout() {
         city: form.city,
         country: form.country,
         notes: form.notes,
-        items: items.map((i) => ({ productId: i.productId, productName: i.productName, phrase: i.phrase, productType: i.productType, color: i.color, size: i.size, fit: i.fit, quantity: i.quantity, unitPrice: i.unitPrice, lineTotal: i.unitPrice * i.quantity })),
+        items: items.map((i) => ({ productId: i.productId, productName: i.productName, phrase: i.phrase, productType: i.productType, color: i.color, size: i.size, fit: i.fit, style: i.style, quantity: i.quantity, unitPrice: i.unitPrice, lineTotal: i.unitPrice * i.quantity })),
         subtotal,
         shipping,
         total,
@@ -356,7 +356,7 @@ export default function Checkout() {
           <div className="divide-y divide-border">
             {items.map((i) => (
               <div key={i.key} className="py-3 flex justify-between gap-2 text-sm">
-                <span className="min-w-0"><span className="block font-medium truncate">{i.productName}</span><span className="text-muted-foreground text-xs">{i.color} · {i.size}{i.fit === 'oversize' ? ` · ${fitLabel('oversize', lang)}` : ''} · ×{i.quantity}</span></span>
+                <span className="min-w-0"><span className="block font-medium truncate">{i.productName}</span><span className="text-muted-foreground text-xs">{i.style ? `${i.style} · ` : ''}{i.color} · {i.size}{i.fit === 'oversize' ? ` · ${fitLabel('oversize', lang)}` : ''} · ×{i.quantity}</span></span>
                 <span className="shrink-0">${i.unitPrice * i.quantity}</span>
               </div>
             ))}

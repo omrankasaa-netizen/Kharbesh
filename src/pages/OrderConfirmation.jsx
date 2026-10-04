@@ -59,7 +59,7 @@ export default function OrderConfirmation() {
         <div className="divide-y divide-border">
           {(order.items || []).map((it, idx) => (
             <div key={idx} className="py-3 flex justify-between text-sm">
-              <span>{it.productName} · {it.color} · {it.size}{it.fit === 'oversize' ? ` · ${fitLabel('oversize', lang)}` : ''} · ×{it.quantity}</span>
+              <span>{it.productName} · {it.style ? `${it.style} · ` : ''}{it.color} · {it.size}{it.fit === 'oversize' ? ` · ${fitLabel('oversize', lang)}` : ''} · ×{it.quantity}</span>
               <span>${it.lineTotal}</span>
             </div>
           ))}
