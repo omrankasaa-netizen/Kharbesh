@@ -31,7 +31,7 @@ function itemsTable(items: OrderLineItem[], lang: "en" | "ar"): string {
       <tr>
         <td style="padding:10px 0;border-bottom:1px solid ${BORDER};color:${CREAM};font-family:${lang === "ar" ? ARABIC_FONT : LATIN_FONT};font-size:14px;">
           ${esc(it.productName)}<br/>
-          <span style="color:${MUTED};font-size:12px;">${esc(it.color)} · ${esc(it.size)}${it.fit === "oversize" ? (lang === "ar" ? " · أوفرسايز" : " · Oversize fit") : ""} · ×${it.quantity}</span>
+          <span style="color:${MUTED};font-size:12px;">${it.style ? `${esc(it.style)} · ` : ""}${esc(it.color)} · ${esc(it.size)}${it.fit === "oversize" ? (lang === "ar" ? " · أوفرسايز" : " · Oversize fit") : ""} · ×${it.quantity}</span>
         </td>
         <td align="${lang === "ar" ? "left" : "right"}" style="padding:10px 0;border-bottom:1px solid ${BORDER};color:${CREAM};font-family:${LATIN_FONT};font-size:14px;white-space:nowrap;">
           $${it.lineTotal.toFixed(2)}
@@ -433,6 +433,6 @@ export function otpEmail(code: string, lang: "en" | "ar"): { subject: string; ht
     preheader: lang === "ar" ? "رمز دخولك جوا." : "Your sign-in code is inside.",
     bodyHtml: lang === "ar" ? bodyAr : bodyEn,
   });
-  const text = lang === "ar" ? `رمز الدخول: ${code} (ينتهي بعد 10 دقايق)` : `Your sign-in code: ${code} (expires in 10 minutes)`;
+  const text = lang === "ar" ? `رمز الدخول: ${code} (ينتهي بعد 10 دقايق)` : `Your Kharbesh sign-in code: ${code} (expires in 10 minutes)`;
   return { subject, html, text };
 }
