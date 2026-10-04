@@ -13,6 +13,7 @@ import {
   type FactoryOrderItem,
 } from "@db/schema";
 import { factorySizeFor, normalizeFit } from "../lib/fitSizes";
+import { effectiveGarmentType } from "../lib/garmentStyle";
 import { crossedIntoLow, notifyLowStock, type LowStockVariant } from "./inventory";
 
 function toUiItem(i: FactoryOrderItem) {
@@ -141,7 +142,9 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
         const product = productId != null ? productById.get(productId) : undefined;
         const colorImages = productId != null ? colorImagesByKey.get(colorKey(productId, item.color)) : undefined;
         const referencePhotoUrl = colorImages?.[0] ?? product?.images?.[0] ?? null;
-        const productType = (item.productType as "tee" | "hoodie" | "accessory") ?? "tee";
+        // The garment the factory actually cuts: a hoodie style chosen on a
+        // tee product makes this a hoodie (sizing + blank-stock consumption).
+        const productType = effectiveGarmentType(item.productType ?? "tee", item.style);
         const fit = normalizeFit(item.fit, productType);
         await tx.insert(factoryOrderItems).values({
           factoryOrderId,
