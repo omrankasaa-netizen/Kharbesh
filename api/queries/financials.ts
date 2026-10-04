@@ -1,4 +1,5 @@
 import { and, eq, gte, isNotNull, isNull, lte, ne } from "drizzle-orm";
+import { effectiveGarmentType } from "../lib/garmentStyle";
 import { getDb } from "./connection";
 import {
   auditLogs,
@@ -7,6 +8,7 @@ import {
   factoryOrders,
   factoryPayments,
   garmentCosts,
+  garmentStyles,
   orders,
   overheadExpenses,
   products,
@@ -191,6 +193,16 @@ export async function getFinancialSummary(from?: string, to?: string) {
   const costForType = (productType: string | undefined) =>
     (productType != null ? blankCostByType.get(productType) : undefined) ?? fallbackBlankCost;
 
+  // Per-style factory blank cost (e.g. Autumn Hoodie $16, Fleeced Winter
+  // Hoodie $20) — overrides the per-garment-type cost for items whose order
+  // line carries that style.
+  const styleCostRows = await db
+    .select({ nameEn: garmentStyles.nameEn, factoryCostCents: garmentStyles.factoryCostCents })
+    .from(garmentStyles);
+  const costByStyle = new Map(
+    styleCostRows.filter((r) => r.factoryCostCents != null).map((r) => [r.nameEn.toLowerCase(), r.factoryCostCents!]),
+  );
+
   const conditions = [];
   if (from) conditions.push(gte(orders.createdAt, new Date(from)));
   if (to) conditions.push(lte(orders.createdAt, new Date(to + "T23:59:59")));
@@ -225,7 +237,13 @@ export async function getFinancialSummary(from?: string, to?: string) {
     }
     for (const item of o.items as OrderLineItem[]) {
       unitsCount += item.quantity;
-      cogsCents += item.quantity * (costForType(item.productType) + printFeeCents + packagingCostCents);
+      // Style-specific factory cost wins; otherwise the per-garment-type
+      // cost, keyed by the EFFECTIVE garment (a hoodie style picked on a tee
+      // product costs the hoodie blank, not the tee one).
+      const styleCost = item.style ? costByStyle.get(item.style.toLowerCase()) : undefined;
+      const blankCost =
+        styleCost ?? costForType(effectiveGarmentType(item.productType ?? "tee", item.style));
+      cogsCents += item.quantity * (blankCost + printFeeCents + packagingCostCents);
     }
   }
 
