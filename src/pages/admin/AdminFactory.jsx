@@ -15,13 +15,15 @@ const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 const TEE_INTERNAL_SIZES = ['S/M', 'L/XL', 'XXL'];
 const FITS = ['regular', 'oversize'];
 
-/** One-line garment spec for a factory line item: fit + internal cut size
-    (what the factory pulls), with the customer's chosen size alongside. */
+/** One-line garment spec for a factory line item: hoodie style + fit +
+    internal cut size (what the factory pulls), with the customer's chosen
+    size alongside. */
 function garmentSpec(it) {
+  const style = it.style_name ? `${it.style_name} · ` : '';
   const fit = it.product_type === 'tee' || it.product_type === 'hoodie' ? (it.fit || 'regular') : null;
   const cut = it.size;
   const customer = it.display_size && it.display_size !== it.size ? ` (customer: ${it.display_size})` : '';
-  return `${fit ? `${fit} · ` : ''}${cut}${customer}`;
+  return `${style}${fit ? `${fit} · ` : ''}${cut}${customer}`;
 }
 
 function exportToExcel(factoryOrder) {
@@ -40,6 +42,7 @@ function exportToExcel(factoryOrder) {
       'Design': it.design_name_en || '—',
       'Phrase': it.phrase_en || '',
       'Product type': it.product_type,
+      'Style': it.style_name || '',
       'Color': it.color,
       'Fit': it.product_type === 'tee' || it.product_type === 'hoodie' ? (it.fit || 'regular') : '',
       'Cut size': it.size,
@@ -53,7 +56,7 @@ function exportToExcel(factoryOrder) {
     return row;
   });
   const ws = XLSX.utils.json_to_sheet(rows);
-  const baseCols = [{ wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 30 }, { wch: 24 }, { wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 13 }, { wch: 8 }, { wch: 16 }];
+  const baseCols = [{ wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 30 }, { wch: 24 }, { wch: 28 }, { wch: 12 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 13 }, { wch: 8 }, { wch: 16 }];
   const fileCols = Array.from({ length: maxFiles }, () => ({ wch: 40 }));
   ws['!cols'] = [...baseCols, ...fileCols, { wch: 40 }, { wch: 20 }];
   const wb = XLSX.utils.book_new();
