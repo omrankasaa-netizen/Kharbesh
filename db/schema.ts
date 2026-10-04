@@ -324,7 +324,7 @@ export const contactMessages = mysqlTable("contact_messages", {
   name: varchar("name", { length: 160 }).notNull(),
   email: varchar("email", { length: 320 }).notNull(),
   phone: varchar("phone", { length: 40 }),
-  message: text("message", { length: 1000 }).notNull(),
+  message: text("message").notNull(),
   status: mysqlEnum("status", ["new", "read", "archived"]).default("new").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -622,7 +622,7 @@ export const loyaltyAccounts = mysqlTable("loyalty_accounts", {
   lifetimeSpentCents: int("lifetimeSpentCents").default(0).notNull(),
   freeShippingCredits: int("freeShippingCredits").default(1).notNull(),
   tierLockedByAdmin: boolean("tierLockedByAdmin").default(false).notNull(),
-  notes: varchar("notes", { length: 500 }),
+  notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
