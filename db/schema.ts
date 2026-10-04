@@ -94,6 +94,15 @@ export const garmentStyles = mysqlTable("garment_styles", {
   nameEn: varchar("nameEn", { length: 120 }).notNull().unique(),
   nameAr: varchar("nameAr", { length: 120 }),
   priceModifierCents: int("priceModifierCents").default(0).notNull(),
+  // Cross-garment pricing: when set, choosing this style on ANY apparel
+  // product charges this absolute price instead of the product's own price
+  // (e.g. any design on an Autumn Hoodie sells for $38). Exposed publicly on
+  // the catalog so the PDP can switch the displayed price. Null = no
+  // override (product price applies).
+  fixedPriceCents: int("fixedPriceCents"),
+  // Factory blank cost for this style — overrides the per-garment-type cost
+  // in COGS. SERVER-ONLY: never exposed on the public catalog endpoint.
+  factoryCostCents: int("factoryCostCents"),
   sizes: json("sizes").$type<string[]>().notNull(),
   sortOrder: int("sortOrder").default(0).notNull(),
 });
@@ -194,9 +203,10 @@ export type OrderLineItem = {
   // Customer-facing cut choice (tees + hoodies; absent on legacy orders
   // and accessories — treat absent as "regular").
   fit?: "regular" | "oversize";
-  // Customer-chosen hoodie style (e.g. "Autumn Hoodie") for hoodie products.
-  // Absent on legacy orders, non-hoodie items, and hoodie orders that kept
-  // the product's admin-assigned style.
+  // Customer-chosen garment style (e.g. "Autumn Hoodie") for apparel items —
+  // including a hoodie style picked on a tee product (cross-garment: any
+  // design on tee/autumn-hoodie/fleeced-hoodie). Absent on legacy orders,
+  // accessories, and orders that kept the product's own garment.
   style?: string;
   quantity: number;
   unitPrice: number;
@@ -276,7 +286,7 @@ export const customRequests = mysqlTable("custom_requests", {
   language: varchar("language", { length: 60 }),
   recipient: varchar("recipient", { length: 120 }),
   occasion: varchar("occasion", { length: 200 }),
-  tone: mysqlEnum("tone", ["subtle", "bold", "sarcastic", "clean", "colorful"]).default("subtle"),
+  tone: mysqlEnum("tone", ["subtle", "bold", "sarcastic", "clean", "colorful"]).default("subtle").notNull(),
   garment: varchar("garment", { length: 120 }),
   // Requested cut for tee/hoodie garments (regular | oversize). Nullable —
   // legacy requests and other garments have no fit; treat absent as
@@ -314,7 +324,7 @@ export const contactMessages = mysqlTable("contact_messages", {
   name: varchar("name", { length: 160 }).notNull(),
   email: varchar("email", { length: 320 }).notNull(),
   phone: varchar("phone", { length: 40 }),
-  message: text("message").notNull(),
+  message: text("message", { length: 1000 }).notNull(),
   status: mysqlEnum("status", ["new", "read", "archived"]).default("new").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -612,7 +622,7 @@ export const loyaltyAccounts = mysqlTable("loyalty_accounts", {
   lifetimeSpentCents: int("lifetimeSpentCents").default(0).notNull(),
   freeShippingCredits: int("freeShippingCredits").default(1).notNull(),
   tierLockedByAdmin: boolean("tierLockedByAdmin").default(false).notNull(),
-  notes: text("notes"),
+  notes: varchar("notes", { length: 500 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
