@@ -27,6 +27,7 @@ function toUiItem(i: FactoryOrderItem) {
     product_type: i.productType,
     color: i.color,
     fit: i.fit,
+    style_name: i.styleName,
     size: i.size,
     display_size: i.displaySize,
     quantity: i.quantity,
@@ -152,6 +153,9 @@ export async function generatePrintJobFromOrders(orderIds: number[], actorUserId
           productType,
           color: item.color,
           fit,
+          // Customer-chosen hoodie type (Autumn / Fleeced Winter / …) so the
+          // factory pulls the right blank; null when the product default applies.
+          styleName: item.style ?? null,
           // The factory cuts the INTERNAL size group (tees: S/M, L/XL,
           // XXL); the customer's chosen size rides along for packing.
           size: factorySizeFor(productType, item.size),

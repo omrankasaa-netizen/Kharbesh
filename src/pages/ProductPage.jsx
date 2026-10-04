@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { useI18n } from '@/lib/i18n';
-import { useProducts, useColors, resolveColor } from '@/lib/useCatalog.jsx';
+import { useProducts, useColors, useGarmentStyles, resolveColor } from '@/lib/useCatalog.jsx';
 import { useCart } from '@/lib/cart';
 import { FIT_OPTIONS, DEFAULT_FIT, productHasFits } from '@/lib/fitSizes';
 import { toggleWishlist, isSaved } from '@/lib/wishlist';
@@ -21,6 +21,7 @@ export default function ProductPage() {
   const { products, loading } = useProducts();
   const colors = useColors();
   const { addItem } = useCart();
+  const allStyles = useGarmentStyles();
   const navigate = useNavigate();
   const { settings } = useSiteSettings();
 
@@ -29,6 +30,7 @@ export default function ProductPage() {
   const [colorName, setColorName] = useState('');
   const [size, setSize] = useState('');
   const [fit, setFit] = useState(DEFAULT_FIT);
+  const [styleName, setStyleName] = useState('');
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [colorImages, setColorImages] = useState({});
@@ -91,6 +93,15 @@ export default function ProductPage() {
   const isPreorder = product.preorder_type !== 'always_on';
   const hasFits = productHasFits(product);
   const chosenFit = hasFits ? fit : DEFAULT_FIT;
+  // Hoodie type choice (Autumn / Fleeced Winter / Heavyweight) — the catalog
+  // drives the options; default is the product's admin-assigned style when
+  // it's a hoodie style, else the first hoodie style in the catalog.
+  const hoodieStyles = product.product_type === 'hoodie' ? allStyles.filter((s) => /hoodie|هودي/i.test(s.name_en)) : [];
+  const chosenStyle = hoodieStyles.length
+    ? (hoodieStyles.find((s) => s.name_en === styleName) ||
+       hoodieStyles.find((s) => s.name_en === product.garment_style) ||
+       hoodieStyles[0])
+    : null;
   // Fit explainer names the garment — tees and hoodies both carry the
   // two-cut choice but the copy shouldn't say "tee" on a hoodie page.
   const fitNote = product.product_type === 'hoodie' ? t.product.fitNoteHoodie : t.product.fitNote;
@@ -109,6 +120,7 @@ export default function ProductPage() {
       color: colorName,
       size,
       fit: chosenFit,
+      style: chosenStyle?.name_en || undefined,
       quantity: qty,
       unitPrice: product.price,
     });
@@ -201,7 +213,7 @@ export default function ProductPage() {
 
           {/* Spec chips — edition-card facts */}
           <div className="mt-5 flex flex-wrap gap-2">
-            {[selectedColor && (lang === 'ar' ? selectedColor.name_ar : selectedColor.name_en), product.garment_style, product.fit_en].filter(Boolean).map((chip) => (
+            {[selectedColor && (lang === 'ar' ? selectedColor.name_ar : selectedColor.name_en), chosenStyle ? (lang === 'ar' ? (chosenStyle.name_ar || chosenStyle.name_en) : chosenStyle.name_en) : product.garment_style, product.fit_en].filter(Boolean).map((chip) => (
               <span key={chip} className="kh-mono text-[10px] uppercase tracking-[0.14em] px-3 py-[6px]" style={{ border: '1px solid var(--line-strong)', borderRadius: 2, color: 'var(--ink)' }}>
                 {chip}
               </span>
@@ -228,6 +240,26 @@ export default function ProductPage() {
             </div>
             {colorName && <p className="text-sm text-muted-foreground mt-2">{lang === 'ar' ? (resolveColor(colorName, colors)?.name_ar) : colorName}</p>}
           </fieldset>
+
+          {/* Hoodie type — Autumn / Fleeced Winter / Heavyweight. Only shown
+              when the catalog actually has a choice to make. */}
+          {hoodieStyles.length > 1 && (
+            <fieldset className="mt-6" disabled={!colorName}>
+              <legend className="kh-eyebrow mb-3">{t.product.chooseStyle}</legend>
+              <div className="flex flex-wrap gap-2">
+                {hoodieStyles.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setStyleName(s.name_en)}
+                    aria-pressed={chosenStyle?.name_en === s.name_en}
+                    className={`kh-btn-outline kh-btn-filter !text-[13px] !py-2 !px-4 ${chosenStyle?.name_en === s.name_en ? '!bg-primary !text-primary-foreground' : ''}`}
+                  >
+                    {lang === 'ar' ? (s.name_ar || s.name_en) : s.name_en}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
 
           {/* Fit — tees and hoodies come in two cuts, same price, same sizes */}
           {hasFits && (
@@ -298,8 +330,8 @@ export default function ProductPage() {
             href={whatsappLink(
               settings?.contact?.whatsappNumber,
               (lang === 'ar'
-                ? `هاي، بدي ${garmentNounAr}: ${name}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (أوفرسايز)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`
-                : `Hi! I'd like to order: ${name}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (oversize fit)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`),
+                ? `هاي، بدي ${garmentNounAr}: ${name}${chosenStyle ? ` (${chosenStyle.name_ar || chosenStyle.name_en})` : ''}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (أوفرسايز)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`
+                : `Hi! I'd like to order: ${name}${chosenStyle ? ` (${chosenStyle.name_en})` : ''}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (oversize fit)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`),
             )}
             target="_blank"
             rel="noreferrer"

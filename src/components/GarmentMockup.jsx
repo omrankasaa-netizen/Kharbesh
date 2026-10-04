@@ -10,26 +10,40 @@ export default function GarmentMockup({ type = 'tee', color = '#F0E9D6', textCol
 
   return (
     <svg viewBox="0 0 300 360" className={className} preserveAspectRatio="xMidYMid meet" role="img" aria-label="Garment preview">
-      {isHoodie && (
-        <path d="M118,52 Q150,22 182,52 L206,40 Q150,8 94,40 Z" fill={color} stroke={stroke} strokeWidth="1.5" opacity="0.65" />
-      )}
-      {/* body + sleeves */}
-      <path
-        d="M95,58 L42,84 L66,150 L96,130 L96,322 Q96,326 100,326 L200,326 Q204,326 204,322 L204,130 L234,150 L258,84 L205,58 L178,54 Q150,78 122,54 Z"
-        fill={color}
-        stroke={stroke}
-        strokeWidth="1.5"
-      />
-      {/* collar */}
-      <path d="M122,54 Q150,80 178,54" fill="none" stroke={stroke} strokeWidth="1.5" />
-      {isHoodie && (
+      {isHoodie ? (
         <>
-          <path d="M122,54 Q150,80 178,54 L172,66 Q150,86 128,66 Z" fill="none" stroke={stroke} strokeWidth="1.5" />
-          {/* pocket */}
-          <rect x="100" y="232" width="100" height="58" rx="6" fill="none" stroke={stroke} strokeWidth="1.5" />
+          {/* hood behind the neck */}
+          <path d="M106,62 Q102,16 150,10 Q198,16 194,62 L178,54 Q150,32 122,54 Z" fill={color} stroke={stroke} strokeWidth="1.5" />
+          {/* body + long sleeves */}
+          <path
+            d="M94,62 L46,90 L68,296 Q69,303 76,302 L96,297 L96,322 Q96,326 100,326 L200,326 Q204,326 204,322 L204,297 L224,302 Q231,303 232,296 L254,90 L206,62 L178,54 Q150,80 122,54 Z"
+            fill={color}
+            stroke={stroke}
+            strokeWidth="1.5"
+          />
+          {/* underarm seams (sleeve/body split) + hood opening */}
+          <path d="M96,148 L96,297 M204,148 L204,297" fill="none" stroke={stroke} strokeWidth="1.5" />
+          <path d="M122,54 Q150,32 178,54 Q150,80 122,54 Z" fill="none" stroke={stroke} strokeWidth="1.5" />
+          {/* ribbed hem + cuffs */}
+          <path d="M96,310 L204,310" fill="none" stroke={stroke} strokeWidth="1.5" />
+          <path d="M64,283 L96,277 M204,277 L236,283" fill="none" stroke={stroke} strokeWidth="1.5" />
+          {/* kangaroo pocket */}
+          <path d="M104,240 L196,240 L196,298 L104,298 Z" fill="none" stroke={stroke} strokeWidth="1.5" />
+          <path d="M104,240 L122,298 M196,240 L178,298" fill="none" stroke={stroke} strokeWidth="1.5" />
           {/* drawstrings */}
-          <path d="M138,70 Q136,96 140,116" fill="none" stroke={stroke} strokeWidth="1.5" />
-          <path d="M162,70 Q164,96 160,116" fill="none" stroke={stroke} strokeWidth="1.5" />
+          <path d="M138,72 Q135,98 139,118 M162,72 Q165,98 161,118" fill="none" stroke={stroke} strokeWidth="1.5" />
+        </>
+      ) : (
+        <>
+          {/* tee: body + short sleeves */}
+          <path
+            d="M95,58 L42,84 L66,150 L96,130 L96,322 Q96,326 100,326 L200,326 Q204,326 204,322 L204,130 L234,150 L258,84 L205,58 L178,54 Q150,78 122,54 Z"
+            fill={color}
+            stroke={stroke}
+            strokeWidth="1.5"
+          />
+          {/* collar */}
+          <path d="M122,54 Q150,80 178,54" fill="none" stroke={stroke} strokeWidth="1.5" />
         </>
       )}
       {showText && (

@@ -194,6 +194,10 @@ export type OrderLineItem = {
   // Customer-facing cut choice (tees + hoodies; absent on legacy orders
   // and accessories — treat absent as "regular").
   fit?: "regular" | "oversize";
+  // Customer-chosen hoodie style (e.g. "Autumn Hoodie") for hoodie products.
+  // Absent on legacy orders, non-hoodie items, and hoodie orders that kept
+  // the product's admin-assigned style.
+  style?: string;
   quantity: number;
   unitPrice: number;
   lineTotal: number;
@@ -422,6 +426,10 @@ export const factoryOrderItems = mysqlTable(
     color: varchar("color", { length: 80 }).notNull(),
     // Cut of the garment — tees + hoodies; accessory rows stay "regular".
     fit: mysqlEnum("fit", ["regular", "oversize"]).default("regular").notNull(),
+    // Customer-chosen hoodie style (e.g. "Autumn Hoodie" vs "Fleeced Winter
+    // Hoodie") so the factory pulls the right blank. Null for non-hoodie
+    // rows and hoodie orders that kept the product's assigned style.
+    styleName: varchar("styleName", { length: 120 }),
     // The size the FACTORY cuts: for tees this is the internal group
     // (S/M, L/XL, XXL) — see api/lib/fitSizes.ts. The customer's chosen
     // size (S, M, L, XL, XXL) is kept in displaySize for packing.
@@ -554,6 +562,7 @@ export const discounts = mysqlTable("discounts", {
   active: boolean("active").default(true).notNull(),
   startsAt: timestamp("startsAt"),
   expiresAt: timestamp("expiresAt"),
+  createdByUserId: bigint("createdByUserId", { mode: "number", unsigned: true }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
