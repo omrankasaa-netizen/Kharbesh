@@ -1,6 +1,7 @@
 import { getDb } from "./connection";
-import { promoCodes, discounts, campaigns, products } from "@db/schema";
+import { promoCodes, discounts, campaigns, products, garmentStyles } from "@db/schema";
 import { desc, eq, inArray, sql } from "drizzle-orm";
+import { isHoodieStyleName, resolveOrderStyle } from "../lib/garmentStyle";
 
 // ── Mappers ──────────────────────────────────────────────────────────────────
 
@@ -362,11 +363,18 @@ export async function previewPromoCode(code: string, subtotalCents: number) {
  * order total. Products are re-fetched here (never trusting client-supplied
  * price/type) exactly like `createOrder` does.
  */
-export async function previewCartDiscounts(items: { productId: string; quantity: number }[]) {
+export async function previewCartDiscounts(items: { productId: string; quantity: number; style?: string }[]) {
   const db = getDb();
   const ids = [...new Set(items.map((i) => Number(i.productId)).filter((n) => Number.isInteger(n)))];
   const rows = ids.length ? await db.select().from(products).where(inArray(products.id, ids)) : [];
   const byId = new Map(rows.map((r) => [r.id, r]));
+
+  // Same style-fixed-price override as createOrder, so the previewed
+  // subtotal matches what the server will actually charge.
+  const styleRows = await db
+    .select({ nameEn: garmentStyles.nameEn, fixedPriceCents: garmentStyles.fixedPriceCents })
+    .from(garmentStyles);
+  const hoodieStyleNames = styleRows.map((r) => r.nameEn).filter(isHoodieStyleName);
 
   const activeDiscounts = await loadActiveAutomaticDiscounts();
   let subtotalCents = 0;
@@ -376,7 +384,16 @@ export async function previewCartDiscounts(items: { productId: string; quantity:
   for (const item of items) {
     const product = byId.get(Number(item.productId));
     if (!product) continue;
-    const lineTotalCents = product.priceCents * item.quantity;
+    // Invalid styles are ignored here (preview only) — createOrder is the
+    // authoritative gate and rejects them.
+    let style: string | undefined;
+    try {
+      style = resolveOrderStyle(item.style, product.productType, hoodieStyleNames);
+    } catch {
+      style = undefined;
+    }
+    const styleRow = style ? styleRows.find((r) => r.nameEn === style) : undefined;
+    const lineTotalCents = (styleRow?.fixedPriceCents ?? product.priceCents) * item.quantity;
     subtotalCents += lineTotalCents;
     const best = pickAutomaticDiscount(activeDiscounts, {
       productType: product.productType,
