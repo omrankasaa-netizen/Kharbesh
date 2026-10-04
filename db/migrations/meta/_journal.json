@@ -113,6 +113,13 @@
       "when": 1791058579656,
       "tag": "0015_add_hoodie_styles",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1791210000000,
+      "tag": "0016_add_factory_item_style",
+      "breakpoints": true
     }
   ]
 }

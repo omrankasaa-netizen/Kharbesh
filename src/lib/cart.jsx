@@ -27,7 +27,10 @@ function loadCart() {
         // Tees and hoodies come in regular + oversize cuts — the fit is
         // part of what makes a cart line unique (both cuts = two lines).
         const fit = item.fit === 'oversize' ? 'oversize' : 'regular';
-        return { ...item, quantity, color, size, fit, key: item.key || `${item.productId}|${color}|${size}|${fit}` };
+        // Hoodie type (Autumn / Fleeced Winter / Heavyweight) also splits
+        // cart lines — two types of the same design are two lines.
+        const style = item.style ?? '';
+        return { ...item, quantity, color, size, fit, style, key: item.key || `${item.productId}|${color}|${size}|${fit}|${style}` };
       });
   } catch {
     return memoryCart;
@@ -59,7 +62,7 @@ export const CartProvider = ({ children }) => {
       /* tracking must never break the cart */
     }
     setItems((prev) => {
-      const key = `${item.productId}|${item.color}|${item.size}|${item.fit === 'oversize' ? 'oversize' : 'regular'}`;
+      const key = `${item.productId}|${item.color}|${item.size}|${item.fit === 'oversize' ? 'oversize' : 'regular'}|${item.style ?? ''}`;
       const existing = prev.find((p) => p.key === key);
       if (existing) {
         return prev.map((p) => (p.key === key ? { ...p, quantity: p.quantity + item.quantity } : p));
