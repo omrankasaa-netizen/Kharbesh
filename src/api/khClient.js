@@ -236,6 +236,9 @@ export const kh = {
             size: i.size,
             // Cut choice (tees + hoodies) — dropped unless a valid fit value.
             fit: FITS.includes(i.fit) ? i.fit : undefined,
+            // Hoodie type choice (hoodies only) — validated server-side
+            // against the garment_styles catalog.
+            style: empty(i.style),
             quantity: i.quantity,
           })),
           promoCode: empty(data.promo_code),
