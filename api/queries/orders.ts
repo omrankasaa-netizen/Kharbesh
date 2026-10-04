@@ -1,11 +1,12 @@
 import { getDb } from "./connection";
-import { auditLogs, discounts, orders, products, promoCodes, type Order, type OrderLineItem } from "@db/schema";
+import { auditLogs, discounts, garmentStyles, orders, products, promoCodes, type Order, type OrderLineItem } from "@db/schema";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { normalizePhoneToE164, phoneLookupVariants } from "../lib/phone";
 import { discountAmountCents, isWithinWindow, matchesDiscount } from "./promotions";
 import { computeShippingCents, getSettings, isPaymentMethodEnabled } from "./settings";
 import { applyLoyaltyToOrder, tierLabel } from "./loyalty";
 import { normalizeFit } from "../lib/fitSizes";
+import { isHoodieStyleName, resolveOrderStyle } from "../lib/garmentStyle";
 import { sendEmail } from "../lib/email";
 import { followUpEmail } from "../lib/emailTemplates";
 
@@ -60,7 +61,7 @@ export type CreateOrderInput = {
   language: "en" | "ar";
   userId?: number;
   paymentMethod: "cash_on_delivery" | "whish";
-  items: { productId: string; color: string; size: string; fit?: string; quantity: number }[];
+  items: { productId: string; color: string; size: string; fit?: string; style?: string; quantity: number }[];
   promoCode?: string;
 };
 
@@ -94,6 +95,11 @@ export async function createOrder(input: CreateOrderInput) {
     let subtotalCents = 0;
     let automaticDiscountCents = 0;
 
+    // Hoodie styles a customer may pick on the PDP (Autumn / Fleeced Winter /
+    // Heavyweight) — loaded once per order, validated per line item.
+    const styleRows = await tx.select({ nameEn: garmentStyles.nameEn }).from(garmentStyles);
+    const hoodieStyleNames = styleRows.map((r) => r.nameEn).filter(isHoodieStyleName);
+
     for (const item of input.items) {
       const productId = Number(item.productId);
       if (!Number.isInteger(productId)) {
@@ -126,6 +132,9 @@ export async function createOrder(input: CreateOrderInput) {
       // Fit is a cut choice for tees and hoodies; accessories are forced
       // to regular so inventory/factory never see a junk fit value.
       const fit = normalizeFit(item.fit, product.productType);
+      // Hoodie type (Autumn / Fleeced Winter / Heavyweight) — only hoodie
+      // products carry it; unknown names are rejected, never swapped.
+      const style = resolveOrderStyle(item.style, product.productType, hoodieStyleNames);
       if (item.quantity < 1 || item.quantity > 20) {
         throw new Error("INVALID_QUANTITY");
       }
@@ -159,6 +168,7 @@ export async function createOrder(input: CreateOrderInput) {
         color: item.color,
         size: item.size,
         fit,
+        style,
         quantity: item.quantity,
         unitPrice: product.priceCents / 100,
         lineTotal: lineTotalCents / 100,
