@@ -1,0 +1,14 @@
+function toUiStyle(s: typeof garmentStyles.$inferSelect) {
+  return {
+    id: String(s.id),
+    name_en: s.nameEn,
+    name_ar: s.nameAr,
+    price_modifier: s.priceModifierCents / 100,
+    // Absolute sell price when this style is picked on any apparel product
+    // (cross-garment pricing) — public so the PDP can switch the displayed
+    // price. factoryCostCents stays server-only (cost data, never exposed).
+    fixed_price: s.fixedPriceCents != null ? s.fixedPriceCents / 100 : null,
+    sizes: s.sizes,
+    sort_order: s.sortOrder,
+  };
+}
