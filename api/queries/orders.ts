@@ -95,9 +95,13 @@ export async function createOrder(input: CreateOrderInput) {
     let subtotalCents = 0;
     let automaticDiscountCents = 0;
 
-    // Hoodie styles a customer may pick on the PDP (Autumn / Fleeced Winter /
-    // Heavyweight) — loaded once per order, validated per line item.
-    const styleRows = await tx.select({ nameEn: garmentStyles.nameEn }).from(garmentStyles);
+    // Garment styles a customer may pick on the PDP (Autumn / Fleeced Winter /
+    // Heavyweight) — loaded once per order, validated per line item. A style
+    // with a fixed price overrides the product's own price (cross-garment:
+    // any design on an Autumn Hoodie sells at the hoodie price).
+    const styleRows = await tx
+      .select({ nameEn: garmentStyles.nameEn, fixedPriceCents: garmentStyles.fixedPriceCents })
+      .from(garmentStyles);
     const hoodieStyleNames = styleRows.map((r) => r.nameEn).filter(isHoodieStyleName);
 
     for (const item of input.items) {
@@ -132,8 +136,9 @@ export async function createOrder(input: CreateOrderInput) {
       // Fit is a cut choice for tees and hoodies; accessories are forced
       // to regular so inventory/factory never see a junk fit value.
       const fit = normalizeFit(item.fit, product.productType);
-      // Hoodie type (Autumn / Fleeced Winter / Heavyweight) — only hoodie
-      // products carry it; unknown names are rejected, never swapped.
+      // Garment style (Autumn / Fleeced Winter / Heavyweight) — apparel
+      // products carry it (a hoodie style may be picked on a tee product);
+      // unknown names are rejected, never swapped.
       const style = resolveOrderStyle(item.style, product.productType, hoodieStyleNames);
       if (item.quantity < 1 || item.quantity > 20) {
         throw new Error("INVALID_QUANTITY");
@@ -146,7 +151,11 @@ export async function createOrder(input: CreateOrderInput) {
         throw new Error("SOLD_OUT");
       }
 
-      const lineTotalCents = product.priceCents * item.quantity;
+      // Server-authoritative unit price: a style with a fixed price wins
+      // over the product price; otherwise the product's own price applies.
+      const styleRow = style ? styleRows.find((r) => r.nameEn === style) : undefined;
+      const unitCents = styleRow?.fixedPriceCents ?? product.priceCents;
+      const lineTotalCents = unitCents * item.quantity;
       subtotalCents += lineTotalCents;
 
       let best: { discount: (typeof activeDiscounts)[number]; amountCents: number } | null = null;
@@ -170,7 +179,7 @@ export async function createOrder(input: CreateOrderInput) {
         fit,
         style,
         quantity: item.quantity,
-        unitPrice: product.priceCents / 100,
+        unitPrice: unitCents / 100,
         lineTotal: lineTotalCents / 100,
       });
 
