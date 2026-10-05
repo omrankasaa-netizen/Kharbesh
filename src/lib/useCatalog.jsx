@@ -68,7 +68,7 @@ export const useSiteSettings = () => {
 
 export const resolveColor = (name, colors) => colors.find((c) => c.name_en === name);
 
-export function useProducts({ collectionSlug, search, dropOnly, productType } = {}) {
+export function useProducts({ collectionSlug, search, dropOnly, productType, newest } = {}) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const { collections } = useContext(CatalogContext);
@@ -109,13 +109,22 @@ export function useProducts({ collectionSlug, search, dropOnly, productType } = 
             (p.collection_name || '').toLowerCase().includes(s)
           );
         }
+        // Newest-first: by creation date (fallback id) so "New drop"
+        // surfaces always show the latest additions, not sort_order picks.
+        if (newest) {
+          list = [...list].sort((a, b) => {
+            const da = new Date(a.created_date || 0).getTime();
+            const db = new Date(b.created_date || 0).getTime();
+            return db - da || Number(b.id) - Number(a.id);
+          });
+        }
         setProducts(list);
       } catch { if (active) setProducts([]); }
       finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collectionSlug, search, dropOnly, productType, collections]);
+  }, [collectionSlug, search, dropOnly, productType, newest, collections]);
   return { products, loading };
 }
 
