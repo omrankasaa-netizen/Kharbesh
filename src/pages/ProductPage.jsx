@@ -69,6 +69,27 @@ export default function ProductPage() {
     [product, colors]
   );
 
+  // A hoodie picked on a tee product: show the generic hoodie shot for the
+  // chosen color+fit (the design was never photographed on hoodies). The
+  // photos module is dynamically imported so its ~300KB only downloads when
+  // a hoodie is actually picked; the GarmentMockup SVG renders meanwhile and
+  // stays as fallback for colors/fits without a shot.
+  // (Hook lives with the other hooks, above the early returns below.)
+  const [hoodiePhoto, setHoodiePhoto] = useState(null);
+  const selectedColorName = colorName || approvedColors[0]?.name_en;
+  useEffect(() => {
+    // styleName is only non-empty when a cross-garment hoodie option was
+    // picked (the base option's key is ''), and only tee products mock up.
+    const needsHoodieShot = Boolean(styleName) && product?.product_type === 'tee';
+    if (!needsHoodieShot) { setHoodiePhoto(null); return; }
+    let cancelled = false;
+    import('@/lib/hoodiePhotos')
+      .then((m) => { if (!cancelled) setHoodiePhoto(m.genericHoodiePhoto(selectedColorName, fit)); })
+      .catch(() => { if (!cancelled) setHoodiePhoto(null); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [styleName, product?.product_type, selectedColorName, fit]);
+
   const selectedColor = approvedColors.find((c) => c.name_en === colorName) || approvedColors[0];
   const hex = selectedColor?.hex || '#F0E9D6';
   const ink = contrastInk(hex);
@@ -121,6 +142,7 @@ export default function ProductPage() {
   // A hoodie picked on a tee product: show the hoodie mockup instead of the
   // tee photos so the customer sees what they're actually buying.
   const showMockupForGarment = Boolean(chosenGarment?.isHoodie && product.product_type === 'tee');
+  const galleryPhoto = showMockupForGarment ? hoodiePhoto : activePhoto;
   // Fit explainer names the garment — tees and hoodies both carry the
   // two-cut choice but the copy shouldn't say "tee" on a hoodie page.
   const fitNote = product.product_type === 'hoodie' ? t.product.fitNoteHoodie : t.product.fitNote;
@@ -194,9 +216,9 @@ export default function ProductPage() {
         {/* Gallery */}
         <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <div className="bg-card border border-border rounded-md aspect-[4/5] flex items-center justify-center overflow-hidden">
-            {activePhoto && !showMockupForGarment ? (
+            {galleryPhoto ? (
               <img
-                src={activePhoto}
+                src={galleryPhoto}
                 alt={`${name} — ${selectedColor?.name_en}`}
                 className="w-full h-full object-cover"
                 loading="eager"
