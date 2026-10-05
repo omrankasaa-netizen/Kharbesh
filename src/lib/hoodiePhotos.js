@@ -19,12 +19,34 @@ import greyRegular from './hoodie-photos/grey-regular';
 import greyOversize from './hoodie-photos/grey-oversize';
 import charcoalBlueRegular from './hoodie-photos/charcoal-blue-regular';
 import charcoalBlueOversize from './hoodie-photos/charcoal-blue-oversize';
+import blackRegularFix from './hoodie-photos/black-regular.fix';
+import blackOversizeFix from './hoodie-photos/black-oversize.fix';
+import whiteRegularFix from './hoodie-photos/white-regular.fix';
+import whiteOversizeFix from './hoodie-photos/white-oversize.fix';
+import greyRegularFix from './hoodie-photos/grey-regular.fix';
+import greyOversizeFix from './hoodie-photos/grey-oversize.fix';
+import charcoalBlueRegularFix from './hoodie-photos/charcoal-blue-regular.fix';
+import charcoalBlueOversizeFix from './hoodie-photos/charcoal-blue-oversize.fix';
+
+// Each .fix module is a list of [start, deleteCount, insert] splices applied
+// to the sibling photo module's string. Empty unless the committed module
+// drifted from the source image.
+function applyFixes(s, fixes) {
+  if (!fixes || fixes.length === 0) return s;
+  let out = '';
+  let last = 0;
+  for (const [start, del, ins] of fixes) {
+    out += s.slice(last, start) + ins;
+    last = start + del;
+  }
+  return out + s.slice(last);
+}
 
 export const GENERIC_HOODIE_BY_COLOR_FIT = {
-  Black: { regular: blackRegular, oversize: blackOversize },
-  White: { regular: whiteRegular, oversize: whiteOversize },
-  Grey: { regular: greyRegular, oversize: greyOversize },
-  'Charcoal Blue': { regular: charcoalBlueRegular, oversize: charcoalBlueOversize },
+  Black: { regular: applyFixes(blackRegular, blackRegularFix), oversize: applyFixes(blackOversize, blackOversizeFix) },
+  White: { regular: applyFixes(whiteRegular, whiteRegularFix), oversize: applyFixes(whiteOversize, whiteOversizeFix) },
+  Grey: { regular: applyFixes(greyRegular, greyRegularFix), oversize: applyFixes(greyOversize, greyOversizeFix) },
+  'Charcoal Blue': { regular: applyFixes(charcoalBlueRegular, charcoalBlueRegularFix), oversize: applyFixes(charcoalBlueOversize, charcoalBlueOversizeFix) },
 };
 
 /** Generic hoodie photo for a color+fit, falling back across fit so a
