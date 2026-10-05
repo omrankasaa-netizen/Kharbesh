@@ -93,21 +93,40 @@ export default function ProductPage() {
   const isPreorder = product.preorder_type !== 'always_on';
   const hasFits = productHasFits(product);
   const chosenFit = hasFits ? fit : DEFAULT_FIT;
-  // Hoodie type choice (Autumn / Fleeced Winter / Heavyweight) — the catalog
-  // drives the options; default is the product's admin-assigned style when
-  // it's a hoodie style, else the first hoodie style in the catalog.
-  const hoodieStyles = product.product_type === 'hoodie' ? allStyles.filter((s) => /hoodie|هودي/i.test(s.name_en)) : [];
-  const chosenStyle = hoodieStyles.length
-    ? (hoodieStyles.find((s) => s.name_en === styleName) ||
-       hoodieStyles.find((s) => s.name_en === product.garment_style) ||
-       hoodieStyles[0])
-    : null;
+  // Garment choice — the same design can be bought on the product's own
+  // garment (tee/hoodie) or on any hoodie style that carries a fixed price
+  // (Autumn / Fleeced Winter / …). The displayed price switches with the
+  // selection; the server re-validates and re-prices authoritatively at
+  // checkout. Hoodie styles WITHOUT a fixed price are never offered here
+  // (fail-safe against undercharging the tee price for a hoodie).
+  const isApparel = product.product_type === 'tee' || product.product_type === 'hoodie';
+  const hoodieStyles = isApparel ? allStyles.filter((s) => /hoodie|هودي/i.test(s.name_en)) : [];
+  const baseLabel = product.product_type === 'hoodie'
+    ? (product.garment_style || t.product.garmentHoodie)
+    : t.product.garmentTee;
+  const garmentOptions = !isApparel ? [] : [
+    { key: '', label: baseLabel, styleName: undefined, price: product.price, isHoodie: product.product_type === 'hoodie' },
+    ...hoodieStyles
+      .filter((s) => s.fixed_price != null && s.name_en !== product.garment_style)
+      .map((s) => ({
+        key: s.name_en,
+        label: lang === 'ar' ? (s.name_ar || s.name_en) : s.name_en,
+        styleName: s.name_en,
+        price: s.fixed_price,
+        isHoodie: true,
+      })),
+  ];
+  const chosenGarment = garmentOptions.find((g) => g.key === styleName) || garmentOptions[0] || null;
+  const activePrice = chosenGarment?.price ?? product.price;
+  // A hoodie picked on a tee product: show the hoodie mockup instead of the
+  // tee photos so the customer sees what they're actually buying.
+  const showMockupForGarment = Boolean(chosenGarment?.isHoodie && product.product_type === 'tee');
   // Fit explainer names the garment — tees and hoodies both carry the
   // two-cut choice but the copy shouldn't say "tee" on a hoodie page.
   const fitNote = product.product_type === 'hoodie' ? t.product.fitNoteHoodie : t.product.fitNote;
   // Garment noun for the WhatsApp order message (Arabic only — the EN
   // message is generic). Defaults to the generic "piece" for accessories.
-  const garmentNounAr = { tee: 'هالتيشيرت', hoodie: 'هالهودي' }[product.product_type] || 'هالقطعة';
+  const garmentNounAr = chosenGarment?.isHoodie ? 'هالهودي' : ({ tee: 'هالتيشيرت' }[product.product_type] || 'هالقطعة');
 
   const handleAdd = () => {
     if (!canAdd) return;
@@ -120,9 +139,9 @@ export default function ProductPage() {
       color: colorName,
       size,
       fit: chosenFit,
-      style: chosenStyle?.name_en || undefined,
+      style: chosenGarment?.styleName,
       quantity: qty,
-      unitPrice: product.price,
+      unitPrice: activePrice,
     });
     setAdded(true);
     setTimeout(() => navigate('/cart'), 500);
@@ -175,7 +194,7 @@ export default function ProductPage() {
         {/* Gallery */}
         <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <div className="bg-card border border-border rounded-md aspect-[4/5] flex items-center justify-center overflow-hidden">
-            {activePhoto ? (
+            {activePhoto && !showMockupForGarment ? (
               <img
                 src={activePhoto}
                 alt={`${name} — ${selectedColor?.name_en}`}
@@ -186,7 +205,7 @@ export default function ProductPage() {
               />
             ) : (
               <GarmentMockup
-                type={product.product_type}
+                type={showMockupForGarment ? 'hoodie' : product.product_type}
                 color={hex}
                 textColor={ink}
                 phrase={product.phrase_ar}
@@ -206,14 +225,14 @@ export default function ProductPage() {
             </p>
           )}
           <div className="flex items-baseline gap-3 mt-4">
-            <span className="font-heading text-2xl" style={{ fontFamily: 'var(--brand-font-heading)' }}>${product.price}</span>
-            {product.compare_at_price && <span className="text-muted-foreground line-through">${product.compare_at_price}</span>}
+            <span className="font-heading text-2xl" style={{ fontFamily: 'var(--brand-font-heading)' }}>${activePrice}</span>
+            {product.compare_at_price && chosenGarment?.key === '' && <span className="text-muted-foreground line-through">${product.compare_at_price}</span>}
           </div>
           <p className="mt-4 text-muted-foreground">{desc}</p>
 
           {/* Spec chips — edition-card facts */}
           <div className="mt-5 flex flex-wrap gap-2">
-            {[selectedColor && (lang === 'ar' ? selectedColor.name_ar : selectedColor.name_en), chosenStyle ? (lang === 'ar' ? (chosenStyle.name_ar || chosenStyle.name_en) : chosenStyle.name_en) : product.garment_style, product.fit_en].filter(Boolean).map((chip) => (
+            {[selectedColor && (lang === 'ar' ? selectedColor.name_ar : selectedColor.name_en), chosenGarment?.label || product.garment_style, product.fit_en].filter(Boolean).map((chip) => (
               <span key={chip} className="kh-mono text-[10px] uppercase tracking-[0.14em] px-3 py-[6px]" style={{ border: '1px solid var(--line-strong)', borderRadius: 2, color: 'var(--ink)' }}>
                 {chip}
               </span>
@@ -241,20 +260,20 @@ export default function ProductPage() {
             {colorName && <p className="text-sm text-muted-foreground mt-2">{lang === 'ar' ? (resolveColor(colorName, colors)?.name_ar) : colorName}</p>}
           </fieldset>
 
-          {/* Hoodie type — Autumn / Fleeced Winter / Heavyweight. Only shown
-              when the catalog actually has a choice to make. */}
-          {hoodieStyles.length > 1 && (
+          {/* Garment — Tee / Autumn Hoodie / Fleeced Winter Hoodie / … with
+              per-garment prices. Only shown when there's a real choice. */}
+          {garmentOptions.length > 1 && (
             <fieldset className="mt-6" disabled={!colorName}>
-              <legend className="kh-eyebrow mb-3">{t.product.chooseStyle}</legend>
+              <legend className="kh-eyebrow mb-3">{t.product.chooseGarment}</legend>
               <div className="flex flex-wrap gap-2">
-                {hoodieStyles.map((s) => (
+                {garmentOptions.map((g) => (
                   <button
-                    key={s.id}
-                    onClick={() => setStyleName(s.name_en)}
-                    aria-pressed={chosenStyle?.name_en === s.name_en}
-                    className={`kh-btn-outline kh-btn-filter !text-[13px] !py-2 !px-4 ${chosenStyle?.name_en === s.name_en ? '!bg-primary !text-primary-foreground' : ''}`}
+                    key={g.key || 'base'}
+                    onClick={() => setStyleName(g.key)}
+                    aria-pressed={chosenGarment?.key === g.key}
+                    className={`kh-btn-outline kh-btn-filter !text-[13px] !py-2 !px-4 ${chosenGarment?.key === g.key ? '!bg-primary !text-primary-foreground' : ''}`}
                   >
-                    {lang === 'ar' ? (s.name_ar || s.name_en) : s.name_en}
+                    {g.label} · ${g.price}
                   </button>
                 ))}
               </div>
@@ -330,8 +349,8 @@ export default function ProductPage() {
             href={whatsappLink(
               settings?.contact?.whatsappNumber,
               (lang === 'ar'
-                ? `هاي، بدي ${garmentNounAr}: ${name}${chosenStyle ? ` (${chosenStyle.name_ar || chosenStyle.name_en})` : ''}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (أوفرسايز)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`
-                : `Hi! I'd like to order: ${name}${chosenStyle ? ` (${chosenStyle.name_en})` : ''}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (oversize fit)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${product.price * qty}`),
+                ? `هاي، بدي ${garmentNounAr}: ${name}${chosenGarment?.styleName ? ` (${chosenGarment.label})` : ''}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (أوفرسايز)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${activePrice * qty}`
+                : `Hi! I'd like to order: ${name}${chosenGarment?.styleName ? ` (${chosenGarment.label})` : ''}${selectedColor ? ` — ${selectedColor.name_en}` : ''}${hasFits && chosenFit === 'oversize' ? ' (oversize fit)' : ''}${size ? `, size ${size}` : ''} (x${qty}) — $${activePrice * qty}`),
             )}
             target="_blank"
             rel="noreferrer"

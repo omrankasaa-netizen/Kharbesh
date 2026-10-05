@@ -308,6 +308,10 @@ function toUiStyle(s: typeof garmentStyles.$inferSelect) {
     name_en: s.nameEn,
     name_ar: s.nameAr,
     price_modifier: s.priceModifierCents / 100,
+    // Absolute sell price when this style is picked on any apparel product
+    // (cross-garment pricing) — public so the PDP can switch the displayed
+    // price. factoryCostCents stays server-only (cost data, never exposed).
+    fixed_price: s.fixedPriceCents != null ? s.fixedPriceCents / 100 : null,
     sizes: s.sizes,
     sort_order: s.sortOrder,
   };
@@ -325,6 +329,7 @@ export async function createGarmentStyle(data: {
   name_en: string;
   name_ar?: string | null;
   price_modifier?: number;
+  fixed_price?: number | null;
   sizes?: string[];
 }) {
   const db = getDb();
@@ -340,6 +345,7 @@ export async function createGarmentStyle(data: {
       nameEn: data.name_en.trim(),
       nameAr: data.name_ar?.trim() || null,
       priceModifierCents: Math.round((data.price_modifier ?? 0) * 100),
+      fixedPriceCents: data.fixed_price != null ? Math.round(data.fixed_price * 100) : null,
       sizes: data.sizes?.length ? data.sizes : ["S", "M", "L", "XL", "XXL"],
       sortOrder: nextSort,
     })
@@ -350,13 +356,15 @@ export async function createGarmentStyle(data: {
 
 export async function updateGarmentStyle(
   id: number,
-  data: { name_en?: string; name_ar?: string | null; price_modifier?: number; sizes?: string[]; sort_order?: number },
+  data: { name_en?: string; name_ar?: string | null; price_modifier?: number; fixed_price?: number | null; sizes?: string[]; sort_order?: number },
 ) {
   const db = getDb();
   const patch: Record<string, unknown> = {};
   if (data.name_en !== undefined) patch.nameEn = data.name_en.trim();
   if (data.name_ar !== undefined) patch.nameAr = data.name_ar?.trim() || null;
   if (data.price_modifier !== undefined) patch.priceModifierCents = Math.round(data.price_modifier * 100);
+  if (data.fixed_price !== undefined)
+    patch.fixedPriceCents = data.fixed_price != null ? Math.round(data.fixed_price * 100) : null;
   if (data.sizes !== undefined) patch.sizes = data.sizes;
   if (data.sort_order !== undefined) patch.sortOrder = data.sort_order;
   await db.update(garmentStyles).set(patch).where(eq(garmentStyles.id, id));

@@ -58,9 +58,9 @@ export const createOrderSchema = z.object({
         // Garment cut choice (tees + hoodies) — optional so older clients /
         // accessories keep working; normalized server-side (default regular).
         fit: z.enum(["regular", "oversize"]).optional(),
-        // Hoodie type (Autumn / Fleeced Winter / Heavyweight) — hoodie
-        // products only; validated against the garment_styles catalog
-        // server-side.
+        // Garment style (Autumn / Fleeced Winter / Heavyweight) — apparel
+        // products (a hoodie style may be picked on a tee product);
+        // validated against the garment_styles catalog server-side.
         style: z.string().trim().min(1).max(120).optional(),
         quantity: z.number().int().min(1).max(20),
       }),
@@ -90,7 +90,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   PRODUCT_UNAVAILABLE: "One of the items is no longer available.",
   COLOR_UNAVAILABLE: "A selected color is not available for that item.",
   SIZE_UNAVAILABLE: "A selected size is not available for that item.",
-  STYLE_UNAVAILABLE: "A selected hoodie type is not available for that item.",
+  STYLE_UNAVAILABLE: "A selected garment type is not available for that item.",
   SOLD_OUT: "One of the items just sold out.",
   INVALID_PRODUCT: "Invalid item in cart.",
   INVALID_QUANTITY: "Invalid quantity.",
@@ -205,7 +205,13 @@ export const orderRouter = createRouter({
   previewCartDiscounts: publicQuery
     .input(
       z
-        .array(z.object({ productId: z.string().regex(/^\d+$/), quantity: z.number().int().min(1).max(20) }))
+        .array(
+          z.object({
+            productId: z.string().regex(/^\d+$/),
+            quantity: z.number().int().min(1).max(20),
+            style: z.string().trim().min(1).max(120).optional(),
+          }),
+        )
         .min(1)
         .max(30),
     )

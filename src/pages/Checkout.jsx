@@ -80,14 +80,17 @@ export default function Checkout() {
   useEffect(() => {
     if (items.length === 0) { setAutoDiscount(null); return; }
     let cancelled = false;
+    // Style matters for the preview: a garment picked via the cross-garment
+    // selector (Autumn/Fleeced hoodie) re-prices the line server-side, so the
+    // preview must send it to show the same totals the order will charge.
     base44.entities.Promotions.previewCartDiscounts(
-      items.map((i) => ({ productId: String(i.productId), quantity: i.quantity })),
+      items.map((i) => ({ productId: String(i.productId), quantity: i.quantity, style: i.style || undefined })),
     )
       .then((result) => { if (!cancelled) setAutoDiscount(result); })
       .catch(() => { if (!cancelled) setAutoDiscount(null); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(items.map((i) => [i.productId, i.quantity]))]);
+  }, [JSON.stringify(items.map((i) => [i.productId, i.quantity, i.style]))]);
 
   const netSubtotal = autoDiscount ? autoDiscount.net_subtotal : subtotal;
   const autoDiscountAmount = autoDiscount?.automatic_discount || 0;
