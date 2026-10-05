@@ -75,7 +75,7 @@ function ShowcaseCard({ product }) {
 
 export default function DesignShowcase() {
   const { lang } = useI18n();
-  const { products, loading } = useProducts();
+  const { products, loading } = useProducts({ newest: true });
   const featured = products.slice(0, SHOWCASE_COUNT);
 
   if (!loading && featured.length === 0) return null;
@@ -85,18 +85,18 @@ export default function DesignShowcase() {
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-16 sm:py-24">
         <div className="flex items-end justify-between gap-4 mb-10">
           <div>
-            <span className="kh-eyebrow">{lang === 'ar' ? 'تصاميم جاهزة' : 'Ready designs'}</span>
+            <span className="kh-eyebrow">{lang === 'ar' ? 'نيو دروب' : 'New drop'}</span>
             <h2 className={`kh-section-title mt-3 ${lang === 'ar' ? 'kh-section-title-ar' : ''}`}>
-              {lang === 'ar' ? 'جاهزة تتخربش' : 'Ready to Kharbesh'}
+              {lang === 'ar' ? 'طازة من المطبعة' : 'Fresh off the press'}
             </h2>
             <p className="mt-3 max-w-xl" style={{ color: 'var(--muted)' }}>
               {lang === 'ar'
-                ? 'كل تصميم نكتة كاملة. لبسها — وخلّي غيرك يضحك، أو يستغرب.'
-                : 'Every design is a full joke. Wear it — let the rest laugh, or wonder.'}
+                ? 'أجدد التصاميم عالموقع — شوف شو نزل جديد قبل الكل.'
+                : 'The newest designs on the site — see what just dropped before everyone else.'}
             </p>
           </div>
-          <Link to="/shop" className="kh-btn-text hidden sm:inline-flex">
-            {lang === 'ar' ? 'كل القطع ←' : 'View all pieces →'}
+          <Link to="/drop" className="kh-btn-text hidden sm:inline-flex">
+            {lang === 'ar' ? 'شوف كل الدروب ←' : 'View the whole drop →'}
           </Link>
         </div>
 

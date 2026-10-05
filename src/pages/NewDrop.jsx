@@ -7,7 +7,13 @@ import { Scribble } from '@/components/Brand';
 
 export default function NewDrop() {
   const { t } = useI18n();
-  const { products, loading } = useProducts({ dropOnly: true });
+  // A named preorder drop always wins; when none is running, the page
+  // surfaces the latest arrivals instead so /drop never sits empty while
+  // fresh pieces exist (e.g. the newest batch added in admin).
+  const { products: dropProducts, loading: loadingDrop } = useProducts({ dropOnly: true });
+  const { products: newest, loading: loadingNewest } = useProducts({ newest: true });
+  const loading = loadingDrop || loadingNewest;
+  const products = dropProducts.length > 0 ? dropProducts : newest.slice(0, 18);
   const hasDrop = !loading && products.length > 0;
   return (
     <div>
