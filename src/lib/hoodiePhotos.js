@@ -7,8 +7,9 @@
  * ProductPage so the ~300KB of photos only download when a hoodie option is
  * actually selected, never on a plain tee visit.
  *
- * Keyed by `garment_colors.nameEn` exactly as seeded in the DB (Heather Grey
- * shots = Grey, Dark Charcoal = Charcoal Blue). Fits: 'regular' | 'oversize'
+ * Keyed by `garment_colors.nameEn` exactly as live in the DB (Black, White,
+ * Grey, Dark Charcoal — charcoal shots are the charcoal-blue modules).
+ * Fits: 'regular' | 'oversize'
  * (see src/lib/fitSizes.js).
  */
 import blackRegular from './hoodie-photos/black-regular';
@@ -46,7 +47,7 @@ export const GENERIC_HOODIE_BY_COLOR_FIT = {
   Black: { regular: applyFixes(blackRegular, blackRegularFix), oversize: applyFixes(blackOversize, blackOversizeFix) },
   White: { regular: applyFixes(whiteRegular, whiteRegularFix), oversize: applyFixes(whiteOversize, whiteOversizeFix) },
   Grey: { regular: applyFixes(greyRegular, greyRegularFix), oversize: applyFixes(greyOversize, greyOversizeFix) },
-  'Charcoal Blue': { regular: applyFixes(charcoalBlueRegular, charcoalBlueRegularFix), oversize: applyFixes(charcoalBlueOversize, charcoalBlueOversizeFix) },
+  'Dark Charcoal': { regular: applyFixes(charcoalBlueRegular, charcoalBlueRegularFix), oversize: applyFixes(charcoalBlueOversize, charcoalBlueOversizeFix) },
 };
 
 /** Generic hoodie photo for a color+fit, falling back across fit so a
