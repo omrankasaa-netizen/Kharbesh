@@ -358,7 +358,7 @@ export const adminRouter = createRouter({
   /** Permanent delete — super_admin only. There is no soft-delete for orders. */
   hardDeleteOrder: superAdminQuery
     .input(z.object({ id: idParam }))
-    .mutation(({ ctx, input }) => hardDeleteOrder(Number(input.id), ctx.user.id)),
+    .mutation(({ ctx, input }) => hardDeleteOrder(Number(input.id))),
 
   /** Manual "Send follow-up" button on an order row — no automatic timer. */
   sendOrderFollowupEmail: staffQuery
@@ -571,6 +571,9 @@ export const adminRouter = createRouter({
       name_en: z.string().min(1).max(120),
       name_ar: z.string().max(120).nullable().optional(),
       price_modifier: z.number().optional(),
+      // Cross-garment fixed sell price ($) — when set, any design picked on
+      // this garment sells at exactly this price. Null = product price.
+      fixed_price: z.number().min(0).max(1_000_000).nullable().optional(),
       sizes: z.array(z.string()).optional(),
     }))
     .mutation(({ input }) => createGarmentStyle(input)),
@@ -581,6 +584,8 @@ export const adminRouter = createRouter({
       name_en: z.string().min(1).max(120).optional(),
       name_ar: z.string().max(120).nullable().optional(),
       price_modifier: z.number().optional(),
+      // See createGarmentStyle: null clears the cross-garment fixed price.
+      fixed_price: z.number().min(0).max(1_000_000).nullable().optional(),
       sizes: z.array(z.string()).optional(),
     }))
     .mutation(({ input }) => updateGarmentStyle(Number(input.id), input)),
